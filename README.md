@@ -8,7 +8,7 @@ The following changes have been made from Moonbase59's latest version, 0.6.8:
 
 The underlying program logic was mostly untouched, other than a few minor tweaks I made to get it to compile in MSVC, which doesn't have full C99 support.
 
-Due to the previous maintainer's decision to commit static binary files, the repo ballooned to neary 1 GB in size. Consequently, I decided to delete the git history and start over from new, and rebaseline the versioning at 1.0. For this repo, binary packages for Windows 64 bit and Debian/Ubuntu amd64 will be provided on the [release page](https://github.com/complexlogic/loudgain/releases). 
+Due to the previous maintainer's decision to commit static binary files, the repo ballooned to nearly 1 GB in size. Consequently, I decided to delete the git history and start over from new, and rebaseline the versioning at 1.0. For this repo, binary packages for Windows 64 bit and Debian/Ubuntu amd64 will be provided on the [release page](https://github.com/complexlogic/loudgain/releases). 
 
 For the best results, loudgain on Windows should be run on the latest version of Windows 10, or Windows 11. The Linux .deb package is compatible with Debian Bullseye and later, Ubuntu 20.04 and later.
 
