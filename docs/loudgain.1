@@ -1,0 +1,159 @@
+.\" generated with Ronn/v0.7.3
+.\" http://github.com/rtomayko/ronn/tree/0.7.3
+.
+.TH "LOUDGAIN" "1" "September 2019" "" ""
+.
+.SH "NAME"
+\fBloudgain\fR \- loudness normalizer based on the EBU R128 standard
+.
+.SH "SYNOPSIS"
+\fBloudgain [OPTIONS] FILES\.\.\.\fR
+.
+.SH "DESCRIPTION"
+\fBloudgain\fR is a loudness normalizer that scans music files and calculates loudness\-normalized gain and loudness peak values according to the EBU R128 standard, and can optionally write ReplayGain\-compatible metadata\.
+.
+.P
+loudgain implements a subset of mp3gain\'s command\-line options, which means that it can be used as a drop\-in replacement in some situations\.
+.
+.P
+loudgain will \fInot\fR modify the actual audio data, but instead just write ReplayGain \fItags\fR if so requested\. It is up to the player to interpret these\. (In some players, you need to enable this feature\.)
+.
+.P
+loudgain currently supports writing tags to the following file types:
+.
+.br
+FLAC (\.flac), Ogg (\.ogg, \.oga, \.spx, \.opus), MP2 (\.mp2), MP3 (\.mp3), MP4 (\.mp4, \.m4a), ASF/WMA (\.asf, \.wma), WavPack (\.wv), APE (\.ape)\.
+.
+.P
+Experimental, use with care: WAV (\.wav), AIFF (\.aiff, \.aif, \.snd)\.
+.
+.SH "OPTIONS"
+.
+.TP
+\fB\-h, \-\-help\fR
+Show this help\.
+.
+.TP
+\fB\-v, \-\-version\fR
+Show version number\.
+.
+.TP
+\fB\-r, \-\-track\fR
+Calculate track gain only (default)\.
+.
+.TP
+\fB\-a, \-\-album\fR
+Calculate album gain (and track gain)\.
+.
+.TP
+\fB\-c, \-\-clip\fR
+Ignore clipping warnings\.
+.
+.TP
+\fB\-k, \-\-noclip\fR
+Lower track/album gain to avoid clipping (<= \-1 dBTP)\.
+.
+.TP
+\fB\-K n, \-\-maxtpl=n\fR
+Avoid clipping; max\. true peak level = n dBTP\.
+.
+.TP
+\fB\-d n, \-\-pregain=n\fR
+Apply n dB/LU pre\-gain value (\-5 for \-23 LUFS target)\.
+.
+.TP
+\fB\-s d, \-\-tagmode=d\fR
+Delete ReplayGain tags from files\.
+.
+.TP
+\fB\-s i, \-\-tagmode=i\fR
+Write ReplayGain 2\.0 tags to files\. ID3v2 for MP2, MP3, WAV and AIFF; Vorbis Comments for FLAC, Ogg, Speex and Opus; iTunes\-type metadata for MP4/M4A; WMA tags for ASF/WMA; APEv2 tags for WavPack and APE\.
+.
+.TP
+\fB\-s e, \-\-tagmode=e\fR
+like \'\-s i\', plus extra tags (reference, ranges)\.
+.
+.TP
+\fB\-s l, \-\-tagmode=l\fR
+like \'\-s e\', but LU units instead of dB\.
+.
+.TP
+\fB\-s s, \-\-tagmode=s\fR
+Don\'t write ReplayGain tags (default)\.
+.
+.TP
+\fB\-L, \-\-lowercase\fR
+Force lowercase \'REPLAYGAIN_*\' tags (MP2/MP3/MP4/ASF/WMA/WAV/AIFF only)\. This is non\-standard, but sometimes needed\.
+.
+.TP
+\fB\-S, \-\-striptags\fR
+Strip tag types other than ID3v2 from MP2/MP3 files (i\.e\. ID3v1, APEv2)\. Strip tag types other than APEv2 from WavPack/APE files (i\.e\. ID3v1)\.
+.
+.TP
+\fB\-I 3, \-\-id3v2version=3\fR
+Write ID3v2\.3 tags to MP2/MP3/WAV/AIFF files\.
+.
+.TP
+\fB\-I 4, \-\-id3v2version=4\fR
+Write ID3v2\.4 tags to MP2/MP3/WAV/AIFF files (default)\.
+.
+.TP
+\fB\-o, \-\-output\fR
+Database\-friendly tab\-delimited list output (mp3gain\-compatible)\.
+.
+.TP
+\fB\-O, \-\-output\-new\fR
+Database\-friendly new format tab\-delimited list output\. Ideal for analysis of files if redirected to a CSV file\.
+.
+.TP
+\fB\-q, \-\-quiet\fR
+Don\'t print scanning status messages\.
+.
+.SH "RECOMMENDATIONS"
+To give you a head start, here are my personal recommendations for being (almost) universally compatible\.
+.
+.P
+Use loudgain on a »one album per folder« basis; standard RG2 settings but lowercase ReplayGain tags; clipping prevention on; strip obsolete tag types from MP3 and WavPack files; use ID3v2\.3 for MP3s; store extended tags:
+.
+.IP "" 4
+.
+.nf
+
+$ loudgain \-a \-k \-s e *\.flac
+$ loudgain \-a \-k \-s e *\.ogg
+$ loudgain \-I3 \-S \-L \-a \-k \-s e *\.mp3
+$ loudgain \-L \-a \-k \-s e *\.m4a
+$ loudgain \-a \-k \-s e *\.opus
+$ loudgain \-L \-a \-k \-s e *\.wma
+$ loudgain \-I3 \-L \-a \-k \-s e *\.wav
+$ loudgain \-I3 \-L \-a \-k \-s e *\.aiff
+$ loudgain \-S \-a \-k \-s e *\.wv
+$ loudgain \-S \-a \-k \-s e *\.ape
+.
+.fi
+.
+.IP "" 0
+.
+.P
+I’ve been happy with these settings for many years now\. Your mileage may vary\.
+.
+.P
+For easy mass\-tagging, there is a bash script called \fBrgbpm\fR included with loudgain, which follows above recommendations\. You can make a copy, put that into your personal \fB~/bin\fR folder and modify it to whatever \fIyou\fR need\.
+.
+.SH "BUGS"
+\fBloudgain\fR is maintained on GitHub\. Please report all bugs to the issue tracker at https://github\.com/complexlogic/loudgain/issues\.
+.
+.SH "AUTHORS"
+Matthias C\. Hormann \fImhormann@gmx\.de\fR
+.
+.br
+Alessandro Ghedini \fIalessandro@ghedini\.me\fR
+.
+.SH "COPYRIGHT"
+Copyright (C) 2019 Matthias C\. Hormann \fImhormann@gmx\.de\fR (versions > 0\.1)
+.
+.br
+Copyright (C) 2014 Alessandro Ghedini \fIalessandro@ghedini\.me\fR (v0\.1)
+.
+.P
+This program is released under the 2 clause BSD license\.
