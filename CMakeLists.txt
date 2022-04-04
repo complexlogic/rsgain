@@ -123,10 +123,25 @@ if (WIN32)
   install(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION "./")
   install(FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION "./")
   install(FILES "${PROJECT_SOURCE_DIR}/CHANGELOG.txt" DESTINATION "./")
+  
+  # Copy the VC Runtime DLLs in case user doesn't have them installed
+  set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
+  include(InstallRequiredSystemLibraries)
+  set(required_libs "vcruntime140.dll;vcruntime140_1.dll;msvcp140.dll")
+  foreach(required_lib ${required_libs})
+    foreach(system_lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
+      string(FIND ${system_lib} ${required_lib} vcruntime)
+      if (NOT vcruntime EQUAL -1)
+        install(FILES ${system_lib} DESTINATION "./")
+      endif ()
+    endforeach ()
+  endforeach ()
+  
+  # Set up CPack
   set(CPACK_PACKAGE_NAME ${EXECUTABLE_TITLE})
   set(CPACK_GENERATOR "ZIP")
   include(CPack)
-
+  
 # Installation - Linux/Mac
 else ()
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
