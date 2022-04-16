@@ -19,7 +19,7 @@ Usage is exactly the same as previous versions. No features have been added or r
 
 ## Scanning Your Music Library With loudgain-scanner
 The repo contains a simple, cross-platform Python script ```loudgain-scanner```, which will recursively scan your entire music library using the recommended settings for each file type. To use the script, the following requirements must be met:
-- The ```loudgain``` executable is in your PATH *or* the same directory as the script
+- The ```loudgain``` executable is the same directory as the script *or* in your PATH 
 - Your library is organized with each album in its own folder
 - In each album folder, all audio files are of the same type. It is acceptable to have non-audio files in an album folder e.g. log files or cover art, but if multiple audio file types are detected, the folder will not be scanned.
 
@@ -33,7 +33,7 @@ loudgain-scanner /path/to/music/library
 ### Windows
 Make sure you have Python installed. You can get it from the Microsoft Store, or directly from [the foundation's website](https://www.python.org/). Open a command line interpreter of your choice in the folder where you extracted loudgain, and execute the script:
 ```
-.\loudgain-scanner.py "C:\path\to\music library"
+python loudgain-scanner.py "C:\path\to\music library"
 ```
 
 
