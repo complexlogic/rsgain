@@ -26,6 +26,7 @@ The repo contains a simple, cross-platform Python script ```loudgain-scanner```,
 Pass the root of the directory you want to scan as the first argument to the script.
 
 ### Unix
+The script was installed into your system directories along with the program:
 ```
 loudgain-scanner /path/to/music/library
 ```
