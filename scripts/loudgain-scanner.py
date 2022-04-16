@@ -6,11 +6,10 @@ import glob
 import subprocess
 import platform
 
-loudgain = "loudgain"
-if platform.system == "Windows":
-    EXECUTABLE_TITLE = loudgain + ".exe"
+if platform.system() == "Windows":
+    EXECUTABLE_TITLE = "loudgain.exe"
 else:
-    EXECUTABLE_TITLE = loudgain
+    EXECUTABLE_TITLE = "loudgain"
 
 SCAN_ARGS = {
     '.flac': ['-a', '-k', '-s', 'e'],
@@ -48,14 +47,15 @@ def scan(directory):
                 subprocess.run(command)
 
 if __name__ == "__main__":
-    if shutil.which("loudgain") is None:
-        script_dir = os.path.dirname(os.path.realpath(__file__))
-        executable_path = os.path.join(script_dir, EXECUTABLE_TITLE)
-        if os.path.isfile(executable_path):
-            loudgain = executable_path
-        else:
-            print("Error: loudgain not found. Make sure it's in your PATH or the same directory as the script")
-            sys.exit(1)
+    script_dir = os.path.dirname(os.path.realpath(__file__))
+    executable_path = os.path.join(script_dir, EXECUTABLE_TITLE)
+    if os.path.isfile(executable_path):
+        loudgain = executable_path
+    elif shutil.which("loudgain") is not None:
+        loudgain = "loudgain"
+    else:
+        print("Error: loudgain not found. Make sure it's in your PATH or the same directory as the script")
+        sys.exit(1)
     if (len(sys.argv)) < 2:
         print("Error: You must pass the path of the root directory to scan as the first argument")
         sys.exit(1)
