@@ -196,7 +196,6 @@ void quit(int status)
 }
 
 
-bool warn_ebu            = false;
 int  ebur128_v_major     = 0;
 int  ebur128_v_minor     = 0;
 int  ebur128_v_patch     = 0;
@@ -233,8 +232,6 @@ int main(int argc, char *argv[]) {
 	ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
 	snprintf(ebur128_version, sizeof(ebur128_version), "%d.%d.%d",
 		ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
-	if (ebur128_v_major <= 1 && ebur128_v_minor <= 2 && ebur128_v_patch < 4)
-		warn_ebu = true;
 
 	// libavformat version
 	lavf_ver = avformat_version();
@@ -729,10 +726,6 @@ static inline void help(void) {
 	output("  MP4 (.mp4, .m4a), ASF/WMA (.asf, .wma), WavPack (.wv), APE (.ape).\n");
 	output("  Experimental: WAV (.wav), AIFF (.aiff, .aif, .snd).\n");
 
-	if (warn_ebu) {
-		output("%sWarning:%s Your EBU R128 library (libebur128) is version %s.\n", COLOR_RED, COLOR_OFF, ebur128_version);
-		output("This is an old version and might cause problems.\n");
-	}
 	output("\n");
 	output(COLOR_RED "Options:\n" COLOR_OFF);
 

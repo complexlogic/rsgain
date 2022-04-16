@@ -62,7 +62,7 @@ else ()
   pkg_check_modules(LAVR REQUIRED libswresample)
   pkg_check_modules(LAVU REQUIRED libavutil)
   pkg_check_modules(LTAG REQUIRED taglib)
-  pkg_check_modules(EBUR128 REQUIRED libebur128)
+  pkg_check_modules(EBUR128 REQUIRED libebur128>=1.2.4)
 
   include_directories(
     ${LAVC_INCLUDE_DIRS}
