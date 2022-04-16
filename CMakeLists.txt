@@ -34,16 +34,16 @@ if (WIN32)
   
   include_directories(
     ${FFMPEG_INCLUDE_DIRS} 
-	${TAGLIB_INCLUDE_DIR} 
-	${LIBEBUR128_INCLUDE_DIR} 
-	${GETOPT_INCLUDE_DIR}
-	${PROJECT_BINARY_DIR}
+    ${TAGLIB_INCLUDE_DIR} 
+    ${LIBEBUR128_INCLUDE_DIR} 
+    ${GETOPT_INCLUDE_DIR}
+    ${PROJECT_BINARY_DIR}
   )
   link_libraries(
     ${FFMPEG_LIBRARIES} 
-	${TAGLIB} 
-	${LIBEBUR128} 
-	${GETOPT}
+    ${TAGLIB} 
+    ${LIBEBUR128} 
+    ${GETOPT}
   )
   
 # Find dependencies - Linux/Mac
@@ -103,7 +103,7 @@ if (WIN32)
   endif()
   configure_file(
     ${PROJECT_SOURCE_DIR}/config/${PROJECT_NAME}.manifest.in 
-	${PROJECT_BINARY_DIR}/${PROJECT_NAME}.manifest
+    ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.manifest
   )
 endif()
 

@@ -6,33 +6,36 @@ The following changes have been made from Moonbase59's latest version, 0.6.8:
 - The I/O code was significantly refactored to be cross-platform, with function definitions that are abstracted, and separate Unix/Windows code underneath
 - The progress bar was refactored to be more performant
 
-The underlying program logic was mostly untouched, other than a few minor tweaks I made to get it to compile in MSVC, which doesn't have full C99 support.
+The underlying program logic was mostly untouched, other than a few minor tweaks I made to get it to compile with MSVC, which doesn't have full C99 support.
 
 Due to the previous maintainer's decision to commit static binary files, the repo ballooned to nearly 1 GB in size. Consequently, I decided to delete the git history and start over from new, and rebaseline the versioning at 1.0. For this repo, binary packages for Windows 64 bit and Debian/Ubuntu amd64 will be provided on the [release page](https://github.com/complexlogic/loudgain/releases). 
 
 For the best results, loudgain on Windows should be run on the latest version of Windows 10, or Windows 11. The Linux .deb package is compatible with Debian Bullseye and later, Ubuntu 20.04 and later.
 
-I have also included an original python script I wrote called ```scan.py``` that I use to scan my music library. It is a much simpler alternative to the more complex ```rgbpm``` and ```rgbpm2``` scripts that were written by Moonbase59, and is cross-platform Unix/Windows.
+I have also included an original Python script I wrote called ```loudgain-scanner``` that I use to scan my music library. It is a much simpler alternative to the more complex ```rgbpm``` and ```rgbpm2``` scripts that were written by Moonbase59, and is cross-platform Unix/Windows.
 
 ## Usage
 Usage is exactly the same as previous versions. No features have been added or removed at this point in time. See the [previous repo](https://github.com/Moonbase59/loudgain#getting-started) for usage instructions.
 
-## Scanning Your Music Library With scan.py
-The repo contains a simple, cross-platform python script ```scan.py```, which will recursively scan your entire music library using the recommended settings for each file type. To use the script, the following requirements must be met:
-- The loudgain executable is in your PATH
+## Scanning Your Music Library With loudgain-scanner
+The repo contains a simple, cross-platform Python script ```loudgain-scanner```, which will recursively scan your entire music library using the recommended settings for each file type. To use the script, the following requirements must be met:
+- The ```loudgain``` executable is in your PATH *or* the same directory as the script
 - Your library is organized with each album in its own folder
 - In each album folder, all audio files are of the same type. It is acceptable to have non-audio files in an album folder e.g. log files or cover art, but if multiple audio file types are detected, the folder will not be scanned.
 
-To use the script, run it in the python interpreter and pass the root of the directory you want to scan as the first argument, e.g.:
+Pass the root of the directory you want to scan as the first argument to the script.
 
+### Unix
 ```
-python scan.py /path/to/music/library
-```
-```
-python scan.py "C:\Music\ripped CDs"
+loudgain-scanner /path/to/music/library
 ```
 
-The previous scripts ```rgbpm``` and ```rgbpm2``` that were written by Moonbase59 are also included in the scripts directory.
+### Windows
+Make sure you have Python installed. You can get it from the Microsoft Store, or directly from [the foundation's website](https://www.python.org/). Open a command line interpreter of your choice in the folder where you extracted loudgain, and execute the script:
+```
+.\loudgain-scanner.py "C:\path\to\music library"
+```
+
 
 ## Building
 The build system was rewritten to support both Unix and Windows.
