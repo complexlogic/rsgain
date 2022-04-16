@@ -120,7 +120,7 @@ endif ()
 # Installation - Windows
 if (WIN32)
   install(DIRECTORY ${PROJECT_BINARY_DIR}/Release/ DESTINATION "./")
-  install(DIRECTORY ${PROJECT_SOURCE_DIR}/scripts DESTINATION "./")
+  install(PROGRAMS ${PROJECT_SOURCE_DIR}/scripts/loudgain-scanner.py DESTINATION "./")
   install(FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION "./")
   install(FILES "${PROJECT_SOURCE_DIR}/CHANGELOG.txt" DESTINATION "./")
   
@@ -145,6 +145,7 @@ if (WIN32)
 # Installation - Linux/Mac
 else ()
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
+  install(PROGRAMS ${PROJECT_SOURCE_DIR}/scripts/loudgain-scanner.py DESTINATION ${CMAKE_INSTALL_PREFIX}/bin RENAME "loudgain-scanner")
   install(FILES
     ${PROJECT_SOURCE_DIR}/docs/loudgain.1
     DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1
