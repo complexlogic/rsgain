@@ -1,4 +1,4 @@
-Unreleased
+v1.0.1 (2022-4-15)
 - Refactored scan.py script, renamed to loudgain-scanner.py
 - Strictly enforce libebur128 minimum version 1.2.4
 
