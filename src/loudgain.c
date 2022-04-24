@@ -78,7 +78,7 @@
 #include <libswresample/swresample.h>
 #include <libavformat/avformat.h>
 
-
+#include "loudgain.h"
 #include "config.h"
 #include "scan.h"
 #include "tag.h"
@@ -139,9 +139,9 @@ static const char *AV_CONTAINER_NAME[] = {
     "mov,mp4,m4a,3gp,3g2,mj2",
     "asf",
     "wav",
-		"wv",
-		"aiff",
-		"ape"
+	"wv",
+	"aiff",
+	"ape"
 };
 
 int name_to_id(const char *str) {
@@ -208,25 +208,385 @@ char     lavf_version[15] = "";
 static inline void help(void);
 static inline void version(void);
 
+void scan(int nb_files, char *files[], Config *config)
+{
+	int i;
+	scan_init(nb_files);
+
+	for (i = 0; i < nb_files; i++) {
+		output_ok("Scanning '%s' ...", files[i]);
+		scan_file(files[i], i);
+	}
+
+	// check for different file (codec) types in an album and warn
+	// (including Opus might mess up album gain)
+	if (config->do_album) {
+		if (scan_album_has_different_containers() || scan_album_has_different_codecs()) {
+			output_warn("You have different file types in the same album!");
+			if (scan_album_has_opus())
+				output_fail("Cannot calculate correct album gain when mixing Opus and non-Opus files!");
+		}
+	}
+
+	if (config->tab_output)
+		fputs("File\tMP3 gain\tdB gain\tMax Amplitude\tMax global_gain\tMin global_gain\n", stdout);
+
+	if (config->tab_output_new)
+		fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tWill_clip\tClip_prevent\tGain\tNew_Peak\tNew_Peak_dBTP\n", stdout);
+
+	for (i = 0; i < nb_files; i++) {
+		bool will_clip = false;
+		double tgain = 1.0; // "gained" track peak
+		double tnew;
+		double tpeak = pow(10.0, config->max_true_peak_level / 20.0); // track peak limit
+		double again = 1.0; // "gained" album peak
+		double anew;
+		double apeak = pow(10.0, config->max_true_peak_level / 20.0); // album peak limit
+		bool tclip = false;
+		bool aclip = false;
+
+		scan_result *scan = scan_get_track_result(i, config->pre_gain);
+
+		if (scan == NULL)
+			continue;
+
+		if (config->do_album)
+			scan_set_album_result(scan, config->pre_gain);
+
+		// Check if track or album will clip, and correct if so requested (-k/-K)
+
+		// track peak after gain
+		tgain = pow(10.0, scan->track_gain / 20.0) * scan->track_peak;
+		tnew = tgain;
+		if (config->do_album) {
+			// album peak after gain
+			again = pow(10.0, scan->album_gain / 20.0) * scan->album_peak;
+			anew = again;
+		}
+
+		if ((tgain > tpeak) || (config->do_album && (again > apeak)))
+			will_clip = true;
+
+		// printf("\ntrack: %.2f LU, peak %.6f; album: %.2f LU, peak %.6f\ntrack: %.6f, %.6f; album: %.6f, %.6f; Clip: %s\n",
+		// 	scan->track_gain, scan->track_peak, scan->album_gain, scan->album_peak,
+		// 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
+
+		if (will_clip && config->no_clip) {
+			if (tgain > tpeak) {
+				// set new track peak = minimum of peak after gain and peak limit
+				tnew = FFMIN(tgain, tpeak);
+				scan->track_gain = scan->track_gain - (log10(tgain/tnew) * 20.0);
+				tclip = true;
+			}
+
+			if (config->do_album && (again > apeak)) {
+				anew = FFMIN(again, apeak);
+				scan->album_gain = scan->album_gain - (log10(again/anew) * 20.0);
+				aclip = true;
+			}
+
+			will_clip = false;
+
+			// fprintf(stdout, "\nAfter clipping prevention:\ntrack: %.2f LU, peak %.6f; album: %.2f LU, peak %.6f\ntrack: %.6f, %.6f; album: %.6f, %.6f; Clip: %s\n",
+			// 	scan->track_gain, scan->track_peak, scan->album_gain, scan->album_peak,
+			// 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
+		}
+
+		switch (config->mode) {
+			case 'c': /* check tags */
+				break;
+
+			case 'd': /* delete tags */
+				switch (name_to_id(scan->container)) {
+
+					case AV_CONTAINER_ID_MP3:
+						if (!tag_clear_mp3(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_FLAC:
+						if (!tag_clear_flac(scan))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_OGG:
+						// must separate because TagLib uses fifferent File classes
+						switch (scan->codec_id) {
+							// Opus needs special handling (different RG tags, -23 LUFS ref.)
+							case AV_CODEC_ID_OPUS:
+								if (!tag_clear_ogg_opus(scan))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_VORBIS:
+								if (!tag_clear_ogg_vorbis(scan))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_FLAC:
+								if (!tag_clear_ogg_flac(scan))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_SPEEX:
+								if (!tag_clear_ogg_speex(scan))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							default:
+								output_error("Codec 0x%x in %s container not supported",
+									scan->codec_id, scan->container);
+								break;
+						}
+						break;
+
+					case AV_CONTAINER_ID_MP4:
+						if (!tag_clear_mp4(scan))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_ASF:
+						if (!tag_clear_asf(scan))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_WAV:
+						if (!tag_clear_wav(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_AIFF:
+						if (!tag_clear_aiff(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_WV:
+						if (!tag_clear_wavpack(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_APE:
+						if (!tag_clear_ape(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					default:
+						output_error("File type not supported: %s", scan->container);
+						break;
+				}
+				break;
+
+			case 'i': /* ID3v2 tags */
+			case 'e': /* same as 'i' plus extra tags */
+			case 'l': /* same as 'e' but in LU/LUFS units (instead of 'dB')*/
+				switch (name_to_id(scan->container)) {
+
+					case AV_CONTAINER_ID_MP3:
+						if (!tag_write_mp3(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_FLAC:
+						if (!tag_write_flac(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_OGG:
+						// must separate because TagLib uses fifferent File classes
+						switch (scan->codec_id) {
+							// Opus needs special handling (different RG tags, -23 LUFS ref.)
+							case AV_CODEC_ID_OPUS:
+								if (!tag_write_ogg_opus(scan, config))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_VORBIS:
+								if (!tag_write_ogg_vorbis(scan, config))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_FLAC:
+								if (!tag_write_ogg_flac(scan, config))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							case AV_CODEC_ID_SPEEX:
+								if (!tag_write_ogg_speex(scan, config))
+									output_error("Couldn't write to: %s", scan->file);
+								break;
+
+							default:
+								output_error("Codec 0x%x in %s container not supported",
+									scan->codec_id, scan->container);
+								break;
+						}
+						break;
+
+					case AV_CONTAINER_ID_MP4:
+						if (!tag_write_mp4(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_ASF:
+						if (!tag_write_asf(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_WAV:
+						if (!tag_write_wav(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_AIFF:
+						if (!tag_write_aiff(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_WV:
+						if (!tag_write_wavpack(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					case AV_CONTAINER_ID_APE:
+						if (!tag_write_ape(scan, config))
+							output_error("Couldn't write to: %s", scan->file);
+						break;
+
+					default:
+						output_error("File type not supported: %s", scan->container);
+						break;
+				}
+				break;
+
+			case 'a': /* APEv2 tags */
+				output_error("APEv2 tags are not supported");
+				break;
+
+			case 'v': /* Vorbis Comments tags */
+				output_error("Vorbis Comment tags are not supported");
+				break;
+
+			case 's': /* skip tags */
+				break;
+
+			case 'r': /* force re-calculation */
+				break;
+
+			default:
+				output_error("Invalid tag mode");
+				break;
+		}
+
+		if (config->tab_output) {
+			// output old-style mp3gain-compatible list
+			fprintf(stdout, "%s\t", scan->file);
+			fprintf(stdout, "%d\t", 0);
+			fprintf(stdout, "%.2f\t", scan->track_gain);
+			fprintf(stdout, "%.6f\t", scan->track_peak * 32768.0);
+			fprintf(stdout, "%d\t", 0);
+			fprintf(stdout, "%d\n", 0);
+
+			if (config->warn_clip && will_clip)
+				output_error("The track will clip");
+
+			if ((i == (nb_files - 1)) && config->do_album) {
+				fprintf(stdout, "%s\t", "Album");
+				fprintf(stdout, "%d\t", 0);
+				fprintf(stdout, "%.2f\t", scan->album_gain);
+				fprintf(stdout, "%.6f\t", scan->album_peak * 32768.0);
+				fprintf(stdout, "%d\t", 0);
+				fprintf(stdout, "%d\n", 0);
+			}
+		} else if (config->tab_output_new) {
+			// output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
+			fprintf(stdout, "%s\t", scan->file);
+			fprintf(stdout, "%.2f LUFS\t", scan->track_loudness);
+			fprintf(stdout, "%.2f %s\t", scan->track_loudness_range, config->unit);
+			fprintf(stdout, "%.6f\t", scan->track_peak);
+			fprintf(stdout, "%.2f dBTP\t", 20.0 * log10(scan->track_peak));
+			fprintf(stdout, "%.2f LUFS\t", scan->loudness_reference);
+			fprintf(stdout, "%s\t", will_clip ? "Y" : "N");
+			fprintf(stdout, "%s\t", tclip ? "Y" : "N");
+			fprintf(stdout, "%.2f %s\t", scan->track_gain, config->unit);
+			fprintf(stdout, "%.6f\t", tnew);
+			fprintf(stdout, "%.2f dBTP\n", 20.0 * log10(tnew));
+
+			if ((i == (nb_files - 1)) && config->do_album) {
+				fprintf(stdout, "%s\t", "Album");
+				fprintf(stdout, "%.2f LUFS\t", scan->album_loudness);
+				fprintf(stdout, "%.2f %s\t", scan->album_loudness_range, config->unit);
+				fprintf(stdout, "%.6f\t", scan->album_peak);
+				fprintf(stdout, "%.2f dBTP\t", 20.0 * log10(scan->album_peak));
+				fprintf(stdout, "%.2f LUFS\t", scan->loudness_reference);
+				fprintf(stdout, "%s\t", (!aclip && (again > apeak)) ? "Y" : "N");
+				fprintf(stdout, "%s\t", aclip ? "Y" : "N");
+				fprintf(stdout, "%.2f %s\t", scan->album_gain, config->unit);
+				fprintf(stdout, "%.6f\t", anew);
+				fprintf(stdout, "%.2f dBTP\n", 20.0 * log10(anew));
+			}
+		} else {
+			// output something human-readable
+			output("\nTrack: %s\n", scan->file);
+
+			output(" Loudness: %8.2f LUFS\n", scan->track_loudness);
+			output(" Range:    %8.2f %s\n", scan->track_loudness_range, config->unit);
+			output(" Peak:     %8.6f (%.2f dBTP)\n", scan->track_peak, 20.0 * log10(scan->track_peak));
+			if (scan->codec_id == AV_CODEC_ID_OPUS) {
+				// also show the Q7.8 number that goes into R128_TRACK_GAIN
+				output(" Gain:     %8.2f %s (%d)%s\n", scan->track_gain, config->unit,
+				 gain_to_q78num(scan->track_gain),
+				 tclip ? " (corrected to prevent clipping)" : "");
+			} else {
+				output(" Gain:     %8.2f %s%s\n", scan->track_gain, config->unit,
+				 tclip ? " (corrected to prevent clipping)" : "");
+			}
+
+			if (config->warn_clip && will_clip)
+				output_error("The track will clip");
+
+			if ((i == (nb_files - 1)) && config->do_album) {
+				output("\nAlbum:\n");
+
+				output(" Loudness: %8.2f LUFS\n", scan->album_loudness);
+				output(" Range:    %8.2f %s\n", scan->album_loudness_range, config->unit);
+				output(" Peak:     %8.6f (%.2f dBTP)\n", scan->album_peak, 20.0 * log10(scan->album_peak));
+				if (scan->codec_id == AV_CODEC_ID_OPUS) {
+					// also show the Q7.8 number that goes into R128_ALBUM_GAIN
+					output(" Gain:     %8.2f %s (%d)%s\n", scan->album_gain, config->unit,
+					gain_to_q78num(scan->album_gain),
+						aclip ? " (corrected to prevent clipping)" : "");
+				} else {
+					output(" Gain:     %8.2f %s%s\n", scan->album_gain, config->unit,
+						aclip ? " (corrected to prevent clipping)" : "");
+				}
+			}
+		}
+		free(scan);
+	}
+
+	scan_deinit();
+}
+
+
+
 int main(int argc, char *argv[]) {
 	int rc, i;
-
-	char mode           = 's';
-	char unit[3]        = "dB";
-
 	unsigned nb_files   = 0;
-
-	double pre_gain     = 0.f;
-	double max_true_peak_level = -1.0; // dBTP; default for -k, as per EBU Tech 3343
-
-	bool no_clip        = false;
-	bool warn_clip      = true;
-	bool do_album       = false;
-	bool tab_output     = false;
-	bool tab_output_new = false;
-	bool lowercase      = false; // force MP3 ID3v2 tags to lowercase?
-	bool strip          = false; // MP3 ID3v2: strip other tag types?
-	int  id3v2version   = 4;     // MP3 ID3v2 version to write; can be 3 or 4
+	
+	Config config = {
+		.mode = 's',
+		.unit = UNIT_DB,
+		.pre_gain = 0.0f,
+		.max_true_peak_level = 0.f,
+		.no_clip = false,
+		.warn_clip = true,
+		.do_album = false,
+		.tab_output = false,
+		.tab_output_new = false,
+		.lowercase = false,
+		.strip = false,
+		.id3v2version = 4
+	};
 
 	// libebur128 version check -- versions before 1.2.4 aren’t recommended
 	ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
@@ -255,49 +615,49 @@ int main(int argc, char *argv[]) {
 				break;
 
 			case 'a':
-				do_album = true;
+				config.do_album = true;
 				break;
 
 			case 'c':
-				warn_clip = false;
+				config.warn_clip = false;
 				break;
 
 			case 'k':
 				// old-style, no argument, now defaults to -1 dBTP max. true peak level
-				no_clip = true;
+				config.no_clip = true;
 				break;
 
 			case 'K': {
 				// new style, argument in dBTP, sets max. true peak level
-				no_clip = true;
+				config.no_clip = true;
 
 				char *rest = NULL;
-				max_true_peak_level = strtod(optarg, &rest);
+				config.max_true_peak_level = strtod(optarg, &rest);
 
 				if (!rest ||
 				    (rest == optarg) ||
-				    !isfinite(pre_gain))
+				    !isfinite(config.pre_gain))
 					output_fail("Invalid max. true peak level (dBTP)");
 				break;
 			}
 
 			case 'd': {
 				char *rest = NULL;
-				pre_gain = strtod(optarg, &rest);
+				config.pre_gain = strtod(optarg, &rest);
 
 				if (!rest ||
 				    (rest == optarg) ||
-				    !isfinite(pre_gain))
+				    !isfinite(config.pre_gain))
 					output_fail("Invalid pregain value (dB/LU)");
 				break;
 			}
 
 			case 'o':
-				tab_output = true;
+				config.tab_output = true;
 				break;
 
 			case 'O':
-				tab_output_new = true;
+				config.tab_output_new = true;
 				break;
 
 			case 'q':
@@ -307,26 +667,26 @@ int main(int argc, char *argv[]) {
 			case 's': {
 				// for mp3gain compatibilty, include modes that do nothing
 				char *valid_modes = "cdielavsr";
-				mode = optarg[0];
-				if (strchr(valid_modes, mode) == NULL)
-					output_fail("Invalid tag mode: '%c'", mode);
-				if (mode == 'l') {
-					strcpy(unit, "LU");
+				config.mode = optarg[0];
+				if (strchr(valid_modes, config.mode) == NULL)
+					output_fail("Invalid tag mode: '%c'", config.mode);
+				if (config.mode == 'l') {
+					config.unit = UNIT_LU;
 				}
 				break;
 			}
 
 			case 'L':
-				lowercase = true;
+				config.lowercase = true;
 				break;
 
 			case 'S':
-				strip = true;
+				config.strip = true;
 				break;
 
 			case 'I':
-				id3v2version = atoi(optarg);
-				if (!(id3v2version == 3) && !(id3v2version == 4))
+				config.id3v2version = atoi(optarg);
+				if (!(config.id3v2version == 3) && !(config.id3v2version == 4))
 					output_fail("Invalid ID3v2 version; only 3 and 4 are supported.");
 				break;
 
@@ -350,368 +710,11 @@ int main(int argc, char *argv[]) {
 	}
 
 	nb_files = argc - optind;
-	
 	if (!nb_files) {
 		help();
 		quit(EXIT_SUCCESS);
 	}
-
-	scan_init(nb_files);
-
-	for (i = optind; i < argc; i++) {
-		output_ok("Scanning '%s' ...", argv[i]);
-
-		scan_file(argv[i], i - optind);
-	}
-
-	// check for different file (codec) types in an album and warn
-	// (including Opus might mess up album gain)
-	if (do_album) {
-		if (scan_album_has_different_containers() || scan_album_has_different_codecs()) {
-			output_warn("You have different file types in the same album!");
-			if (scan_album_has_opus())
-				output_fail("Cannot calculate correct album gain when mixing Opus and non-Opus files!");
-		}
-	}
-
-	if (tab_output)
-		fputs("File\tMP3 gain\tdB gain\tMax Amplitude\tMax global_gain\tMin global_gain\n", stdout);
-
-	if (tab_output_new)
-		fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tWill_clip\tClip_prevent\tGain\tNew_Peak\tNew_Peak_dBTP\n", stdout);
-
-	for (i = 0; i < nb_files; i++) {
-		bool will_clip = false;
-		double tgain = 1.0; // "gained" track peak
-		double tnew;
-		double tpeak = pow(10.0, max_true_peak_level / 20.0); // track peak limit
-		double again = 1.0; // "gained" album peak
-		double anew;
-		double apeak = pow(10.0, max_true_peak_level / 20.0); // album peak limit
-		bool tclip = false;
-		bool aclip = false;
-
-		scan_result *scan = scan_get_track_result(i, pre_gain);
-
-		if (scan == NULL)
-			continue;
-
-		if (do_album)
-			scan_set_album_result(scan, pre_gain);
-
-		// Check if track or album will clip, and correct if so requested (-k/-K)
-
-		// track peak after gain
-		tgain = pow(10.0, scan -> track_gain / 20.0) * scan -> track_peak;
-		tnew = tgain;
-		if (do_album) {
-			// album peak after gain
-			again = pow(10.0, scan -> album_gain / 20.0) * scan -> album_peak;
-			anew = again;
-		}
-
-		if ((tgain > tpeak) || (do_album && (again > apeak)))
-			will_clip = true;
-
-		// printf("\ntrack: %.2f LU, peak %.6f; album: %.2f LU, peak %.6f\ntrack: %.6f, %.6f; album: %.6f, %.6f; Clip: %s\n",
-		// 	scan -> track_gain, scan -> track_peak, scan -> album_gain, scan -> album_peak,
-		// 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
-
-		if (will_clip && no_clip) {
-			if (tgain > tpeak) {
-				// set new track peak = minimum of peak after gain and peak limit
-				tnew = FFMIN(tgain, tpeak);
-				scan -> track_gain = scan -> track_gain - (log10(tgain/tnew) * 20.0);
-				tclip = true;
-			}
-
-			if (do_album && (again > apeak)) {
-				anew = FFMIN(again, apeak);
-				scan -> album_gain = scan -> album_gain - (log10(again/anew) * 20.0);
-				aclip = true;
-			}
-
-			will_clip = false;
-
-			// fprintf(stdout, "\nAfter clipping prevention:\ntrack: %.2f LU, peak %.6f; album: %.2f LU, peak %.6f\ntrack: %.6f, %.6f; album: %.6f, %.6f; Clip: %s\n",
-			// 	scan -> track_gain, scan -> track_peak, scan -> album_gain, scan -> album_peak,
-			// 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
-		}
-
-		switch (mode) {
-			case 'c': /* check tags */
-				break;
-
-			case 'd': /* delete tags */
-				switch (name_to_id(scan -> container)) {
-
-					case AV_CONTAINER_ID_MP3:
-						if (!tag_clear_mp3(scan, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_FLAC:
-						if (!tag_clear_flac(scan))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_OGG:
-						// must separate because TagLib uses fifferent File classes
-						switch (scan->codec_id) {
-							// Opus needs special handling (different RG tags, -23 LUFS ref.)
-							case AV_CODEC_ID_OPUS:
-								if (!tag_clear_ogg_opus(scan))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_VORBIS:
-								if (!tag_clear_ogg_vorbis(scan))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_FLAC:
-								if (!tag_clear_ogg_flac(scan))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_SPEEX:
-								if (!tag_clear_ogg_speex(scan))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							default:
-								output_error("Codec 0x%x in %s container not supported",
-									scan->codec_id, scan->container);
-								break;
-						}
-						break;
-
-					case AV_CONTAINER_ID_MP4:
-						if (!tag_clear_mp4(scan))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_ASF:
-						if (!tag_clear_asf(scan))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_WAV:
-						if (!tag_clear_wav(scan, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_AIFF:
-						if (!tag_clear_aiff(scan, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_WV:
-						if (!tag_clear_wavpack(scan, strip))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_APE:
-						if (!tag_clear_ape(scan, strip))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					default:
-						output_error("File type not supported: %s", scan->container);
-						break;
-				}
-				break;
-
-			case 'i': /* ID3v2 tags */
-			case 'e': /* same as 'i' plus extra tags */
-			case 'l': /* same as 'e' but in LU/LUFS units (instead of 'dB')*/
-				switch (name_to_id(scan -> container)) {
-
-					case AV_CONTAINER_ID_MP3:
-						if (!tag_write_mp3(scan, do_album, mode, unit, lowercase, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_FLAC:
-						if (!tag_write_flac(scan, do_album, mode, unit))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_OGG:
-						// must separate because TagLib uses fifferent File classes
-						switch (scan->codec_id) {
-							// Opus needs special handling (different RG tags, -23 LUFS ref.)
-							case AV_CODEC_ID_OPUS:
-								if (!tag_write_ogg_opus(scan, do_album, mode, unit))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_VORBIS:
-								if (!tag_write_ogg_vorbis(scan, do_album, mode, unit))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_FLAC:
-								if (!tag_write_ogg_flac(scan, do_album, mode, unit))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							case AV_CODEC_ID_SPEEX:
-								if (!tag_write_ogg_speex(scan, do_album, mode, unit))
-									output_error("Couldn't write to: %s", scan -> file);
-								break;
-
-							default:
-								output_error("Codec 0x%x in %s container not supported",
-									scan->codec_id, scan->container);
-								break;
-						}
-						break;
-
-					case AV_CONTAINER_ID_MP4:
-						if (!tag_write_mp4(scan, do_album, mode, unit, lowercase))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_ASF:
-						if (!tag_write_asf(scan, do_album, mode, unit, lowercase))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_WAV:
-						if (!tag_write_wav(scan, do_album, mode, unit, lowercase, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_AIFF:
-						if (!tag_write_aiff(scan, do_album, mode, unit, lowercase, strip, id3v2version))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_WV:
-						if (!tag_write_wavpack(scan, do_album, mode, unit, lowercase, strip))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					case AV_CONTAINER_ID_APE:
-						if (!tag_write_ape(scan, do_album, mode, unit, lowercase, strip))
-							output_error("Couldn't write to: %s", scan -> file);
-						break;
-
-					default:
-						output_error("File type not supported: %s", scan->container);
-						break;
-				}
-				break;
-
-			case 'a': /* APEv2 tags */
-				output_error("APEv2 tags are not supported");
-				break;
-
-			case 'v': /* Vorbis Comments tags */
-				output_error("Vorbis Comment tags are not supported");
-				break;
-
-			case 's': /* skip tags */
-				break;
-
-			case 'r': /* force re-calculation */
-				break;
-
-			default:
-				output_error("Invalid tag mode");
-				break;
-		}
-
-		if (tab_output) {
-			// output old-style mp3gain-compatible list
-			fprintf(stdout, "%s\t", scan -> file);
-			fprintf(stdout, "%d\t", 0);
-			fprintf(stdout, "%.2f\t", scan -> track_gain);
-			fprintf(stdout, "%.6f\t", scan -> track_peak * 32768.0);
-			fprintf(stdout, "%d\t", 0);
-			fprintf(stdout, "%d\n", 0);
-
-			if (warn_clip && will_clip)
-				output_error("The track will clip");
-
-			if ((i == (nb_files - 1)) && do_album) {
-				fprintf(stdout, "%s\t", "Album");
-				fprintf(stdout, "%d\t", 0);
-				fprintf(stdout, "%.2f\t", scan -> album_gain);
-				fprintf(stdout, "%.6f\t", scan -> album_peak * 32768.0);
-				fprintf(stdout, "%d\t", 0);
-				fprintf(stdout, "%d\n", 0);
-			}
-		} else if (tab_output_new) {
-			// output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
-			fprintf(stdout, "%s\t", scan -> file);
-			fprintf(stdout, "%.2f LUFS\t", scan -> track_loudness);
-			fprintf(stdout, "%.2f %s\t", scan -> track_loudness_range, unit);
-			fprintf(stdout, "%.6f\t", scan -> track_peak);
-			fprintf(stdout, "%.2f dBTP\t", 20.0 * log10(scan -> track_peak));
-			fprintf(stdout, "%.2f LUFS\t", scan -> loudness_reference);
-			fprintf(stdout, "%s\t", will_clip ? "Y" : "N");
-			fprintf(stdout, "%s\t", tclip ? "Y" : "N");
-			fprintf(stdout, "%.2f %s\t", scan -> track_gain, unit);
-			fprintf(stdout, "%.6f\t", tnew);
-			fprintf(stdout, "%.2f dBTP\n", 20.0 * log10(tnew));
-
-			if ((i == (nb_files - 1)) && do_album) {
-				fprintf(stdout, "%s\t", "Album");
-				fprintf(stdout, "%.2f LUFS\t", scan -> album_loudness);
-				fprintf(stdout, "%.2f %s\t", scan -> album_loudness_range, unit);
-				fprintf(stdout, "%.6f\t", scan -> album_peak);
-				fprintf(stdout, "%.2f dBTP\t", 20.0 * log10(scan -> album_peak));
-				fprintf(stdout, "%.2f LUFS\t", scan -> loudness_reference);
-				fprintf(stdout, "%s\t", (!aclip && (again > apeak)) ? "Y" : "N");
-				fprintf(stdout, "%s\t", aclip ? "Y" : "N");
-				fprintf(stdout, "%.2f %s\t", scan -> album_gain, unit);
-				fprintf(stdout, "%.6f\t", anew);
-				fprintf(stdout, "%.2f dBTP\n", 20.0 * log10(anew));
-			}
-		} else {
-			// output something human-readable
-			output("\nTrack: %s\n", scan -> file);
-
-			output(" Loudness: %8.2f LUFS\n", scan -> track_loudness);
-			output(" Range:    %8.2f %s\n", scan -> track_loudness_range, unit);
-			output(" Peak:     %8.6f (%.2f dBTP)\n", scan -> track_peak, 20.0 * log10(scan -> track_peak));
-			if (scan -> codec_id == AV_CODEC_ID_OPUS) {
-				// also show the Q7.8 number that goes into R128_TRACK_GAIN
-				output(" Gain:     %8.2f %s (%d)%s\n", scan -> track_gain, unit,
-				 gain_to_q78num(scan -> track_gain),
-				 tclip ? " (corrected to prevent clipping)" : "");
-			} else {
-				output(" Gain:     %8.2f %s%s\n", scan -> track_gain, unit,
-				 tclip ? " (corrected to prevent clipping)" : "");
-			}
-
-			if (warn_clip && will_clip)
-				output_error("The track will clip");
-
-			if ((i == (nb_files - 1)) && do_album) {
-				output("\nAlbum:\n");
-
-				output(" Loudness: %8.2f LUFS\n", scan -> album_loudness);
-				output(" Range:    %8.2f %s\n", scan -> album_loudness_range, unit);
-				output(" Peak:     %8.6f (%.2f dBTP)\n", scan -> album_peak, 20.0 * log10(scan -> album_peak));
-				if (scan -> codec_id == AV_CODEC_ID_OPUS) {
-					// also show the Q7.8 number that goes into R128_ALBUM_GAIN
-					output(" Gain:     %8.2f %s (%d)%s\n", scan -> album_gain, unit,
-					gain_to_q78num(scan -> album_gain),
-						aclip ? " (corrected to prevent clipping)" : "");
-				} else {
-					output(" Gain:     %8.2f %s%s\n", scan -> album_gain, unit,
-						aclip ? " (corrected to prevent clipping)" : "");
-				}
-			}
-		}
-		free(scan);
-	}
-
-	scan_deinit();
-
+	scan(nb_files, argv + optind, &config);
 	quit(EXIT_SUCCESS);
 }
 

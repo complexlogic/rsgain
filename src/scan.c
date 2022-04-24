@@ -195,7 +195,7 @@ int scan_file(const char *file, unsigned index) {
   output_ok("Stream #%d: %s, %s%d Hz, %d ch, %s",
     stream_id, codec->long_name, infotext, ctx->sample_rate, ctx->channels, infobuf);
 
-	scan_codecs[index] = codec -> id;
+	scan_codecs[index] = codec->id;
 
 	av_init_packet(&packet);
 
@@ -205,7 +205,7 @@ int scan_file(const char *file, unsigned index) {
 	swr = swr_alloc();
 
 	*ebur128 = ebur128_init(
-		ctx -> channels, ctx -> sample_rate,
+		ctx->channels, ctx->sample_rate,
 		EBUR128_MODE_S | EBUR128_MODE_I | EBUR128_MODE_LRA |
 		EBUR128_MODE_SAMPLE_PEAK | EBUR128_MODE_TRUE_PEAK
 	);
@@ -216,13 +216,13 @@ int scan_file(const char *file, unsigned index) {
 	if (frame == NULL)
 		output_fail("OOM");
 
-	if (container -> streams[stream_id] -> start_time != AV_NOPTS_VALUE)
-		start = container -> streams[stream_id] -> start_time *
-		        av_q2d(container -> streams[stream_id] -> time_base);
+	if (container->streams[stream_id]->start_time != AV_NOPTS_VALUE)
+		start = container->streams[stream_id]->start_time *
+		        av_q2d(container->streams[stream_id]->time_base);
 
-	if (container -> streams[stream_id] -> duration != AV_NOPTS_VALUE)
-		len   = container -> streams[stream_id] -> duration *
-		        av_q2d(container -> streams[stream_id] -> time_base);
+	if (container->streams[stream_id]->duration != AV_NOPTS_VALUE)
+		len   = container->streams[stream_id]->duration *
+		        av_q2d(container->streams[stream_id]->time_base);
 
 	progress_bar(0, 0, 0, 0);
 
@@ -244,8 +244,8 @@ int scan_file(const char *file, unsigned index) {
             goto end;
         }
         if (rc >= 0) {
-          double pos = frame -> pkt_dts *
-  				             av_q2d(container -> streams[stream_id] -> time_base);
+          double pos = frame->pkt_dts *
+  				             av_q2d(container->streams[stream_id]->time_base);
   				scan_frame(*ebur128, frame, swr);
 
           if (pos >= 0)
@@ -303,7 +303,7 @@ scan_result *scan_get_track_result(unsigned index, double pre_gain) {
 	if (ebur128_loudness_range(ebur128, &range) != EBUR128_SUCCESS)
 		range = 0.0;
 
-	for (ch = 0; ch < ebur128 -> channels; ch++) {
+	for (ch = 0; ch < ebur128->channels; ch++) {
 		double tmp;
 
 		if (ebur128_true_peak(ebur128, ch, &tmp) != EBUR128_SUCCESS)
@@ -316,21 +316,21 @@ scan_result *scan_get_track_result(unsigned index, double pre_gain) {
   if (scan_codecs[index] == AV_CODEC_ID_OPUS)
     pre_gain = pre_gain - 5.0f;
 
-	result -> file                 = scan_files[index];
-  result -> container            = scan_containers[index];
-	result -> codec_id             = scan_codecs[index];
+	result->file                 = scan_files[index];
+  result->container            = scan_containers[index];
+	result->codec_id             = scan_codecs[index];
 
-	result -> track_gain           = LUFS_TO_RG(global) + pre_gain;
-	result -> track_peak           = peak;
-	result -> track_loudness       = global;
-	result -> track_loudness_range = range;
+	result->track_gain           = LUFS_TO_RG(global) + pre_gain;
+	result->track_peak           = peak;
+	result->track_loudness       = global;
+	result->track_loudness_range = range;
 
-	result -> album_gain           = 0.f;
-	result -> album_peak           = 0.f;
-	result -> album_loudness       = 0.f;
-	result -> album_loudness_range = 0.f;
+	result->album_gain           = 0.f;
+	result->album_peak           = 0.f;
+	result->album_loudness       = 0.f;
+	result->album_loudness_range = 0.f;
 
-  result -> loudness_reference   = LUFS_TO_RG(-pre_gain);
+  result->loudness_reference   = LUFS_TO_RG(-pre_gain);
 
 	return result;
 }
@@ -371,7 +371,7 @@ double scan_get_album_peak() {
   for (i = 0; i < scan_nb_files; i++) {
     ebur128 = scan_states[i];
 
-    for (ch = 0; ch < ebur128 -> channels; ch++) {
+    for (ch = 0; ch < ebur128->channels; ch++) {
   		double tmp;
 
   		if (ebur128_true_peak(ebur128, ch, &tmp) != EBUR128_SUCCESS)
@@ -403,11 +403,11 @@ void scan_set_album_result(scan_result *result, double pre_gain) {
   if (scan_album_has_opus())
     pre_gain = pre_gain - 5.0f;
 
-	result -> album_gain           = LUFS_TO_RG(global) + pre_gain;
+	result->album_gain           = LUFS_TO_RG(global) + pre_gain;
 	// Calculate correct album peak (v0.2.1)
-	result -> album_peak           = scan_get_album_peak();
-	result -> album_loudness       = global;
-	result -> album_loudness_range = range;
+	result->album_peak           = scan_get_album_peak();
+	result->album_loudness       = global;
+	result->album_loudness_range = range;
 }
 
 static void scan_frame(ebur128_state *ebur128, AVFrame *frame,
@@ -419,16 +419,16 @@ static void scan_frame(ebur128_state *ebur128, AVFrame *frame,
 	int                 out_linesize;
 	enum AVSampleFormat out_fmt = AV_SAMPLE_FMT_S16;
 
-	av_opt_set_channel_layout(swr, "in_channel_layout", frame -> channel_layout, 0);
-	av_opt_set_channel_layout(swr, "out_channel_layout", frame -> channel_layout, 0);
+	av_opt_set_channel_layout(swr, "in_channel_layout", frame->channel_layout, 0);
+	av_opt_set_channel_layout(swr, "out_channel_layout", frame->channel_layout, 0);
 
   // add channel count to properly handle .wav reading
-  av_opt_set_int(swr, "in_channel_count",  frame -> channels, 0);
-  av_opt_set_int(swr, "out_channel_count", frame -> channels, 0);
+  av_opt_set_int(swr, "in_channel_count",  frame->channels, 0);
+  av_opt_set_int(swr, "out_channel_count", frame->channels, 0);
 
-  av_opt_set_int(swr, "in_sample_rate", frame -> sample_rate, 0);
-  av_opt_set_int(swr, "out_sample_rate", frame -> sample_rate, 0);
-	av_opt_set_sample_fmt(swr, "in_sample_fmt", frame -> format, 0);
+  av_opt_set_int(swr, "in_sample_rate", frame->sample_rate, 0);
+  av_opt_set_int(swr, "out_sample_rate", frame->sample_rate, 0);
+	av_opt_set_sample_fmt(swr, "in_sample_fmt", frame->format, 0);
 	av_opt_set_sample_fmt(swr, "out_sample_fmt", out_fmt, 0);
 
 	rc = swr_init(swr);
@@ -440,19 +440,19 @@ static void scan_frame(ebur128_state *ebur128, AVFrame *frame,
 	}
 
 	out_size = av_samples_get_buffer_size(
-		&out_linesize, frame -> channels, frame -> nb_samples, out_fmt, 0
+		&out_linesize, frame->channels, frame->nb_samples, out_fmt, 0
 	);
 
 	out_data = av_malloc(out_size);
 
 	if (swr_convert(
-		swr, (uint8_t**) &out_data, frame -> nb_samples,
-		(const uint8_t**) frame -> data, frame -> nb_samples
+		swr, (uint8_t**) &out_data, frame->nb_samples,
+		(const uint8_t**) frame->data, frame->nb_samples
 	) < 0)
 		output_fail("Cannot convert");
 
 	rc = ebur128_add_frames_short(
-		ebur128, (short *) out_data, frame -> nb_samples
+		ebur128, (short *) out_data, frame->nb_samples
 	);
 
 	if (rc != EBUR128_SUCCESS)
