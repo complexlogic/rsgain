@@ -86,38 +86,24 @@
 
 #ifdef _WIN32
 #include <windows.h>
-HANDLE console;
-BOOL initial_cursor_visibility;
-
 void init_console(void);
 void set_cursor_visibility(BOOL setting, BOOL *previous);
 #endif
 
-const char *short_opts = "rackK:d:oOqs:LSI:h?v";
+// Global variables
+int  ebur128_v_major     = 0;
+int  ebur128_v_minor     = 0;
+int  ebur128_v_patch     = 0;
+char ebur128_version[15] = "";
+unsigned swr_ver         = 0;
+char     swr_version[15] = "";
+unsigned lavf_ver         = 0;
+char     lavf_version[15] = "";
 
-static struct option long_opts[] = {
-	{ "track",        no_argument,       NULL, 'r' },
-	{ "album",        no_argument,       NULL, 'a' },
-
-	{ "clip",         no_argument,       NULL, 'c' },
-	{ "noclip",       no_argument,       NULL, 'k' },
-	{ "maxtpl",       required_argument, NULL, 'K' },
-
-	{ "pregain",      required_argument, NULL, 'd' },
-
-	{ "output",       no_argument,       NULL, 'o' },
-	{ "output-new",   no_argument,       NULL, 'O' },
-	{ "quiet",        no_argument,       NULL, 'q' },
-
-	{ "tagmode",      required_argument, NULL, 's' },
-	{ "lowercase",    no_argument,       NULL, 'L' },
-	{ "striptags",    no_argument,       NULL, 'S' },
-	{ "id3v2version", required_argument, NULL, 'I' },
-
-	{ "help",         no_argument,       NULL, 'h' },
-	{ "version",      no_argument,       NULL, 'v' },
-	{ 0, 0, 0, 0 }
-};
+#ifdef _WIN32
+HANDLE console;
+BOOL initial_cursor_visibility;
+#endif
 
 enum AV_CONTAINER_ID {
     AV_CONTAINER_ID_MP3,
@@ -196,16 +182,11 @@ void quit(int status)
 }
 
 
-int  ebur128_v_major     = 0;
-int  ebur128_v_minor     = 0;
-int  ebur128_v_patch     = 0;
-char ebur128_version[15] = "";
-unsigned swr_ver         = 0;
-char     swr_version[15] = "";
-unsigned lavf_ver         = 0;
-char     lavf_version[15] = "";
 
-static inline void help(void);
+
+static inline void help_custom(void);
+static inline void help_main(void);
+static inline void help_easy(void);
 static inline void version(void);
 
 void scan(int nb_files, char *files[], Config *config)
@@ -567,12 +548,63 @@ void scan(int nb_files, char *files[], Config *config)
 	scan_deinit();
 }
 
+static void easy_mode(int argc, char *argv[])
+{
+	int rc, i;
+	const char *short_opts = "+hq";
+	static struct option long_opts[] = {
+		{ "help",         no_argument,       NULL, 'h' },
+		{ "quiet",        no_argument,       NULL, 'q' },
+		{ 0, 0, 0, 0 }
+	};
 
+	while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
+		switch (rc) {
+			case 'h':
+				help_easy();
+				quit(EXIT_SUCCESS);
+				break;
 
-int main(int argc, char *argv[]) {
+			case 'q':
+				quiet = true;
+				break;
+		}
+	}
+	if (argc == optind) {
+		output("Error: You must specific the directory to scan\n");
+		quit(EXIT_FAILURE);
+	}
+}
+
+static void custom_mode(int argc, char *argv[])
+{
 	int rc, i;
 	unsigned nb_files   = 0;
-	
+
+	const char *short_opts = "+rackK:d:oOqs:LSI:h?";
+	static struct option long_opts[] = {
+		{ "track",        no_argument,       NULL, 'r' },
+		{ "album",        no_argument,       NULL, 'a' },
+
+		{ "clip",         no_argument,       NULL, 'c' },
+		{ "noclip",       no_argument,       NULL, 'k' },
+		{ "maxtpl",       required_argument, NULL, 'K' },
+
+		{ "pregain",      required_argument, NULL, 'd' },
+
+		{ "output",       no_argument,       NULL, 'o' },
+		{ "output-new",   no_argument,       NULL, 'O' },
+		{ "quiet",        no_argument,       NULL, 'q' },
+
+		{ "tagmode",      required_argument, NULL, 's' },
+		{ "lowercase",    no_argument,       NULL, 'L' },
+		{ "striptags",    no_argument,       NULL, 'S' },
+		{ "id3v2version", required_argument, NULL, 'I' },
+
+		{ "help",         no_argument,       NULL, 'h' },
+		{ 0, 0, 0, 0 }
+	};
+
 	Config config = {
 		.mode = 's',
 		.unit = UNIT_DB,
@@ -587,26 +619,6 @@ int main(int argc, char *argv[]) {
 		.strip = false,
 		.id3v2version = 4
 	};
-
-	// libebur128 version check -- versions before 1.2.4 aren’t recommended
-	ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
-	snprintf(ebur128_version, sizeof(ebur128_version), "%d.%d.%d",
-		ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
-
-	// libavformat version
-	lavf_ver = avformat_version();
-	snprintf(lavf_version, sizeof(lavf_version), "%u.%u.%u",
-		lavf_ver>>16, lavf_ver>>8&0xff, lavf_ver&0xff);
-
-	// libswresample version
-	swr_ver = swresample_version();
-	snprintf(swr_version, sizeof(swr_version), "%u.%u.%u",
-		swr_ver>>16, swr_ver>>8&0xff, swr_ver&0xff);
-  
-	// Initialize Windows console
-	#ifdef _WIN32
-	init_console();
-	#endif 
 
 	while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
 		switch (rc) {
@@ -693,36 +705,100 @@ int main(int argc, char *argv[]) {
 			case '?':
 				if (optopt == 0) {
 					// actual option '-?'
-					help();
+					help_custom();
 					quit(EXIT_SUCCESS);
 				} else {
 					// getopt error, message already printed
 					quit(EXIT_FAILURE);	// error
 				}
 			case 'h':
-				help();
+				help_custom();
 				quit(EXIT_SUCCESS);
-
-			case 'v':
-				version();
-				quit(EXIT_SUCCESS);
+				break;
 		}
 	}
 
 	nb_files = argc - optind;
 	if (!nb_files) {
-		help();
-		quit(EXIT_SUCCESS);
+		output("Error: No files specified\n");
+		quit(EXIT_FAILURE);
 	}
 	scan(nb_files, argv + optind, &config);
+}
+
+
+int main(int argc, char *argv[]) {
+	int rc, i;
+	char *command = NULL;
+	
+	const char *short_opts = "+hv";
+	static struct option long_opts[] = {
+		{ "help",         no_argument,       NULL, 'h' },
+		{ "version",      no_argument,       NULL, 'v' },
+		{ 0, 0, 0, 0 }
+	};
+
+	// libebur128 version check -- versions before 1.2.4 aren’t recommended
+	ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
+	snprintf(ebur128_version, sizeof(ebur128_version), "%d.%d.%d",
+		ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
+
+	// libavformat version
+	lavf_ver = avformat_version();
+	snprintf(lavf_version, sizeof(lavf_version), "%u.%u.%u",
+		lavf_ver>>16, lavf_ver>>8&0xff, lavf_ver&0xff);
+
+	// libswresample version
+	swr_ver = swresample_version();
+	snprintf(swr_version, sizeof(swr_version), "%u.%u.%u",
+		swr_ver>>16, swr_ver>>8&0xff, swr_ver&0xff);
+  
+	// Initialize Windows console
+	#ifdef _WIN32
+	init_console();
+	#endif 
+
+	while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
+		switch (rc) {
+			case 'h':
+				help_main();
+				quit(EXIT_SUCCESS);
+				break;
+
+			case 'v':
+				version();
+				quit(EXIT_SUCCESS);
+				break;
+		}
+	}
+
+	if (argc == optind) {
+		help_main();
+		quit(EXIT_SUCCESS);
+	}
+	
+	// Parse and run command
+	command = argv[optind];
+	char **subargs = argv + optind;
+	int num_subargs = argc - optind;
+	optind = 1;
+	if (!strcmp(command, "easy")) {
+		easy_mode(num_subargs, subargs);
+	}
+	else if (!strcmp(command, "custom")) {
+		custom_mode(num_subargs, subargs);
+	}
+	else {
+		output("Error: Unrecognized command \"%s\"\n", command);
+		quit(EXIT_FAILURE);
+	}
 	quit(EXIT_SUCCESS);
 }
 
-static inline void help(void) {
-	#define CMD_HELP(CMDL, CMDS, MSG) output("  %s%-5s %-16s%s  %s.\n", COLOR_YELLOW, CMDS ",", CMDL, COLOR_OFF, MSG);
-	#define CMD_CONT(MSG) output("  %s%-5s %-16s%s  %s.\n", COLOR_YELLOW, "", "", COLOR_OFF, MSG);
 
-	output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+static inline void help_main(void) {
+
+	output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
 	output("%s %s supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
 	output("  FLAC (.flac), Ogg (.ogg, .oga, .spx, .opus), MP2 (.mp2), MP3 (.mp3),\n");
@@ -734,6 +810,32 @@ static inline void help(void) {
 
 	CMD_HELP("--help",     "-h", "Show this help");
 	CMD_HELP("--version",  "-v", "Show version number");
+	
+	output("\n");
+	output(COLOR_RED "Commands:\n" COLOR_OFF);
+
+	CMD_CMD("easy",     "Easy Mode: Recursively scan a directory with recommended settings");
+	CMD_CMD("custom",   "Custom Mode: Scan files with custom settings");
+	output("\n");
+	output("Run '%s easy --help' or '%s custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
+
+	output("\n\n");
+	output("Please report any issues to " PROJECT_URL "/issues\n\n");
+}
+
+
+static inline void help_custom(void) {
+
+	output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+
+	output("  Custom Mode allows the user to specify the options to scan the files with. The\n");
+	output("  list of files to scan must be listed explicity after the options (typically\n");
+	output("  generated by a shell glob).\n");
+
+	output("\n");
+	output(COLOR_RED "Options:\n" COLOR_OFF);
+
+	CMD_HELP("--help",     "-h", "Show this help");
 
 	output("\n");
 
@@ -773,8 +875,27 @@ static inline void help(void) {
 	CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
 	output("\n");
-	// puts("Mandatory arguments to long options are also mandatory for any corresponding short options.");
-	//puts("");
+
+	output("Please report any issues to " PROJECT_URL "/issues\n");
+	output("\n");
+}
+
+static inline void help_easy(void) {
+
+	output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+
+	output("  Easy Mode will recursively scan a directory using the recommended settings for each\n");
+	output("  file type. Easy Mode assumes that you have your music library organized with each album\n");
+	output("  in its own folder.\n");
+
+	output("\n");
+	output(COLOR_RED "Options:\n" COLOR_OFF);
+
+	CMD_HELP("--help",     "-h", "Show this help");
+	CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
+
+	output("\n");
+
 	output("Please report any issues to " PROJECT_URL "/issues\n");
 	output("\n");
 }

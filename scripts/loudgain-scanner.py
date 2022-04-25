@@ -12,16 +12,16 @@ else:
     EXECUTABLE_TITLE = "loudgain"
 
 SCAN_ARGS = {
-    '.flac': ['-a', '-k', '-s', 'e'],
-    '.ogg': ['-a', '-k', '-s', 'e'],
-    '.mp3': ['-I3', '-S', '-L', '-a', '-k', '-s', 'e'],
-    '.m4a': ['-L', '-a', '-k', '-s', 'e'],
-    '.opus': ['-a', '-k', '-s', 'e'],
-    '.wma': ['-L', '-a', '-k', '-s', 'e'],
-    '.wav': ['-I3', '-L', '-a', '-k', '-s', 'e'],
-    '.aiff': ['-I3', '-L', '-a', '-k', '-s', 'e'],
-    '.wv': ['-S', '-a', '-k', '-s', 'e'],
-    '.ape': ['-S', '-a', '-k', '-s', 'e']
+    '.flac': ['custom', '-a', '-k', '-s', 'e'],
+    '.ogg':  ['custom', '-a', '-k', '-s', 'e'],
+    '.mp3':  ['custom', '-I3', '-S', '-L', '-a', '-k', '-s', 'e'],
+    '.m4a':  ['custom', '-L', '-a', '-k', '-s', 'e'],
+    '.opus': ['custom', '-a', '-k', '-s', 'e'],
+    '.wma':  ['custom', '-L', '-a', '-k', '-s', 'e'],
+    '.wav':  ['custom', '-I3', '-L', '-a', '-k', '-s', 'e'],
+    '.aiff': ['custom', '-I3', '-L', '-a', '-k', '-s', 'e'],
+    '.wv':   ['custom', '-S', '-a', '-k', '-s', 'e'],
+    '.ape':  ['custom', '-S', '-a', '-k', '-s', 'e']
 }
 
 def scan(directory):
