@@ -12,6 +12,8 @@ project(
   HOMEPAGE_URL "https://github.com/complexlogic/loudgain"
   LANGUAGES C CXX
 )
+set(CMAKE_C_STANDARD 99)
+set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "loudgain")
 configure_file(
   "${PROJECT_SOURCE_DIR}/config/config.h.in" 
@@ -113,8 +115,6 @@ add_subdirectory(src)
 # Compile options - Linux/Mac
 if (UNIX)
   set_target_properties(loudgain PROPERTIES COMPILE_FLAGS "-Wall -pedantic -g")
-  set(CMAKE_C_FLAGS "-std=gnu99 -D_GNU_SOURCE")
-  set(CMAKE_CXX_FLAGS "-std=gnu++11 -D_GNU_SOURCE")
 endif ()
 
 # Installation - Windows

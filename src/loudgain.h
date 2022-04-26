@@ -6,7 +6,7 @@
 
 typedef struct {
 	char mode;
-	char *unit;
+	const char *unit;
 	double pre_gain;
 	double max_true_peak_level;
 	bool no_clip;
@@ -19,3 +19,11 @@ typedef struct {
 	int id3v2version;
 } Config;
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+void quit(int status);
+void scan(int nb_files, char *files[], Config *config);
+#ifdef __cplusplus
+}
+#endif
