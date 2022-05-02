@@ -58,6 +58,8 @@ struct output_info {
 };
 
 int quiet = 0;
+int disable_progress_bar = 0;
+extern int multithread;
 
 static void get_screen_size(unsigned *w, unsigned *h);
 static void print_buffer(const char *buffer, int length, FILE *stream);
@@ -146,7 +148,6 @@ void output_fail(const char *fmt, ...)
 	va_start(args, fmt);
 	print_output(&info, fmt, args);
 	va_end(args);
-	quit(EXIT_FAILURE);
 }
 
 static void print_output(struct output_info *info, const char *fmt, va_list args)
@@ -198,12 +199,12 @@ void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 	
 	switch (ctrl) {
 		case 0: /* init */
-			if (quiet)
+			if (quiet || multithread)
 				break;
-      #ifndef _WIN32
+#ifndef _WIN32
 			if (!isatty(fileno(stdout)))
 				break;
-      #endif
+#endif
 
 			show_bar = 1;
 

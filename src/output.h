@@ -61,6 +61,7 @@ extern "C" {
 #define LEN(x) ((sizeof(x)/sizeof(x[0])) - sizeof(x[0]))
 
 extern int quiet;
+extern int disable_progress_bar;
 
 void output(const char *fmt, ...);
 void output_ok(const char *fmt, ...);

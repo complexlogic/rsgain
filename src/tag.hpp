@@ -27,11 +27,42 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+ #include "tag.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-bool scan(int nb_files, char **files, Config *config);
-#ifdef __cplusplus
-}
-#endif
+bool tag_write_mp3(scan_result *scan, Config *config);
+bool tag_clear_mp3(scan_result *scan, Config *config);
+
+bool tag_write_flac(scan_result *scan, Config *config);
+bool tag_clear_flac(scan_result *scan);
+
+bool tag_write_ogg_vorbis(scan_result *scan, Config *config);
+bool tag_clear_ogg_vorbis(scan_result *scan);
+
+bool tag_write_ogg_flac(scan_result *scan, Config *config);
+bool tag_clear_ogg_flac(scan_result *scan);
+
+bool tag_write_ogg_speex(scan_result *scan, Config *config);
+bool tag_clear_ogg_speex(scan_result *scan);
+
+bool tag_write_ogg_opus(scan_result *scan, Config *config);
+bool tag_clear_ogg_opus(scan_result *scan);
+
+bool tag_write_mp4(scan_result *scan, Config *config);
+bool tag_clear_mp4(scan_result *scan);
+
+bool tag_write_asf(scan_result *scan, Config *config);
+bool tag_clear_asf(scan_result *scan);
+
+bool tag_write_wav(scan_result *scan, Config *config);
+bool tag_clear_wav(scan_result *scan, Config *config);
+
+bool tag_write_aiff(scan_result *scan, Config *config);
+bool tag_clear_aiff(scan_result *scan, Config *config);
+
+bool tag_write_wavpack(scan_result *scan, Config *config);
+bool tag_clear_wavpack(scan_result *scan, Config *config);
+
+bool tag_write_ape(scan_result *scan, Config *config);
+bool tag_clear_ape(scan_result *scan, Config *config);
+
+int gain_to_q78num(double gain);

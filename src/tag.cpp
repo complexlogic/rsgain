@@ -81,7 +81,7 @@
 #include <apefile.h>
 
 #include "loudgain.h"
-#include "scan.h"
+#include "scan.hpp"
 #include "tag.h"
 #include "output.h"
 
@@ -122,6 +122,12 @@ static const char *RG_ATOM = "----:com.apple.iTunes:";
 
 
 /*** MP3 ****/
+
+void taglib_get_version(char *buffer, size_t buffer_size)
+{
+  snprintf(buffer, buffer_size, "%u.%u.%u", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION);
+}
+
 
 static void tag_add_txxx(TagLib::ID3v2::Tag *tag, char *name, char *value) {
   TagLib::ID3v2::UserTextIdentificationFrame *frame =
