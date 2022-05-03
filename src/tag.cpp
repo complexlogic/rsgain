@@ -3,28 +3,6 @@
  *
  * Copyright (c) 2014, Alessandro Ghedini
  * All rights reserved.
- * 2019-06-30 - Matthias C. Hormann
- *   - Tag format in accordance with ReplayGain 2.0 spec
- *     https://wiki.hydrogenaud.io/index.php?title=ReplayGain_2.0_specification
- *   - Add Ogg Vorbis file handling
- * 2019-07-07 - v0.2.3 - Matthias C. Hormann
- *   - Write lowercase REPLAYGAIN_* tags to MP3 ID3v2, for incompatible players
- * 2019-07-08 - v0.2.4 - Matthias C. Hormann
- *   - add -s e mode, writes extra tags (REPLAYGAIN_REFERENCE_LOUDNESS,
- *     REPLAYGAIN_TRACK_RANGE and REPLAYGAIN_ALBUM_RANGE)
- *   - add "-s l" mode (like "-s e" but uses LU/LUFS instead of dB)
- * 2019-07-09 - v0.2.6 - Matthias C. Hormann
- *  - Add "-L" mode to force lowercase tags in MP3/ID3v2.
- * 2019-07-10 - v0.2.7 - Matthias C. Hormann
- *  - Add "-S" mode to strip ID3v1/APEv2 tags from MP3 files.
- *  - Add "-I 3"/"-I 4" modes to select ID3v2 version to write.
- * 2019-07-31 - v0.40 - Matthias C. Hormann
- *  - Add MP4 handling
- * 2019-08-02 - v0.5.1 - Matthias C. Hormann
- *  - avoid unneccessary double file write on deleting+writing tags
- *  - make tag delete/write functions return true on success, false otherwise
- * 2019-08-06 - v0.5.3 - Matthias C. Hormann
- *  - Add support for Opus (.opus) files.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -80,7 +58,7 @@
 #include <wavpackfile.h>
 #include <apefile.h>
 
-#include "loudgain.h"
+#include "rsgain.h"
 #include "scan.hpp"
 #include "tag.h"
 #include "output.h"

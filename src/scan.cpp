@@ -4,14 +4,6 @@
  * Copyright (c) 2014, Alessandro Ghedini
  * All rights reserved.
  *
- * 2019-06-30 - Matthias C. Hormann
- *  calculate correct album peak
- *  TODO: This still sucks because albums are handled track-by-track.
- * 2019-08-01 - Matthias C. Hormann
- *  - Move from deprecated libavresample library to libswresample (FFmpeg)
- * 2019-08-16 - Matthias C. Hormann
- *  - Rework to use the new FFmpeg API, no more deprecated calls
- *    (needed for FFmpeg 4.2+)
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -52,7 +44,7 @@ extern "C" {
 #include <libavutil/opt.h>
 }
 
-#include "loudgain.h"
+#include "rsgain.h"
 #include "scan.hpp"
 #include "output.h"
 #include "tag.hpp"
@@ -199,7 +191,6 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
         error = true;
         goto end;
     }
-
 
     /* select the audio stream */
     stream_id = av_find_best_stream(container, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
@@ -348,8 +339,8 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     av_packet_unref(&packet);
     }
 
-  // complete progress bar for very short files (only cosmetic)
-  progress_bar(1, len, len, 0);
+    // complete progress bar for very short files (only cosmetic)
+    progress_bar(1, len, len, 0);
 
 end:
     progress_bar(2, 0, 0, 0);

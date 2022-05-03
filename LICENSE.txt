@@ -1,6 +1,6 @@
 Copyright (c) 2014, Alessandro Ghedini <alessandro@ghedini.me>
 v0.1-v0.6.8: Copyright (C) 2019 Matthias C. Hormann <mhormann@gmx.de>
-Windows port by complexlogic, 2022
+rsgain by complexlogic, 2022
 
 All rights reserved.
 

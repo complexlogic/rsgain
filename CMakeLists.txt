@@ -1,20 +1,20 @@
-# loudgain CMakeLists.txt
+# rsgain CMakeLists.txt
 # Copyright (C) 2014 Alessandro Ghedini <alessandro@ghedini.me>
 # Modifications Copyright (C) 2019 Matthias C. Hormann <mhormann@gmx.de>
-# Windows port by complexlogic, 2022
+# rsgain by complexlogic, 2022
 # This file is released under the 2 clause BSD license, see COPYING
 
 cmake_minimum_required(VERSION 3.13)
 project(
-  loudgain 
+  rsgain 
   VERSION 1.0.1
   DESCRIPTION "ReplayGain 2.0 loudness normalizer" 
-  HOMEPAGE_URL "https://github.com/complexlogic/loudgain"
+  HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES C CXX
 )
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 20)
-set(EXECUTABLE_TITLE "loudgain")
+set(EXECUTABLE_TITLE "rsgain")
 configure_file(
   "${PROJECT_SOURCE_DIR}/config/config.h.in" 
   "${PROJECT_BINARY_DIR}/config.h"
@@ -114,7 +114,7 @@ add_subdirectory(src)
 
 # Compile options - Linux/Mac
 if (UNIX)
-  set_target_properties(loudgain PROPERTIES COMPILE_FLAGS "-Wall -pedantic -g")
+  set_target_properties(rsgain PROPERTIES COMPILE_FLAGS "-Wall -pedantic -g")
 endif ()
 
 # Installation - Windows

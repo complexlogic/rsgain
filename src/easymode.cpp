@@ -12,7 +12,7 @@
 #include <string.h>
 #include <iomanip>
 #include <locale>
-#include "loudgain.h"
+#include "rsgain.h"
 #include "easymode.hpp"
 #include "output.h"
 #include "scan.hpp"

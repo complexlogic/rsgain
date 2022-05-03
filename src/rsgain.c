@@ -4,40 +4,7 @@
  * Copyright (c) 2014, Alessandro Ghedini
  * All rights reserved.
  *
- * 2019-06-30 - v0.2.1 - Matthias C. Hormann
- *  - Added version
- *  - Added writing tags to Ogg Vorbis files (now supports MP3, FLAC, Ogg Vorbis)
- *  - Always remove REPLAYGAIN_REFERENCE_LOUDNESS, wrong value might confuse players
- *  - Added notice in help on which file types can be written
- *  - Added album summary
- * 2019-07-07 - v0.2.2 - Matthias C. Hormann
- *  - Fixed album peak calculation.
- *  - Write REPLAYGAIN_ALBUM_* tags only if in album mode
- *  - Better versioning (CMakeLists.txt → config.h)
- *  - TODO: clipping calculation still wrong
- * 2019-07-08 - v0.2.4 - Matthias C. Hormann
- *  - add "-s e" mode, writes extra tags (REPLAYGAIN_REFERENCE_LOUDNESS,
- *    REPLAYGAIN_TRACK_RANGE and REPLAYGAIN_ALBUM_RANGE)
- *  - add "-s l" mode (like "-s e" but uses LU/LUFS instead of dB)
- * 2019-07-08 - v0.2.5 - Matthias C. Hormann
- *  - Clipping warning & prevention (-k) now works correctly, both track & album
- * 2019-07-09 - v0.2.6 - Matthias C. Hormann
- *  - Add "-L" mode to force lowercase tags in MP3/ID3v2.
- * 2019-07-10 - v0.2.7 - Matthias C. Hormann
- *  - Add "-S" mode to strip ID3v1/APEv2 tags from MP3 files.
- *  - Add "-I 3"/"-I 4" modes to select ID3v2 version to write.
- *  - First step to implement a new tab-delimited list format: "-O" mode.
- * 2019-07-13 - v0.2.8 - Matthias C. Hormann
- *  - new -O output format: re-ordered, now shows peak before/after gain applied
- *  - -k now defaults to clipping prevention at -1 dBTP (as EBU recommends)
- *  - New -K: Allows clippping prevention with settable dBTP level,
- *     i.e. -K 0 (old-style) or -K -2 (to compensate for post-processing losses)
- * 2019-08-06 - v0.5.3 - Matthias C. Hormann
- *  - Add support for Opus (.opus) files.
- * 2019-08-16 - v0.6.0 - Matthias C. Hormann
- *  - Rework for new FFmpeg API (get rid of deprecated calls)
- *
- * Windows port by complexlogic, 2022
+ * rsgain by complexlogic, 2022
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
@@ -77,7 +44,7 @@
 #include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
 
-#include "loudgain.h"
+#include "rsgain.h"
 #include "tag.h"
 #include "config.h"
 #include "scan.h"
@@ -91,9 +58,9 @@ void set_cursor_visibility(BOOL setting, BOOL *previous);
 #endif
 
 static void help_main(void);
+static void version(void);
 static inline void help_custom(void);
 static inline void help_easy(void);
-static inline void version(void);
 
 // Global variables
 int multithread = 0;
@@ -143,7 +110,6 @@ void quit(int status)
 	#endif
 	exit(status);
 }
-
 
 static void easy_mode(int argc, char *argv[])
 {
@@ -487,7 +453,7 @@ static inline void help_custom(void) {
 }
 
 
-static inline void version(void) {
+static void version(void) {
 	int  ebur128_v_major     = 0;
 	int  ebur128_v_minor     = 0;
 	int  ebur128_v_patch     = 0;
