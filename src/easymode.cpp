@@ -408,6 +408,7 @@ void scan_easy(const char *directory)
     }
     
     // Generate queue of all directories in directory tree
+    output_ok("Building directory tree");
     std::deque<std::filesystem::path> directories;
     directories.push_back(path);
     for (const std::filesystem::directory_entry &entry : std::filesystem::recursive_directory_iterator(path)) {
@@ -533,14 +534,14 @@ void scan_easy(const char *directory)
     
     output(COLOR_YELLOW "Files Scanned:" COLOR_OFF " %s\n", ss.str().c_str());
     output(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  %s\n", time_string.c_str());
+    output("\n");
 
     // Inform user of errors
     if (error_directories.size()) {
         output(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
         for (std::u8string &d : error_directories) {
-            output("   %s\n", (char*) d.c_str());
+            output("%s\n", (char*) d.c_str());
         }
+        output("\n");
     }
-
-    output("\n");
 }
