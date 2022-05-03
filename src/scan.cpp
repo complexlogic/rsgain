@@ -351,12 +351,14 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                         frame->nb_samples) < 0) {
                             output_fail("Cannot convert");
                             error = true;
+                            av_free(swr_out_data);
                             goto end;
                         }
                         rc = ebur128_add_frames_short(*ebur128, 
                                  (short *) swr_out_data, 
                                  frame->nb_samples
                              );
+                        av_free(swr_out_data);
                     }
                     else {
                         rc = ebur128_add_frames_short(*ebur128, 
@@ -388,7 +390,6 @@ end:
     if (swr != NULL) {
         swr_close(swr);
         swr_free(&swr);
-        av_free(swr_out_data);
     }
 
 
