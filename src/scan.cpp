@@ -314,6 +314,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
             rc = avcodec_send_packet(ctx, &packet);
             if (rc < 0) {
                 output_error("Error while sending a packet to the decoder");
+                error = true;
                 break;
             }
 
@@ -324,6 +325,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                 } 
                 else if (rc < 0) {
                     output_error("Error while receiving a frame from the decoder");
+                    error = true;
                     goto end;
                 }
                 if (rc >= 0) {
