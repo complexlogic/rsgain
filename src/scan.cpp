@@ -766,7 +766,7 @@ scan_result *scan_get_track_result(unsigned index, double pre_gain) {
     pre_gain = pre_gain - 5.0f;
 
     result->file                 = scan_files[index];
-  result->container            = scan_containers[index];
+    result->container            = scan_containers[index];
     result->codec_id             = scan_codecs[index];
 
     result->track_gain           = LUFS_TO_RG(global) + pre_gain;

@@ -61,6 +61,11 @@ struct extension_type {
     FileType file_type;
 };
 
-static FileType determine_type(const char *extension);
+struct overrides_section {
+    const char *section_name;
+    FileType file_type;
+};
+
+static FileType determine_filetype(const char *extension);
 static bool is_type(const char *extension, const FileType file_type);
 void copy_string_alloc(char **dest, const char *string);

@@ -2,16 +2,17 @@
 #include <vector>
 #include <deque>
 #include <chrono>
-#include <stdio.h>
 #include <set>
 #include <string>
 #include <thread>
 #include <mutex>
 #include <condition_variable>
 #include <chrono>
-#include <string.h>
 #include <iomanip>
 #include <locale>
+#include <string.h>
+#include <stdio.h>
+#include <ini.h>
 #include "rsgain.h"
 #include "easymode.hpp"
 #include "output.h"
@@ -209,10 +210,10 @@ static Config configs[] = {
 };
 
 // A function to determine a file type
-static FileType determine_type(const char *extension)
+static FileType determine_filetype(const char *extension)
 {
     for (const struct extension_type &ext : extensions) {
-        if (!strcmp(extension, ext.extension)) {
+        if (MATCH(extension, ext.extension)) {
             return ext.file_type;
         }
     }
@@ -223,7 +224,7 @@ static FileType determine_type(const char *extension)
 static bool is_type(const char *extension, const FileType file_type)
 {
     for (const struct extension_type &ext : extensions) {
-        if (!strcmp(extension, ext.extension)) {
+        if (MATCH(extension, ext.extension)) {
             if (ext.file_type == file_type) {
                 return true;
             }
@@ -234,6 +235,98 @@ static bool is_type(const char *extension, const FileType file_type)
     }
     return false;
 }
+
+static void convert_bool(const char *value, bool &setting)
+{
+    if(MATCH(value, "True") || MATCH(value, "true")) {
+        setting = true;
+    }
+    else if (MATCH(value, "False") || MATCH(value, "false")) {
+        setting = false;
+    }
+}
+
+static FileType determine_section_type(const char *section)
+{
+    static const struct overrides_section sections[] {
+        {"MP2",     MP2},
+        {"MP3",     MP3},
+        {"FLAC",    FLAC},
+        {"OGG",     OGG},
+        {"OPUS",    OPUS},
+        {"M4A",     M4A},
+        {"WMA",     WMA},
+        {"WAV",     WAV},
+        {"AIFF",    AIFF},
+        {"WAVPACK", WAVPACK},
+        {"APE",     APE}
+    };
+
+    for (const struct overrides_section &s : sections) {
+        if(MATCH(section, s.section_name)) {
+            return s.file_type;
+        }
+    }
+    return INVALID;
+}
+
+// Callback for INI parser
+static int handler(void *user, const char *section, const char *name, const char *value)
+{
+    FileType file_type = determine_section_type(section);
+    if (file_type == INVALID) {
+        return 0;
+    }
+
+    // Parse setting keys
+    if (MATCH(name, "AlbumGain")) {
+        convert_bool(value, configs[file_type].do_album);
+    }
+    else if (MATCH(name, "Mode")) {
+        parse_mode(value, &configs[file_type]);
+    }
+    else if (MATCH(name, "ClippingProtection")) {
+        convert_bool(value, configs[file_type].no_clip);
+    }
+    else if (MATCH(name, "Lowercase")) {
+        convert_bool(value, configs[file_type].lowercase);
+    }
+    else if (MATCH(name, "Strip")) {
+        convert_bool(value, configs[file_type].strip);
+    }
+    else if (MATCH(name, "ID3v2Version")) {
+        parse_id3v2version(value, &configs[file_type]);
+    }
+    else if (MATCH(name, "Pregain")) {
+        parse_pregain(value, &configs[file_type]);
+    }
+    else if (MATCH(name, "MaxTruePeakLevel")) {
+        parse_max_true_peak_level(value, &configs[file_type]);
+    }
+    return 0;
+}
+
+// Override the default easy mode settings
+static void load_overrides(const char *overrides_file)
+{
+    std::filesystem::path p(overrides_file);
+    std::filesystem::directory_entry file(p);
+    if (!file.exists()) {
+        output("Error: Overrides file '%s' does not exist\n", overrides_file);
+        return;
+    }
+    if (!file.is_regular_file()) {
+        output("Error: Overrides file '%s' is not valid\n", overrides_file);
+        return;
+    }
+
+    // Parse file
+    output_ok("Applying overrides");
+    if (ini_parse(overrides_file, handler, NULL) < 0) {
+        output("Failed to load overrides file '%s'\n", overrides_file);
+    }
+}
+
 
 void copy_string_alloc(char **dest, const char *string)
 {
@@ -263,6 +356,7 @@ Job::~Job() {
     free(this->files);
 }
 
+// Generates a scan job from a directory path
 Job *generate_job(const std::filesystem::path &path)
 {
     std::set<FileType> extensions;
@@ -275,7 +369,7 @@ Job *generate_job(const std::filesystem::path &path)
         if (!entry.is_regular_file() || !entry.path().has_extension()) {
             continue;
         }
-        file_type = determine_type((char*) entry.path().extension().u8string().c_str());
+        file_type = determine_filetype((char*) entry.path().extension().u8string().c_str());
         if (file_type != INVALID) {
             extensions.insert(file_type);
         }
@@ -374,7 +468,7 @@ void WorkerThread::quit_thread()
     this->thread->join();
 }
 
-void scan_easy(const char *directory)
+void scan_easy(const char *directory, const char *overrides_file)
 {
     std::filesystem::path path(directory);
     std::filesystem::directory_entry dir(path);
@@ -385,16 +479,18 @@ void scan_easy(const char *directory)
 
     // Verify directory exists and is valid
     if (!dir.exists()) {
-        output("Error: Directory \"%s\" does not exist\n", directory);
+        output("Error: Directory '%s' does not exist\n", directory);
         quit(EXIT_FAILURE);
     }
     else if (!dir.is_directory()) {
-        output("Error: \"%s\" is not a valid directory\n", directory);
+        output("Error: '%s' is not a valid directory\n", directory);
         quit(EXIT_FAILURE);
     }
 
-    // Record start time
-    const auto start_time = std::chrono::system_clock::now();
+    // Load overrides
+    if (overrides_file != NULL) {
+        load_overrides(overrides_file);
+    }
 
     // Make sure the requested threads is 1 per CPU core or fewer
     if (multithread) {
@@ -406,7 +502,10 @@ void scan_easy(const char *directory)
             }
         }
     }
-    
+
+    // Record start time
+    const auto start_time = std::chrono::system_clock::now();
+
     // Generate queue of all directories in directory tree
     output_ok("Building directory tree");
     std::deque<std::filesystem::path> directories;

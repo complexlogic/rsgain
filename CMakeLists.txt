@@ -34,11 +34,15 @@ if (WIN32)
   find_path(GETOPT_INCLUDE_DIR "getopt.h" REQUIRED)
   find_library(GETOPT getopt REQUIRED)
   
+  find_path(INIH_INCLUDE_DIR "ini.h" REQUIRED)
+  find_library(INIH inih REQUIRED)
+  
   include_directories(
     ${FFMPEG_INCLUDE_DIRS} 
     ${TAGLIB_INCLUDE_DIR} 
     ${LIBEBUR128_INCLUDE_DIR} 
     ${GETOPT_INCLUDE_DIR}
+    ${INIH_INCLUDE_DIR}
     ${PROJECT_BINARY_DIR}
   )
   link_libraries(
@@ -46,6 +50,7 @@ if (WIN32)
     ${TAGLIB} 
     ${LIBEBUR128} 
     ${GETOPT}
+    ${INIH}
   )
   
 # Find dependencies - Linux/Mac
@@ -58,13 +63,11 @@ else ()
   find_package(PkgConfig MODULE REQUIRED)
   pkg_check_modules(LAVC REQUIRED libavcodec)
   pkg_check_modules(LAVF REQUIRED libavformat)
-  if (${LAVF_VERSION} VERSION_LESS 58.9.100)
-    add_compile_definitions(LAVF_REGISTER_ALL=1)
-  endif ()
   pkg_check_modules(LAVR REQUIRED libswresample)
   pkg_check_modules(LAVU REQUIRED libavutil)
   pkg_check_modules(LTAG REQUIRED taglib)
   pkg_check_modules(EBUR128 REQUIRED libebur128>=1.2.4)
+  pkg_check_modules(INIH REQUIRED inih)
 
   include_directories(
     ${LAVC_INCLUDE_DIRS}
@@ -73,6 +76,7 @@ else ()
     ${LAVU_INCLUDE_DIRS}
     ${LTAG_INCLUDE_DIRS}
     ${EBUR128_INCLUDE_DIRS}
+    ${INIH_INCLUDE_DIRS}
     ${PROJECT_BINARY_DIR}
   )
   link_libraries(
@@ -81,6 +85,7 @@ else ()
     ${LAVR_LIBRARIES}
     ${LAVU_LIBRARIES}
     ${LTAG_LIBRARIES}
+    ${INIH_LIBRARIES}
     ${EBUR128_LIBRARIES}
   )
 endif()
@@ -120,9 +125,15 @@ endif ()
 # Installation - Windows
 if (WIN32)
   install(DIRECTORY ${PROJECT_BINARY_DIR}/Release/ DESTINATION "./")
-  install(PROGRAMS ${PROJECT_SOURCE_DIR}/scripts/loudgain-scanner.py DESTINATION "./")
-  install(FILES "${PROJECT_SOURCE_DIR}/LICENSE.txt" DESTINATION "./")
-  install(FILES "${PROJECT_SOURCE_DIR}/CHANGELOG.txt" DESTINATION "./")
+  
+  configure_file(${PROJECT_SOURCE_DIR}/CHANGELOG.txt ${PROJECT_BINARY_DIR}/CHANGELOG.txt)
+  install(FILES ${PROJECT_BINARY_DIR}/CHANGELOG.txt DESTINATION "./")
+  
+  configure_file(${PROJECT_SOURCE_DIR}/LICENSE.txt ${PROJECT_BINARY_DIR}/LICENSE.txt)
+  install(FILES ${PROJECT_BINARY_DIR}/LICENSE.txt DESTINATION "./")
+  
+  configure_file(${PROJECT_SOURCE_DIR}/config/overrides.ini ${PROJECT_BINARY_DIR}/overrides.ini)
+  install(FILES ${PROJECT_BINARY_DIR}/overrides.ini DESTINATION "./")
   
   # Copy the VC Runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
@@ -145,11 +156,7 @@ if (WIN32)
 # Installation - Linux/Mac
 else ()
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-  install(PROGRAMS ${PROJECT_SOURCE_DIR}/scripts/loudgain-scanner.py DESTINATION ${CMAKE_INSTALL_PREFIX}/bin RENAME "loudgain-scanner")
-  install(FILES
-    ${PROJECT_SOURCE_DIR}/docs/loudgain.1
-    DESTINATION ${CMAKE_INSTALL_PREFIX}/share/man/man1
-  )
+  install(FILES ${PROJECT_SOURCE_DIR}/config/overrides.ini DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE})
   
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")
