@@ -1,7 +1,7 @@
 # rsgain
 **rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-rsgain is a heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain). The goal of rsgain is use the excellent platform provided by loudgain and simplify it for the average user, while also preserving the advanced features for the users that need them. The the following improvements have been made from loudgain:
+rsgain is a heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain). The goal of rsgain is use the excellent platform provided by loudgain and simplify it for the average user, while also preserving the advanced features for the users that need them. The following improvements have been made from loudgain:
 - Native Windows support
 - Built-in recursive directory scanning without the need for a wrapper script. See [Easy Mode](#easy-mode) for more details.
 - Multithreaded scanning
@@ -10,17 +10,17 @@ rsgain is a heavily modified fork of [loudgain](https://github.com/Moonbase59/lo
 Binary files are provided on the Release Page. You can also build the program youself, see [BUILDING].
 
 ### Windows
-rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release], and extract its contents to a directory of your choosing. 
+rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest), and extract its contents to a directory of your choosing. 
 
 It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of using the full path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
 
 ### macOS
 There is currently no binary packages available for macOS, so Mac users will need to build from source. See [BUILDING].
 
-If anybody is willing to maintain a Homebrew package for rsgain, please reach out by making an [Issue] or [Discussion].
+If anybody is willing to maintain a Homebrew package for rsgain, please reach out by making an [Issue](https://github.com/complexlogic/rsgain/issues).
 
 ### Linux
-An amd64 .deb package is provided on the release page. It is installable on most APT-based distro releases from 2020 and later.
+An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on most APT-based distro releases from 2020 and later.
 
 There is a also a PKGBUILD script for Arch/Manjaro users. Install rsgain by running the following commands from a clean directory:
 ```
@@ -45,7 +45,7 @@ rsgain easy /path/to/music/library
 ```
 rsgain easy "C:\path\to\music libary"
 ```
-That's it. rsgain will take care of the finer details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them if desired.
+That's it. rsgain will take care of the details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them if desired.
 
 #### Multithreaded Scanning
 Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads is limited to one per physical CPU core or fewer. For example, if you have a quad core CPU:
@@ -78,7 +78,7 @@ These settings are recommended for maximum comptatibility with available players
 The overrides file is an INI-formatted file that contains sections enclosed in square brackets which correspond to the available formats, and each section contains key=value pairs that correspond to settings. The overrides feature is intended for users that can't use the default settings of Easy Mode, but still prefer the functionality of Easy Mode over Custom Mode.
 
 For example, rsgain writes lowercase tags on MP3 files by default, but you want uppercase tags instead. Format your `overrides.ini` file as follows:
-```
+```INI
 [MP3]
 Lowercase=false
 ```
@@ -102,7 +102,7 @@ Each setting key corresponds to a command line option in Custom Mode. Below is a
 |MaxTruePeakLevel|Decimal|-K|
 |Pregain|Decimal|-d|
 
-See the [Custom Mode](#custom-mode) for more information.
+See the [Custom Mode](#custom-mode) help for more information.
 
 ## Custom Mode
 Custom Mode preserves loudgain's command line syntax for users that still need it. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory scanning, you will need to use a wrapper script.
@@ -112,3 +112,38 @@ Custom Mode is invoked with `rsgain custom` followed by options and a list of fi
  rsgain custom -a -k -s e *.flac
  ```
 
+Command line help:
+```
+Usage: rsgain custom [OPTIONS] FILES...
+  Custom Mode allows the user to specify the options to scan the files with. The
+  list of files to scan must be listed explicitly after the options.
+
+Options:
+  -h,   --help            Show this help.
+
+  -r,   --track           Calculate track gain only (default).
+  -a,   --album           Calculate album gain (and track gain).
+
+  -c,   --clip            Ignore clipping warning.
+  -k,   --noclip          Lower track/album gain to avoid clipping (<= -1 dBTP).
+  -K n, --maxtpl=n        Avoid clipping; max. true peak level = n dBTP.
+  -d n, --pregain=n       Apply n dB/LU pre-gain value (-5 for -23 LUFS target).
+
+  -s d, --tagmode=d       Delete ReplayGain tags from files.
+  -s i, --tagmode=i       Write ReplayGain 2.0 tags to files.
+  -s e, --tagmode=e       like '-s i', plus extra tags (reference, ranges).
+  -s l, --tagmode=l       like '-s e', but LU units instead of dB.
+  -s s, --tagmode=s       Don't write ReplayGain tags (default).
+
+  -L,   --lowercase       Force lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF).
+                          This is non-standard but sometimes needed.
+  -S,   --striptags       Strip tag types other than ID3v2 from MP2/MP3.
+                          Strip tag types other than APEv2 from WavPack/APE.
+  -I 3, --id3v2version=3  Write ID3v2.3 tags to MP2/MP3/WAV/AIFF.
+  -I 4, --id3v2version=4  Write ID3v2.4 tags to MP2/MP3/WAV/AIFF (default).
+
+  -O,   --output          Database-friendly tab-delimited list output.
+  -q,   --quiet           Don't print scanning status messages.
+
+Please report any issues to https://github.com/complexlogic/rsgain/issues
+```
