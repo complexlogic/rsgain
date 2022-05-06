@@ -166,6 +166,7 @@ static void easy_mode(int argc, char *argv[])
         { "quiet",        no_argument,       NULL, 'q' },
 
         { "multithread",  required_argument, NULL, 'm' },
+        { "override",  required_argument, NULL, 'o' },
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -417,7 +418,7 @@ static inline void help_easy(void) {
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
     output("\n");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
-    CMD_HELP_SHORT("", "-o <path>", "Load override settings from file");
+    CMD_HELP("--override=p", "-o p", "Load override settings from path p");
 
     output("\n");
 
