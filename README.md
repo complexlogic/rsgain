@@ -7,7 +7,7 @@ rsgain is a heavily modified fork of [loudgain](https://github.com/Moonbase59/lo
 - Multithreaded scanning
 
 ## Installation
-Binary files are provided on the Release Page. You can also build the program youself, see [BUILDING].
+Binary files are provided on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING].
 
 ### Windows
 rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest), and extract its contents to a directory of your choosing. 
@@ -102,9 +102,9 @@ Each setting key corresponds to a command line option in Custom Mode. Below is a
 |MaxTruePeakLevel|Decimal|-K|
 |Pregain|Decimal|-d|
 
-See the [Custom Mode](#custom-mode) help for more information.
+See the [Custom Mode help](#command-line-help) for more information.
 
-## Custom Mode
+### Custom Mode
 Custom Mode preserves loudgain's command line syntax for users that still need it. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory scanning, you will need to use a wrapper script.
 
 Custom Mode is invoked with `rsgain custom` followed by options and a list of files to scan. For example, scan all FLAC files in the current directory with album gain and clipping protection enabled:
@@ -112,7 +112,7 @@ Custom Mode is invoked with `rsgain custom` followed by options and a list of fi
  rsgain custom -a -k -s e *.flac
  ```
 
-Command line help:
+#### Command Line Help:
 ```
 Usage: rsgain custom [OPTIONS] FILES...
   Custom Mode allows the user to specify the options to scan the files with. The
