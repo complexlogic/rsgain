@@ -1,81 +1,114 @@
-# loudgain
-This repo is a fork of the loudgain command line utility, originally by [ghedo](https://github.com/ghedo/loudgain) and continued by [Moonbase59](https://github.com/Moonbase59/loudgain). The primary purpose of this fork was to port the program to run natively in Windows (Moonbase59's version could only run under WSL). However, since the previous repo seems to have been abandoned, I am hoping that loudgain users will submit PRs for bugfixes and new features on this repo going forward.
+# rsgain
+**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-The following changes have been made from Moonbase59's latest version, 0.6.8:
-- The build system was completely rewritten to support Windows. For Linux, the build script now supports building .deb packages directly. See [Building](#building) for more info.
-- The I/O code was significantly refactored to be cross-platform, with function definitions that are abstracted, and separate Unix/Windows code underneath
-- The progress bar was refactored to be more performant
+rsgain is a heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain). The goal of rsgain is use the excellent platform provided by loudgain and simplify it for the average user, while also preserving the advanced features for the users that need them. The the following improvements have been made from loudgain:
+- Native Windows support
+- Built-in recursive directory scanning without the need for a wrapper script. See [Easy Mode](#easy-mode) for more details.
+- Multithreaded scanning
 
-The underlying program logic was mostly untouched, other than a few minor tweaks I made to get it to compile with MSVC, which doesn't have full C99 support.
-
-Due to the previous maintainer's decision to commit static binary files, the repo ballooned to nearly 1 GB in size. Consequently, I decided to delete the git history and start over from new, and rebaseline the versioning at 1.0. For this repo, binary packages for Windows 64 bit and Debian/Ubuntu amd64 will be provided on the [release page](https://github.com/complexlogic/loudgain/releases). 
-
-For the best results, loudgain on Windows should be run on the latest version of Windows 10, or Windows 11. The Linux .deb package is compatible with Debian Bullseye and later, Ubuntu 20.04 and later.
-
-I have also included an original Python script I wrote called ```loudgain-scanner``` that I use to scan my music library. It is a much simpler alternative to the more complex ```rgbpm``` and ```rgbpm2``` scripts that were written by Moonbase59, and is cross-platform Unix/Windows.
-
-## Usage
-Usage is exactly the same as previous versions. No features have been added or removed at this point in time. See the [previous repo](https://github.com/Moonbase59/loudgain#getting-started) for usage instructions.
-
-## Scanning Your Music Library With loudgain-scanner
-The repo contains a simple, cross-platform Python script ```loudgain-scanner```, which will recursively scan your entire music library using the recommended settings for each file type. To use the script, the following requirements must be met:
-- The ```loudgain``` executable is the same directory as the script *or* in your PATH 
-- Your library is organized with each album in its own folder
-- In each album folder, all audio files are of the same type. It is acceptable to have non-audio files in an album folder e.g. log files or cover art, but if multiple audio file types are detected, the folder will not be scanned.
-
-Pass the root of the directory you want to scan as the first argument to the script.
-
-### Unix
-The script was installed into your system directories along with the program:
-```
-loudgain-scanner /path/to/music/library
-```
+## Installation
+Binary files are provided on the Release Page. You can also build the program youself, see [BUILDING].
 
 ### Windows
-Make sure you have Python installed. You can get it from the Microsoft Store, or directly from [the foundation's website](https://www.python.org/). Open a command line interpreter of your choice in the folder where you extracted loudgain, and execute the script:
+rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release], and extract its contents to a directory of your choosing. 
+
+It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of using the full path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
+
+### macOS
+There is currently no binary packages available for macOS, so Mac users will need to build from source. See [BUILDING].
+
+If anybody is willing to maintain a Homebrew package for rsgain, please reach out by making an [Issue] or [Discussion].
+
+### Linux
+An amd64 .deb package is provided on the release page. It is installable on most APT-based distro releases from 2020 and later.
+
+There is a also a PKGBUILD script for Arch/Manjaro users. Install rsgain by running the following commands from a clean directory:
 ```
-python loudgain-scanner.py "C:\path\to\music library"
+wget
+makepkg -si
 ```
 
+Users of other distros will need to build from source. See [BUILDING].
 
-## Building
-The build system was rewritten to support both Unix and Windows.
+## Usage
+rsgain has two modes of operation: Easy Mode and Custom Mode. Easy Mode is recommended over Custom Mode for almost all use cases. Custom Mode exists to provides backwards compatibility with the legacy loudgain/mp3gain command line.
 
-### Unix
-The basic build instructions are the same as for the [previous repo](https://github.com/Moonbase59/loudgain#building). 
+### Easy Mode
+Easy Mode recursively scans your entire music library using the recommended settings for each file type. You can use Easy Mode if the following conditions apply:
+- Your music library is organized by album i.e. each album has its own folder
+- In each album folder, all audio files are of the same type. It is acceptable to have non-audio files mixed in such as log files or artwork, but if multiple *audio* file types are detected, the folder will not be scanned.
 
-For Linux, the build system now directly supports building .deb packages via CPack. During the cmake generation step, pass ```-DPACKAGE=DEB``` and ```-DCMAKE_INSTALL_PREFIX=/usr``` to cmake. Then, build the package with:
+Easy Mode is invoked with the command `rsgain easy` followed by the root of the directory you want to scan:
 ```
-make package
+rsgain easy /path/to/music/library
 ```
-By default, this will build a package for the amd64 architecture. To explicitly specify an architecture, pass ```-DCPACK_DEBIAN_PACKAGE_ARCHITECTURE```.
+```
+rsgain easy "C:\path\to\music libary"
+```
+That's it. rsgain will take care of the finer details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them if desired.
 
-### Windows 
-The Windows toolchain consists of Visual Studio and vcpkg in addition to Git  and CMake. Before starting, make sure that Visual Studio is installed with C++ core desktop features and C++ CMake tools.
+#### Multithreaded Scanning
+Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads is limited to one per physical CPU core or fewer. For example, if you have a quad core CPU:
+```
+rsgain easy -m 4 /path/to/music/library
+``` 
+The speed gains offered by multithreaded scanning are significant. On my library of about 12,000 songs, it takes [x] hours in the default single threaded mode, but only 1 hour 45 minutes hours with `-m 4`, a reduction of [z].
 
-Clone the master repo and create a build directory:
-```
-git clone https://github.com/complexlogic/loudgain.git
-cd loudgain
-mkdir build && cd build
-```
-Build the dependencies with vcpkg:
-```
-git clone https://github.com/microsoft/vcpkg
-.\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-.\vcpkg\vcpkg install taglib libebur128 getopt ffmpeg[avcodec,opus,avformat,swresample] --triplet=x64-windows
-```
+The scan progress bar is automatically disabled in multithreaded operation because multiple files are being scanned in parallel. 
 
-Generate the Visual Studio project files:
+Expect close to 100% CPU utilization when scanning multithreaded. I typically use multithreaded on a full library scan, and regular single threaded mode when incrementally adding 1 or 2 albums to my library.
+
+#### Overriding Default Settings
+Easy Mode scans files with the following settings by default:
+- Clipping protection enabled
+- Lowercase tags for MP2/MP3, M4A, WMA, and AIFF (uppercase for all others)
+- Decibal units
+- All optional tags enabled:
+	+ Range calculations
+	+ Peak calcuations
+	+ Reference loudness
+	+ Album tags
+- ID3 version 2.3 tags
+- Strip obsolete ID3 version 1 tags
+- -1 dBTP max true peak
+- No pregain
+
+These settings are recommended for maximum comptatibility with available players. However, if you need one of the settings changed, you can override them on a per-format basis using the `-o` option, and an overrides file.
+
+The overrides file is an INI-formatted file that contains sections enclosed in square brackets which correspond to the available formats, and each section contains key=value pairs that correspond to settings. The overrides feature is intended for users that can't use the default settings of Easy Mode, but still prefer the functionality of Easy Mode over Custom Mode.
+
+For example, rsgain writes lowercase tags on MP3 files by default, but you want uppercase tags instead. Format your `overrides.ini` file as follows:
 ```
-cmake .. -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET="x64-windows"
+[MP3]
+Lowercase=false
 ```
-Build and test the program:
+Then, pass the path to the overrides file with the `-o` option:
+
 ```
-cmake --build .
-.\Debug\loudgain.exe
+rsgain easy -o /path/to/overrides.ini /path/to/music/library
 ```
-Optionally, generate a zipped install package:
-```
-cmake --build . --config Release --target package
-```
+A default `overrides.ini` file ships with rsgain in the root package directory for Windows, and in `<install prefix>/share/rsgain` for Unix. The file is pre-populated will all settings that are available to change. Note that this is an *overrides* file, not a configuration file, i.e any formats or settings you're not interested in can simply be deleted and the defaults will be used instead.
+
+Each setting key corresponds to a command line option in Custom Mode. Below is a table of all settings available for override.
+
+|Setting Key | Value Type | Custom Mode Option|
+|------------|------------|-------------------|
+|Mode|Character|-s|
+|Lowercase|Boolean|-L|
+|AlbumGain|Boolean|-a|
+|ClippingProtection|Boolean|-k|
+|ID3v2Version|Integer|-I|
+|Strip|Boolean|-S|
+|MaxTruePeakLevel|Decimal|-K|
+|Pregain|Decimal|-d|
+
+See the [Custom Mode](#custom-mode) for more information.
+
+## Custom Mode
+Custom Mode preserves loudgain's command line syntax for users that still need it. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory scanning, you will need to use a wrapper script.
+
+Custom Mode is invoked with `rsgain custom` followed by options and a list of files to scan. For example, scan all FLAC files in the current directory with album gain and clipping protection enabled:
+ ```
+ rsgain custom -a -k -s e *.flac
+ ```
+

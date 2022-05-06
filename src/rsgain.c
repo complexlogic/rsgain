@@ -166,7 +166,6 @@ static void easy_mode(int argc, char *argv[])
         { "quiet",        no_argument,       NULL, 'q' },
 
         { "multithread",  required_argument, NULL, 'm' },
-        { "overrides",    required_argument, NULL, 'o' },
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -393,7 +392,7 @@ static void help_main(void) {
     output("\n");
     output(COLOR_RED "Commands:\n" COLOR_OFF);
 
-    CMD_CMD("easy",     "Easy Mode: Recursively scan a directory with recommended settings");
+    CMD_CMD("easy",     "Easy Mode:   Recursively scan a directory with recommended settings");
     CMD_CMD("custom",   "Custom Mode: Scan individual files with custom settings");
     output("\n");
     output("Run '%s easy --help' or '%s custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
@@ -418,7 +417,7 @@ static inline void help_easy(void) {
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
     output("\n");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
-    CMD_HELP("--overrides=path", "-o path", "Load override settings from file");
+    CMD_HELP_SHORT("", "-o <path>", "Load override settings from file");
 
     output("\n");
 
