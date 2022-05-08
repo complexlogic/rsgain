@@ -314,8 +314,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
             rc = avcodec_send_packet(ctx, &packet);
             if (rc < 0) {
                 output_error("Error while sending a packet to the decoder");
-                error = true;
-                break;
+                continue;
             }
 
             while (rc >= 0) {
@@ -325,8 +324,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                 } 
                 else if (rc < 0) {
                     output_error("Error while receiving a frame from the decoder");
-                    error = true;
-                    goto end;
+                    break;
                 }
                 if (rc >= 0) {
                     double pos = frame->pkt_dts*av_q2d(container->streams[stream_id]->time_base);
@@ -391,7 +389,6 @@ end:
         swr_close(swr);
         swr_free(&swr);
     }
-
 
     avcodec_close(ctx);
     avformat_close_input(&container);
