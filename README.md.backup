@@ -48,7 +48,7 @@ rsgain easy "C:\path\to\music libary"
 That's it. rsgain will take care of the details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them, if desired.
 
 #### Multithreaded Scanning
-Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must be one per physical CPU core or fewer. For example, if you have a quad core CPU:
+Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads i one per physical CPU core or fewer. For example, if you have a quad core CPU:
 ```
 rsgain easy -m 4 /path/to/music/library
 ``` 
