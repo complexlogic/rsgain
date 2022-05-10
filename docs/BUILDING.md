@@ -66,7 +66,8 @@ Clone the master repo and create a build directory:
 ```
 git clone https://github.com/complexlogic/rsgain.git
 cd rsgain
-mkdir build && cd build
+mkdir build
+cd build
 ```
 Build the dependencies with vcpkg:
 ```
