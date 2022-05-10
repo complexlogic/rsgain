@@ -1,4 +1,4 @@
-v2.0 (2022-5-8)
+v2.0 (2022-5-10)
  - Changed project name to rsgain
  - Added "Easy Mode" with recursive directory scanning. Old command line syntax now known as "Custom Mode"
  - Added multithreaded scanning

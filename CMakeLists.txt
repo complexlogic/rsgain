@@ -15,6 +15,12 @@ project(
 set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "rsgain")
+
+# GCC 9 and earlier are not supported due to C++20 features
+if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
+  message(FATAL_ERROR "GCC 10 and later supported only")
+endif ()
+
 configure_file(
   "${PROJECT_SOURCE_DIR}/config/config.h.in" 
   "${PROJECT_BINARY_DIR}/config.h"
@@ -166,7 +172,7 @@ else ()
     if (NOT CPACK_DEBIAN_PACKAGE_ARCHITECTURE)
       set(CPACK_DEBIAN_PACKAGE_ARCHITECTURE "amd64")
     endif()
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libavcodec58 (>= 4.2.4), libavutil56 (>= 4.2.4), libswresample3  (>= 4.2.4), libavformat58 (>= 4.2.4), libtag1v5 (>= 1.11.1), libebur128-1 (>=1.2.4), libc6 (>=2.29)")
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libavcodec58 (>= 4.2.4), libavutil56 (>= 4.2.4), libswresample3  (>= 4.2.4), libavformat58 (>= 4.2.4), libtag1v5 (>= 1.11.1), libebur128-1 (>=1.2.4), libc6 (>=2.29), libstdc++6 (>=10.2)")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "complexlogic")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_ARCHIVE_TYPE "gnutar")

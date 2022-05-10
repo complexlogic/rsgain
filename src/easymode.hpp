@@ -5,6 +5,17 @@
 #include <mutex>
 #include <condition_variable>
 
+#ifdef __GNUC__
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
+#if GCC_VERSION > 110000
+#define CALC_TIME 1
+#else
+#define CALC_TIME 0
+#endif
+#else
+#define CALC_TIME 1
+#endif
+
 typedef enum {
     INVALID = -1,
     MP2,

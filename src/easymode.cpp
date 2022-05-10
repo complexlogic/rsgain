@@ -610,7 +610,8 @@ void scan_easy(const char *directory, const char *overrides_file)
     }
     output(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
 
-    // Calculate time
+    // Calculate time (not available in GCC 10 and earlier)
+#if CALC_TIME
     std::string time_string;
     std::chrono::hh_mm_ss elapsed(end_time - start_time);
     int h = elapsed.hours().count();
@@ -625,6 +626,7 @@ void scan_easy(const char *directory, const char *overrides_file)
     else {
         time_string = std::to_string(s) + "s";
     }
+#endif
 
     // Format file total string
     std::stringstream ss;
@@ -632,7 +634,9 @@ void scan_easy(const char *directory, const char *overrides_file)
     ss << std::fixed << total_files;
     
     output(COLOR_YELLOW "Files Scanned:" COLOR_OFF " %s\n", ss.str().c_str());
+#if CALC_TIME
     output(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  %s\n", time_string.c_str());
+#endif
     output("\n");
 
     // Inform user of errors
