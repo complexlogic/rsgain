@@ -24,7 +24,7 @@ An amd64 .deb package is provided on the [release page](https://github.com/compl
 
 There is also a PKGBUILD script for Arch/Manjaro users. Run the following commands from a clean directory to install:
 ```
-wget
+wget https://raw.githubusercontent.com/complexlogic/rsgain/master/config/PKGBUILD
 makepkg -si
 ```
 
