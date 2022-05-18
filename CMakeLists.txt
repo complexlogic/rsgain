@@ -21,6 +21,11 @@ if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
   message(FATAL_ERROR "GCC 10 and later supported only")
 endif ()
 
+# Set Visual Studio startup project
+if (WIN32)
+  set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${EXECUTABLE_TITLE})
+endif ()
+
 configure_file(
   "${PROJECT_SOURCE_DIR}/config/config.h.in" 
   "${PROJECT_BINARY_DIR}/config.h"

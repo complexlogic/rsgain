@@ -438,9 +438,9 @@ void WorkerThread::work()
             this->main_cv->notify_all();
             main_lock.unlock();
         }
-
+                                                                                                                                                                                                                                                                                                                                                                        
         // Wait until we get a new job from the main thread
-        this->thread_cv.wait(thread_lock);
+        this->thread_cv.wait_for(thread_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
     }
 
 	return;
@@ -555,7 +555,7 @@ void scan_easy(const char *directory, const char *overrides_file)
             // Wait for threads to finish scanning
             int num_active = active_threads.size();
             while (num_active) {
-                main_cv.wait(main_lock);
+                main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
                 for (WorkerThread *at : active_threads) {
                     if (at->is_finished(error)) {
                         num_active--;

@@ -16,6 +16,8 @@
 #define CALC_TIME 1
 #endif
 
+#define MAX_THREAD_SLEEP 30
+
 typedef enum {
     INVALID = -1,
     MP2,
