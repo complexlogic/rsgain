@@ -7,7 +7,7 @@
 cmake_minimum_required(VERSION 3.13)
 project(
   rsgain 
-  VERSION 2.0
+  VERSION 2.0.1
   DESCRIPTION "ReplayGain 2.0 loudness normalizer" 
   HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES C CXX

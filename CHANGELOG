@@ -1,8 +1,11 @@
+v2.0.1 (2022-5-18)
+- Set max thread sleep period to prevent hanging in multithreaded mode
+
 v2.0 (2022-5-10)
- - Changed project name to rsgain
- - Added "Easy Mode" with recursive directory scanning. Old command line syntax now known as "Custom Mode"
- - Added multithreaded scanning
- - Added override feature for Easy Mode
+- Changed project name to rsgain
+- Added "Easy Mode" with recursive directory scanning. Old command line syntax now known as "Custom Mode"
+- Added multithreaded scanning
+- Added override feature for Easy Mode
 
 v1.0.1 (2022-4-15)
 - Refactored scan.py script, renamed to loudgain-scanner.py
