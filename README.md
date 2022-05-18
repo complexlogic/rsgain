@@ -77,7 +77,7 @@ These settings are recommended for maximum comptatibility with available players
 
 The overrides file is an INI-formatted file that contains sections enclosed in square brackets which correspond to the available formats, and each section contains key=value pairs that correspond to settings. The overrides feature is intended for users that can't use the default settings of Easy Mode, but still prefer the functionality of Easy Mode over Custom Mode.
 
-For example, rsgain writes lowercase tags on MP3 files by default, but suppose you want uppercase tags instead. Format your `overrides.ini` file as follows:
+For example, Easy Mode writes lowercase tags on MP3 files by default, but suppose you want uppercase tags instead. Format your `overrides.ini` file as follows:
 ```INI
 [MP3]
 Lowercase=false
@@ -87,7 +87,7 @@ Then, pass the path to the overrides file with the `-o` option:
 ```
 rsgain easy -o /path/to/overrides.ini /path/to/music/library
 ```
-A default `overrides.ini` file ships with rsgain in the root package directory for Windows, and in `<install prefix>/share/rsgain` for Unix. The file is pre-populated will all settings that are available to change. Note that this is an *overrides* file, not a configuration file, i.e any formats or settings you're not interested in can simply be deleted and the defaults will be used instead.
+A default `overrides.ini` file ships with rsgain in the root package directory for Windows, and in `<install prefix>/share/rsgain` for Unix. The file is pre-populated with all settings that are available to change. Note that this is an *overrides* file, not a configuration file, i.e any formats or settings you're not interested in can simply be deleted and the defaults will be used instead.
 
 Each setting key corresponds to a command line option in Custom Mode. Below is a table of all settings available for override.
 
