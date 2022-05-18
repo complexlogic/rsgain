@@ -12,7 +12,7 @@ Binary packages are provided on the [Release Page](https://github.com/complexlog
 ### Windows
 rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest), and extract its contents to a directory of your choosing. 
 
-It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of using the full path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
+It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
 
 ### macOS
 There is currently no binary package available for macOS, so Mac users will need to build from source. See [BUILDING](docs/BUILDING.md).
@@ -20,7 +20,7 @@ There is currently no binary package available for macOS, so Mac users will need
 If anybody is willing to maintain a Homebrew package for rsgain, please reach out by making an issue on the  [Issue Tracker](https://github.com/complexlogic/rsgain/issues).
 
 ### Linux
-An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on most APT-based distro releases from 2020 and later.
+An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on most APT-based distro releases from 2021 and later.
 
 There is also a PKGBUILD script for Arch/Manjaro users. Run the following commands from a clean directory to install:
 ```
@@ -43,7 +43,7 @@ Easy Mode is invoked with the command `rsgain easy` followed by the root of the 
 rsgain easy /path/to/music/library
 ```
 ```
-rsgain easy "C:\path\to\music libary"
+rsgain easy "C:\path\to\music library"
 ```
 That's it. rsgain will take care of the details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them, if desired.
 
@@ -77,7 +77,7 @@ These settings are recommended for maximum comptatibility with available players
 
 The overrides file is an INI-formatted file that contains sections enclosed in square brackets which correspond to the available formats, and each section contains key=value pairs that correspond to settings. The overrides feature is intended for users that can't use the default settings of Easy Mode, but still prefer the functionality of Easy Mode over Custom Mode.
 
-For example, rsgain writes lowercase tags on MP3 files by default, but you want uppercase tags instead. Format your `overrides.ini` file as follows:
+For example, rsgain writes lowercase tags on MP3 files by default, but suppose you want uppercase tags instead. Format your `overrides.ini` file as follows:
 ```INI
 [MP3]
 Lowercase=false
