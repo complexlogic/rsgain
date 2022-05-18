@@ -19,7 +19,7 @@
 #include "scan.hpp"
 
 extern "C" {
-  extern int multithread;
+    extern int multithread;
 }
 
 static const struct extension_type extensions[] {
@@ -46,166 +46,166 @@ static Config configs[] = {
     // MP2 config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = true,
-		.id3v2version = 3
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = true,
+        .id3v2version = 3
     },
 
     // MP3 config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = true,
-		.id3v2version = 3
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = true,
+        .id3v2version = 3
     },
 
     // FLAC config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = false,
-		.strip = false,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = false,
+        .strip = false,
+        .id3v2version = 4
     },
 
     // OGG config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = false,
-		.strip = false,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = false,
+        .strip = false,
+        .id3v2version = 4
     },
 
     // OPUS config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = false,
-		.strip = false,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = false,
+        .strip = false,
+        .id3v2version = 4
     },
 
     // M4A config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = false,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = false,
+        .id3v2version = 4
     },
 
     // WMA config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = false,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = false,
+        .id3v2version = 4
     },
 
     // WAV config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = false,
-		.id3v2version = 3
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = false,
+        .id3v2version = 3
     },
 
     // AIFF config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = true,
-		.strip = false,
-		.id3v2version = 3
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = true,
+        .strip = false,
+        .id3v2version = 3
     },
 
     // WAVPACK config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = false,
-		.strip = true,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = false,
+        .strip = true,
+        .id3v2version = 4
     },
 
     // APE config
     {
         .mode = 'e',
-		.unit = UNIT_DB,
-		.pre_gain = 0.0f,
-		.max_true_peak_level = -1.0f,
-		.no_clip = true,
-		.warn_clip = true,
-		.do_album = true,
-		.tab_output = false,
-		.lowercase = false,
-		.strip = true,
-		.id3v2version = 4
+        .unit = UNIT_DB,
+        .pre_gain = 0.0f,
+        .max_true_peak_level = -1.0f,
+        .no_clip = true,
+        .warn_clip = true,
+        .do_album = true,
+        .tab_output = false,
+        .lowercase = false,
+        .strip = true,
+        .id3v2version = 4
     },
 };
 
@@ -309,13 +309,12 @@ static int handler(void *user, const char *section, const char *name, const char
 // Override the default easy mode settings
 static void load_overrides(const char *overrides_file)
 {
-    std::filesystem::path p(overrides_file);
-    std::filesystem::directory_entry file(p);
-    if (!file.exists()) {
+    std::filesystem::path path((char8_t*) overrides_file);
+    if (!std::filesystem::exists(path)) {
         output("Error: Overrides file '%s' does not exist\n", overrides_file);
         return;
     }
-    if (!file.is_regular_file()) {
+    if (!std::filesystem::is_regular_file(path)) {
         output("Error: Overrides file '%s' is not valid\n", overrides_file);
         return;
     }
@@ -341,19 +340,19 @@ void copy_string_alloc(char **dest, const char *string)
 }
 
 Job::Job(const std::vector<std::u8string> &file_list, const FileType file_type, const std::filesystem::path &path) {
-    this->nb_files = file_list.size();
-    this->files = (char**) malloc(sizeof(char*) * this->nb_files);
-    for (int i = 0; i < this->nb_files; i++) {
-        copy_string_alloc(this->files + i, (char*) file_list[i].c_str());
+    nb_files = file_list.size();
+    files = (char**) malloc(sizeof(char*) * nb_files);
+    for (int i = 0; i < nb_files; i++) {
+        copy_string_alloc(files + i, (char*) file_list[i].c_str());
     }
-    this->config = configs + file_type;
-    this->directory = path.u8string();
+    config = configs + file_type;
+    directory = path.u8string();
 }
 Job::~Job() {
-    for (int i = 0; i < this->nb_files; i++) {
-        free(this->files[i]);
+    for (int i = 0; i < nb_files; i++) {
+        free(files[i]);
     }
-    free(this->files);
+    free(files);
 }
 
 // Generates a scan job from a directory path
@@ -394,12 +393,12 @@ Job *generate_job(const std::filesystem::path &path)
 
 WorkerThread::WorkerThread(std::mutex *ffmpeg_mutex, std::mutex *main_mutex, std::condition_variable *main_cv)
 {
-    this->files = NULL;
     this->ffmpeg_mutex = ffmpeg_mutex;
     this->main_mutex = main_mutex;
     this->main_cv = main_cv;
-    this->quit = false;
-    this->thread = new std::thread(&WorkerThread::work, this);
+    files = NULL;
+    quit = false;
+    thread = new std::thread(&WorkerThread::work, this);
 }
 
 void WorkerThread::add_job(int start_index, int nb_files, char **files)
@@ -409,7 +408,7 @@ void WorkerThread::add_job(int start_index, int nb_files, char **files)
     this->nb_files = nb_files;
     this->files = files;
     lk.unlock();
-    this->thread_cv.notify_all();
+    thread_cv.notify_all();
 }
 
 WorkerThread::~WorkerThread()
@@ -419,70 +418,69 @@ WorkerThread::~WorkerThread()
 
 void WorkerThread::work()
 {
-    std::unique_lock main_lock(*this->main_mutex, std::defer_lock);
-    std::unique_lock thread_lock(this->thread_mutex);
+    std::unique_lock main_lock(*main_mutex, std::defer_lock);
+    std::unique_lock thread_lock(thread_mutex);
 
-    while (!this->quit) {
-        if (this->files != NULL) {
-            this->error = false;
-            int end = this->start_index + this->nb_files;
-            this->finished = false;
-            for(int i = this->start_index; i < end && !this->error; i++) {
-                this->error = scan_file(this->files[i], i, this->ffmpeg_mutex);
+    while (!quit) {
+        if (files != NULL) {
+            error = false;
+            int end = start_index + nb_files;
+            finished = false;
+            for(int i = start_index; i < end && !error; i++) {
+                error = scan_file(files[i], i, ffmpeg_mutex);
             }
-            this->files = NULL;
-            this->finished = true;
+            files = NULL;
+            finished = true;
 
             // Inform the main thread that the scanning is finished
             main_lock.lock();
-            this->main_cv->notify_all();
+            main_cv->notify_all();
             main_lock.unlock();
         }
                                                                                                                                                                                                                                                                                                                                                                         
         // Wait until we get a new job from the main thread
-        this->thread_cv.wait_for(thread_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
+        thread_cv.wait_for(thread_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
     }
 
-	return;
+    return;
 }
 
 bool WorkerThread::is_finished(bool &error)
 {
-    std::unique_lock lk(this->thread_mutex, std::try_to_lock);
+    std::unique_lock lk(thread_mutex, std::try_to_lock);
     if (!lk.owns_lock())
         return false;
     bool finished = this->finished;
     if (this->finished)
         this->finished = false;
-        error |= this->error;
+    error |= this->error;
     lk.unlock();
     return finished;   
 }
 
 void WorkerThread::quit_thread()
 {
-    std::unique_lock lk(this->thread_mutex);
-    this->quit = true;
+    std::unique_lock lk(thread_mutex);
+    quit = true;
     lk.unlock();
-    this->thread_cv.notify_all();
-    this->thread->join();
+    thread_cv.notify_all();
+    thread->join();
 }
 
 void scan_easy(const char *directory, const char *overrides_file)
 {
-    std::filesystem::path path(directory);
-    std::filesystem::directory_entry dir(path);
+    std::filesystem::path path((char8_t*) directory);
     std::vector<std::u8string> error_directories;
     bool error;
     Job *job;
     long total_files = 0;
 
     // Verify directory exists and is valid
-    if (!dir.exists()) {
+    if (!std::filesystem::exists(path)) {
         output("Error: Directory '%s' does not exist\n", directory);
         quit(EXIT_FAILURE);
     }
-    else if (!dir.is_directory()) {
+    else if (!std::filesystem::is_directory(path)) {
         output("Error: '%s' is not a valid directory\n", directory);
         quit(EXIT_FAILURE);
     }

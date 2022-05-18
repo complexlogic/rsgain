@@ -7,7 +7,7 @@
 
 #ifdef __GNUC__
 #define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
-#if GCC_VERSION > 110000
+#if GCC_VERSION >= 110000
 #define CALC_TIME 1
 #else
 #define CALC_TIME 0
