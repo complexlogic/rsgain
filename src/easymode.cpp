@@ -13,14 +13,13 @@
 #include <string.h>
 #include <stdio.h>
 #include <ini.h>
-#include "rsgain.h"
+#include <fmt/core.h>
+#include "rsgain.hpp"
 #include "easymode.hpp"
-#include "output.h"
+#include "output.hpp"
 #include "scan.hpp"
 
-extern "C" {
-    extern int multithread;
-}
+extern int multithread;
 
 static const struct extension_type extensions[] {
     {".mp2",  MP2},
@@ -311,18 +310,18 @@ static void load_overrides(const char *overrides_file)
 {
     std::filesystem::path path((char8_t*) overrides_file);
     if (!std::filesystem::exists(path)) {
-        output("Error: Overrides file '%s' does not exist\n", overrides_file);
+        fmt::print("Error: Overrides file '{}' does not exist\n", overrides_file);
         return;
     }
     if (!std::filesystem::is_regular_file(path)) {
-        output("Error: Overrides file '%s' is not valid\n", overrides_file);
+        fmt::print("Error: Overrides file '{}' is not valid\n", overrides_file);
         return;
     }
 
     // Parse file
     output_ok("Applying overrides");
     if (ini_parse(overrides_file, handler, NULL) < 0) {
-        output("Failed to load overrides file '%s'\n", overrides_file);
+        fmt::print("Failed to load overrides file '{}'\n", overrides_file);
     }
 }
 
@@ -477,11 +476,11 @@ void scan_easy(const char *directory, const char *overrides_file)
 
     // Verify directory exists and is valid
     if (!std::filesystem::exists(path)) {
-        output("Error: Directory '%s' does not exist\n", directory);
+        fmt::print("Error: Directory '{}' does not exist\n", directory);
         quit(EXIT_FAILURE);
     }
     else if (!std::filesystem::is_directory(path)) {
-        output("Error: '%s' is not a valid directory\n", directory);
+        fmt::print("Error: '{}' is not a valid directory\n", directory);
         quit(EXIT_FAILURE);
     }
 
@@ -535,7 +534,7 @@ void scan_easy(const char *directory, const char *overrides_file)
             if (job == NULL)
                 continue;
 
-            output_ok("Scanning directory: %s", (char*) job->directory.c_str());
+            output_ok("Scanning directory: {}", (char*) job->directory.c_str());
             scan_init(job->nb_files);
 
             // Distribute the files evenly amongst the worker threads
@@ -589,7 +588,7 @@ void scan_easy(const char *directory, const char *overrides_file)
             if (job == NULL)
                 continue;
 
-            output_ok("Scanning directory: %s", (char*) job->directory.c_str());
+            output_ok("Scanning directory: {}", (char*) job->directory.c_str());
             error = scan(job->nb_files, job->files, job->config);
             if (error) {
                 error_directories.push_back(job->directory);
@@ -603,10 +602,10 @@ void scan_easy(const char *directory, const char *overrides_file)
 
     const auto end_time = std::chrono::system_clock::now();
     if (!total_files) {
-        output("No files were scanned\n");
+        fmt::print("No files were scanned\n");
         return;
     }
-    output(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
+    fmt::print(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
 
     // Calculate time (not available in GCC 10 and earlier)
 #if CALC_TIME
@@ -631,18 +630,18 @@ void scan_easy(const char *directory, const char *overrides_file)
     ss.imbue(std::locale(""));
     ss << std::fixed << total_files;
     
-    output(COLOR_YELLOW "Files Scanned:" COLOR_OFF " %s\n", ss.str().c_str());
+    fmt::print(COLOR_YELLOW "Files Scanned:" COLOR_OFF " {}\n", ss.str().c_str());
 #if CALC_TIME
-    output(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  %s\n", time_string.c_str());
+    fmt::print(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  {}\n", time_string.c_str());
 #endif
-    output("\n");
+    fmt::print("\n");
 
     // Inform user of errors
     if (error_directories.size()) {
-        output(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
+        fmt::print(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
         for (std::u8string &d : error_directories) {
-            output("%s\n", (char*) d.c_str());
+            fmt::print("{}\n", (char*) d.c_str());
         }
-        output("\n");
+        fmt::print("\n");
     }
 }

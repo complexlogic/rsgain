@@ -1,7 +1,7 @@
 if (WIN32)
-  add_executable(${EXECUTABLE_TITLE} "rsgain.c" "scan.cpp" "output.c" "tag.cpp" "easymode.cpp" "${PROJECT_BINARY_DIR}/rsgain.manifest")
+  add_executable(${EXECUTABLE_TITLE} "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp" "${PROJECT_BINARY_DIR}/rsgain.manifest")
 else()
-  add_executable(${EXECUTABLE_TITLE} "rsgain.c" "scan.cpp" "output.c" "tag.cpp" "easymode.cpp")
+  add_executable(${EXECUTABLE_TITLE} "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp")
 
   # GCC 10 requires linking with pthread for some reason
   if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)

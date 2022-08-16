@@ -37,19 +37,23 @@
 #include <stdbool.h>
 #include <math.h>
 #include <getopt.h>
+#include <string>
 
-#include <ebur128.h>
+extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
+}
+#include <ebur128.h>
+#include <fmt/core.h>
 
-#include "rsgain.h"
-#include "tag.h"
+#include "rsgain.hpp"
+#include "tag.hpp"
 #include "config.h"
-#include "scan.h"
-#include "output.h"
-#include "easymode.h"
+#include "scan.hpp"
+#include "output.hpp"
+#include "easymode.hpp"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -119,7 +123,7 @@ void parse_pregain(const char *value, Config *config)
     if (!rest ||
         (rest == value) ||
         !isfinite(config->pre_gain))
-        output_fail("Invalid pregain value '%s' (dB/LU)", value);
+        output_fail("Invalid pregain value '{}' (dB/LU)", value);
 }
 
 void parse_mode(const char *value, Config *config)
@@ -128,7 +132,7 @@ void parse_mode(const char *value, Config *config)
     char *valid_modes = "cdielavsr";
     config->mode = value[0];
     if (strchr(valid_modes, config->mode) == NULL)
-        output_fail("Invalid tag mode: '%s'", value);
+        output_fail("Invalid tag mode: '{}'", value);
     if (config->mode == 'l') {
         config->unit = UNIT_LU;
     }
@@ -138,7 +142,7 @@ void parse_id3v2version(const char *value, Config *config)
 {
     config->id3v2version = atoi(value);
     if (!(config->id3v2version == 3) && !(config->id3v2version == 4))
-        output_fail("Invalid ID3v2 version '%s'; only 3 and 4 are supported.", value);
+        output_fail("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
 }
 
 void parse_max_true_peak_level(const char *value, Config *config)
@@ -152,7 +156,7 @@ void parse_max_true_peak_level(const char *value, Config *config)
     if (!rest ||
         (rest == value) ||
         !isfinite(config->pre_gain))
-        output_fail("Invalid max. true peak level '%s' (dBTP)", value);
+        output_fail("Invalid max. true peak level '{}' (dBTP)", value);
 }
 
 // Parse Easy Mode command line arguments
@@ -193,7 +197,7 @@ static void easy_mode(int argc, char *argv[])
     }
 
     if (argc == optind) {
-        output("Error: You must specific the directory to scan\n");
+        fmt::print("Error: You must specific the directory to scan\n");
         quit(EXIT_FAILURE);
     }
 
@@ -315,7 +319,7 @@ static void custom_mode(int argc, char *argv[])
 
     nb_files = argc - optind;
     if (!nb_files) {
-        output("Error: No files specified\n");
+        fmt::print("Error: No files specified\n");
         quit(EXIT_FAILURE);
     }
     scan(nb_files, argv + optind, &config);
@@ -368,7 +372,7 @@ int main(int argc, char *argv[]) {
         custom_mode(num_subargs, subargs);
     }
     else {
-        output("Error: Unrecognized command \"%s\"\n", command);
+        fmt::print("Error: Unrecognized command \"{}\"\n", command);
         quit(EXIT_FAILURE);
     }
     quit(EXIT_SUCCESS);
@@ -376,75 +380,72 @@ int main(int argc, char *argv[]) {
 
 
 static void help_main(void) {
+    fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    fmt::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
+    fmt::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), OPUS (.opus), MP2 (.mp2),\n");
+    fmt::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape).\n");
+    fmt::print("  Experimental: WAV (.wav), AIFF (.aiff, .aif, .snd).\n");
 
-    output("%s %s supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
-    output("  FLAC (.flac), Ogg (.ogg, .oga, .spx), OPUS (.opus), MP2 (.mp2),\n");
-    output("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape).\n");
-    output("  Experimental: WAV (.wav), AIFF (.aiff, .aif, .snd).\n");
-
-    output("\n");
-    output(COLOR_RED "Options:\n" COLOR_OFF);
+    fmt::print("\n");
+    fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
 
     CMD_HELP("--help",     "-h", "Show this help");
     CMD_HELP("--version",  "-v", "Show version number");
     
-    output("\n");
-    output(COLOR_RED "Commands:\n" COLOR_OFF);
+    fmt::print("\n");
+    fmt::print(COLOR_RED "Commands:\n" COLOR_OFF);
 
     CMD_CMD("easy",     "Easy Mode:   Recursively scan a directory with recommended settings");
     CMD_CMD("custom",   "Custom Mode: Scan individual files with custom settings");
-    output("\n");
-    output("Run '%s easy --help' or '%s custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
+    fmt::print("\n");
+    fmt::print("Run '{} easy --help' or '{} custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
 
-    output("\n\n");
-    output("Please report any issues to " PROJECT_URL "/issues\n\n");
+    fmt::print("\n\n");
+    fmt::print("Please report any issues to " PROJECT_URL "/issues\n\n");
 }
 
 
 static inline void help_easy(void) {
+    fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    fmt::print("  Easy Mode recursively scans a directory using the recommended settings for each\n");
+    fmt::print("  file type. Easy Mode assumes that you have your music library organized with each album\n");
+    fmt::print("  in its own folder.\n");
 
-    output("  Easy Mode recursively scans a directory using the recommended settings for each\n");
-    output("  file type. Easy Mode assumes that you have your music library organized with each album\n");
-    output("  in its own folder.\n");
-
-    output("\n");
-    output(COLOR_RED "Options:\n" COLOR_OFF);
+    fmt::print("\n");
+    fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
 
     CMD_HELP("--help",     "-h", "Show this help");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
-    output("\n");
+    fmt::print("\n");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--override=p", "-o p", "Load override settings from path p");
 
-    output("\n");
+    fmt::print("\n");
 
-    output("Please report any issues to " PROJECT_URL "/issues\n");
-    output("\n");
+    fmt::print("Please report any issues to " PROJECT_URL "/issues\n");
+    fmt::print("\n");
 }
 
 
 static inline void help_custom(void) {
+    fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    output(COLOR_RED "Usage: " COLOR_OFF "%s%s%s custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    fmt::print("  Custom Mode allows the user to specify the options to scan the files with. The\n");
+    fmt::print("  list of files to scan must be listed explicitly after the options.\n");
 
-    output("  Custom Mode allows the user to specify the options to scan the files with. The\n");
-    output("  list of files to scan must be listed explicitly after the options.\n");
-
-    output("\n");
-    output(COLOR_RED "Options:\n" COLOR_OFF);
+    fmt::print("\n");
+    fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
 
     CMD_HELP("--help",     "-h", "Show this help");
 
-    output("\n");
+    fmt::print("\n");
 
     CMD_HELP("--track",  "-r", "Calculate track gain only (default)");
     CMD_HELP("--album",  "-a", "Calculate album gain (and track gain)");
 
-    output("\n");
+    fmt::print("\n");
 
     CMD_HELP("--clip",   "-c", "Ignore clipping warning");
     CMD_HELP("--noclip", "-k", "Lower track/album gain to avoid clipping (<= -1 dBTP)");
@@ -452,7 +453,7 @@ static inline void help_custom(void) {
 
     CMD_HELP("--pregain=n",  "-d n",  "Apply n dB/LU pre-gain value (-5 for -23 LUFS target)");
 
-    output("\n");
+    fmt::print("\n");
 
     CMD_HELP("--tagmode=d", "-s d",  "Delete ReplayGain tags from files");
     CMD_HELP("--tagmode=i", "-s i",  "Write ReplayGain 2.0 tags to files");
@@ -461,7 +462,7 @@ static inline void help_custom(void) {
 
     CMD_HELP("--tagmode=s", "-s s",  "Don't write ReplayGain tags (default)");
 
-    output("\n");
+    fmt::print("\n");
 
     CMD_HELP("--lowercase", "-L", "Force lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
@@ -470,15 +471,15 @@ static inline void help_custom(void) {
     CMD_HELP("--id3v2version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
     CMD_HELP("--id3v2version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF (default)");
 
-    output("\n");
+    fmt::print("\n");
 
     CMD_HELP("--output", "-O",  "Database-friendly tab-delimited list output");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
-    output("\n");
+    fmt::print("\n");
 
-    output("Please report any issues to " PROJECT_URL "/issues\n");
-    output("\n");
+    fmt::print("Please report any issues to " PROJECT_URL "/issues\n");
+    fmt::print("\n");
 }
 
 
@@ -490,49 +491,44 @@ static void version(void) {
     unsigned lavf_ver        = 0;
     unsigned lavc_ver        = 0;
     unsigned lavu_ver        = 0;
-    char ebur128_version[15];
-    char swr_version[15];
-    char lavf_version[15];
-    char lavc_version[15];
-    char lavu_version[15];
-    char taglib_version[15];
+    std::string ebur128_version;
+    std::string swr_version;
+    std::string lavf_version;
+    std::string lavc_version;
+    std::string lavu_version;
+    std::string taglib_version;
 
     // libebur128 version check
     ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
-    snprintf(ebur128_version, sizeof(ebur128_version), "%d.%d.%d",
-        ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
+    ebur128_version = fmt::format("{}.{}.{}", ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
 
     // libavformat version
     lavf_ver = avformat_version();
-    snprintf(lavf_version, sizeof(lavf_version), "%u.%u.%u",
-        lavf_ver>>16, lavf_ver>>8&0xff, lavf_ver&0xff);
+    lavf_version = fmt::format("{}.{}.{}", lavf_ver>>16, lavf_ver>>8&0xff, lavf_ver&0xff);
 
     // libavcodec version
     lavc_ver = avcodec_version();
-    snprintf(lavc_version, sizeof(lavc_version), "%u.%u.%u",
-        lavc_ver>>16, lavc_ver>>8&0xff, lavc_ver&0xff);
+    lavc_version = fmt::format("{}.{}.{}", lavc_ver>>16, lavc_ver>>8&0xff, lavc_ver&0xff);
 
     // libavcodec version
     lavu_ver = avutil_version();
-    snprintf(lavu_version, sizeof(lavu_version), "%u.%u.%u",
-        lavu_ver>>16, lavu_ver>>8&0xff, lavu_ver&0xff);
+    lavu_version = fmt::format("{}.{}.{}", lavu_ver>>16, lavu_ver>>8&0xff, lavu_ver&0xff);
 
     // libswresample version
     swr_ver = swresample_version();
-    snprintf(swr_version, sizeof(swr_version), "%u.%u.%u",
-        swr_ver>>16, swr_ver>>8&0xff, swr_ver&0xff);
+    swr_version = fmt::format("{}.{}.{}", swr_ver>>16, swr_ver>>8&0xff, swr_ver&0xff);
 
     // taglib version
-    taglib_get_version(taglib_version, sizeof(taglib_version));
+    taglib_get_version(taglib_version);
 
     // Print versions
-    output(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION " - using:\n");
+    fmt::print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION " - using:\n");
     PRINT_LIB("libebur128", ebur128_version);
     PRINT_LIB("libavformat", lavf_version);
     PRINT_LIB("libavcodec", lavc_version);
     PRINT_LIB("libavutil", lavu_version);
     PRINT_LIB("libswresample", swr_version);
-    output("\n");
-    output("Built with:\n");
+    fmt::print("\n");
+    fmt::print("Built with:\n");
     PRINT_LIB("taglib", taglib_version);
 }

@@ -1,8 +1,8 @@
-#include "easymode.h"
 #include <string>
 #include <vector>
 #include <thread>
 #include <mutex>
+#include <filesystem>
 #include <condition_variable>
 
 #ifdef __GNUC__
@@ -79,6 +79,7 @@ struct overrides_section {
     FileType file_type;
 };
 
+void scan_easy(const char *directory, const char *overrides_file);
 static FileType determine_filetype(const char *extension);
 static bool is_type(const char *extension, const FileType file_type);
 void copy_string_alloc(char **dest, const char *string);

@@ -27,8 +27,11 @@
  * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
- #include "tag.h"
 
+#include "scan.hpp"
+
+
+void taglib_get_version(std::string &buffer);
 bool tag_write_mp3(scan_result *scan, Config *config);
 bool tag_clear_mp3(scan_result *scan, Config *config);
 

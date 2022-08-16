@@ -35,6 +35,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdbool.h>
+#include <cmath>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -47,15 +48,10 @@ extern HANDLE console;
 #include <sys/ioctl.h>
 #endif
 
-#include "output.h"
+#include <fmt/core.h>
+#include "output.hpp"
 #include "config.h"
 
-struct output_info {
-	const char *prefix;
-	int prefix_len;
-	FILE *stream;
-	bool append_newline;
-};
 
 int quiet = 0;
 int disable_progress_bar = 0;
@@ -63,123 +59,7 @@ extern int multithread;
 
 static void get_screen_size(unsigned *w, unsigned *h);
 static void print_buffer(const char *buffer, int length, FILE *stream);
-static void print_output(struct output_info *info, const char *fmt, va_list args);
 void quit(int status);
-
-
-void output(const char *fmt, ...)
-{
-	if (quiet) return;
-	static struct output_info info = {
-		NULL,
-		0,
-		NULL,
-		false
-	};
-	info.stream = stdout;
-
-	va_list args;
-	va_start(args, fmt);
-	print_output(&info, fmt, args);
-	va_end(args);
-}
-
-void output_ok(const char *fmt, ...)
-{
-	if (quiet) return;
-	static struct output_info info = {
-		OK_PREFIX,
-		LEN(OK_PREFIX),
-		NULL,
-		true
-	};
-	info.stream = stdout;
-
-	va_list args;
-	va_start(args, fmt);
-	print_output(&info, fmt, args);
-	va_end(args);
-}
-
-void output_warn(const char *fmt, ...)
-{
-	if (quiet) return;
-	static struct output_info info = {
-		WARN_PREFIX,
-		LEN(WARN_PREFIX),
-		NULL,
-		true
-	};
-	info.stream = stdout;
-
-	va_list args;
-	va_start(args, fmt);
-	print_output(&info, fmt, args);
-	va_end(args);
-}
-
-void output_error(const char *fmt, ...)
-{
-	static struct output_info info = {
-		ERROR_PREFIX,
-		LEN(ERROR_PREFIX),
-		NULL,
-		true
-	};
-	info.stream = stderr;
-
-	va_list args;
-	va_start(args, fmt);
-	print_output(&info, fmt, args);
-	va_end(args);
-}
-
-void output_fail(const char *fmt, ...)
-{
-	static struct output_info info = {
-		FAIL_PREFIX,
-		LEN(FAIL_PREFIX),
-		NULL,
-		true
-	};
-	info.stream = stderr;
-
-	va_list args;
-	va_start(args, fmt);
-	print_output(&info, fmt, args);
-	va_end(args);
-}
-
-static void print_output(struct output_info *info, const char *fmt, va_list args)
-{
-	static char message[LINE_MAX];
-	int newline = info->append_newline ? 1 : 0;
-	int bytes = sizeof(message) - newline; // Allow for newline character
-	char *p = message;
-
-	// Copy prefix
-	if (info->prefix != NULL && info->prefix_len < bytes) {
-		strncpy(p, info->prefix, bytes);
-		bytes -= info->prefix_len;
-		p += info->prefix_len;
-	}
-
-	// Format the message
-	if (bytes > 0) {
-		int n = vsnprintf(p, bytes, fmt, args);
-		if (n > 0 && n < bytes) {
-
-			// Append newline to the end
-			if (newline) {
-				message[info->prefix_len + n] = '\n';
-				message[info->prefix_len + n + 1] = '\0';
-			}
-
-			// Output message to console
-			print_buffer(message, info->prefix_len + n + newline, info->stream);
-		}
-	}
-}
 
 static void print_buffer(const char *buffer, int length, FILE *stream)
 {
@@ -190,12 +70,14 @@ static void print_buffer(const char *buffer, int length, FILE *stream)
     #endif
 }
 
+
 void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 	int i;
 	static int show_bar = 0;
 	int c;
 	static int prev_c = -1;
 	static char *buffer = NULL;
+	static double ratio;
 	
 	switch (ctrl) {
 		case 0: /* init */
@@ -220,15 +102,16 @@ void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 			if (w == 0) {
 				get_screen_size(&w, NULL);
 				w -= 8;
-				buffer = malloc(w + 3);
+				buffer = new char[w + 3];
 			}
+			
 
-			double ratio = x / (double) n;
+			ratio = x / (double) n;
 			c     = ratio * w;
 			
 			// Only update if the progress bar has incremented
 			if (c != prev_c) {
-				output(" %3.0f%% [", ratio * 100);
+				fmt::print(" {}% [", std::round(ratio * 100));
 				for (i = 0; i < c; i++)
 					buffer[i] = '=';
 
@@ -249,7 +132,7 @@ void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 		case 2: /* end */
 			if (show_bar == 1) {
 				print_buffer("\n", 1, stdout);
-				free(buffer);
+				delete buffer;
 				buffer = NULL;
 			}
 			break;

@@ -12,7 +12,6 @@ project(
   HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES C CXX
 )
-set(CMAKE_C_STANDARD 99)
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "rsgain")
 
@@ -79,6 +78,7 @@ else ()
   pkg_check_modules(LTAG REQUIRED taglib)
   pkg_check_modules(EBUR128 REQUIRED libebur128>=1.2.4)
   pkg_check_modules(INIH REQUIRED inih)
+  pkg_check_modules(FMT REQUIRED fmt)
 
   include_directories(
     ${LAVC_INCLUDE_DIRS}
@@ -88,6 +88,7 @@ else ()
     ${LTAG_INCLUDE_DIRS}
     ${EBUR128_INCLUDE_DIRS}
     ${INIH_INCLUDE_DIRS}
+    ${FMT_INCLUDE_DIRS}
     ${PROJECT_BINARY_DIR}
   )
   link_libraries(
@@ -97,6 +98,7 @@ else ()
     ${LAVU_LIBRARIES}
     ${LTAG_LIBRARIES}
     ${INIH_LIBRARIES}
+    ${FMT_LIBRARIES}
     ${EBUR128_LIBRARIES}
   )
 endif()

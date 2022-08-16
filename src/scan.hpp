@@ -1,5 +1,8 @@
+#ifndef HAS_SCAN_H
+#define HAS_SCAN_H
+
 #include <mutex>
-#include "scan.h"
+#include "scan.hpp"
 
 typedef struct {
 	char *file;
@@ -33,6 +36,7 @@ enum AV_CONTAINER_ID {
 		AV_CONTAINER_ID_APE
 };
 
+bool scan(int nb_files, char **files, Config *config);
 int name_to_id(const char *str);
 int scan_init(unsigned nb_files);
 void scan_deinit();
@@ -44,3 +48,5 @@ void scan_set_album_result(scan_result *result, double pre_amp);
 int scan_album_has_different_codecs(void);
 int scan_album_has_different_containers(void);
 int scan_album_has_opus(void);
+
+#endif

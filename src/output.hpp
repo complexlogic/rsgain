@@ -4,6 +4,8 @@
  * Copyright (c) 2014, Alessandro Ghedini
  * All rights reserved.
  *
+ * rsgain by complexlogic, 2022
+ * 
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are
  * met:
@@ -28,10 +30,45 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef __cplusplus
-extern "C" {
+#include <fmt/core.h>
+
+#define COLOR_GREEN	"[1;32m"
+#define COLOR_YELLOW	"[1;33m"
+#define COLOR_RED	"[1;31m"
+#define COLOR_BGRED	"[1;41m"
+#define COLOR_OFF	"[0m"
+
+// The default Windows console font doesn't support the ✔ and ✘ characters
+#ifdef _WIN32
+#define OK_CHAR "OK"
+#define ERROR_CHAR "ERROR"
+#define FAIL_CHAR "FAILURE"
+#else
+#define OK_CHAR "✔"
+#define ERROR_CHAR "✘"
+#define FAIL_CHAR "✘"
 #endif
-bool scan(int nb_files, char **files, Config *config);
-#ifdef __cplusplus
-}
-#endif
+#define WARN_CHAR "!"
+
+#define OK_PREFIX "[" COLOR_GREEN OK_CHAR COLOR_OFF "] "
+#define WARN_PREFIX "[" COLOR_YELLOW WARN_CHAR COLOR_OFF "] "
+#define ERROR_PREFIX "[" COLOR_RED ERROR_CHAR COLOR_OFF "] "
+#define FAIL_PREFIX "[" COLOR_RED FAIL_CHAR COLOR_OFF "] "
+
+extern int quiet;
+extern int disable_progress_bar;
+/*
+void fmt::print(const char *fmt, ...);
+void output_ok(const char *fmt, ...);
+void output_warn(const char *fmt, ...);
+void output_error(const char *fmt, ...);
+void output_fail(const char *fmt, ...);
+*/
+
+#define output_ok(format, ...) fmt::print(OK_PREFIX format __VA_OPT__(,) __VA_ARGS__)
+#define output_warn(format, ...) fmt::print(WARN_PREFIX format __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) fmt::print(ERROR_PREFIX format __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...) fmt::print(FAIL_PREFIX format __VA_OPT__(,) __VA_ARGS__)
+
+
+void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w);
