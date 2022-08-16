@@ -40,7 +40,7 @@ class Job {
         int nb_files;
         char **files;
         std::u8string directory;
-        Config *config;
+        Config &config;
 };
 
 class WorkerThread {

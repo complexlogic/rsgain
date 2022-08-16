@@ -146,11 +146,11 @@ void tag_remove_mp3(TagLib::ID3v2::Tag *tag) {
 // Even if the ReplayGain 2 standard proposes replaygain tags to be uppercase,
 // unfortunately some players only respect the lowercase variant (still).
 // So we use the "lowercase" flag to switch.
-bool tag_write_mp3(scan_result *scan, Config *config) {
+bool tag_write_mp3(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
-  if (config->lowercase) {
+  if (config.lowercase) {
     RG_STRING = RG_STRING_LOWER;
   }
 
@@ -160,15 +160,15 @@ bool tag_write_mp3(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_mp3(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -176,48 +176,48 @@ bool tag_write_mp3(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_REFERENCE_LOUDNESS]), value);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_RANGE]), value);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_RANGE]), value);
     }
   }
 
   // work around bug taglib/taglib#913: strip APE before ID3v1
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::MPEG::File::APE);
 
 #if TAGLIB_VERSION >= 11200
   return f.save(TagLib::MPEG::File::ID3v2,
-    config->strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
-    config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+    config.strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
+    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
-  return f.save(TagLib::MPEG::File::ID3v2, config->strip, config->id3v2version);
+  return f.save(TagLib::MPEG::File::ID3v2, config.strip, config.id3v2version);
 #endif
 }
 
-bool tag_clear_mp3(scan_result *scan, Config *config) {
+bool tag_clear_mp3(scan_result *scan, Config &config) {
   TagLib::MPEG::File f(scan->file);
   TagLib::ID3v2::Tag *tag = f.ID3v2Tag(true);
 
   tag_remove_mp3(tag);
 
   // work around bug taglib/taglib#913: strip APE before ID3v1
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::MPEG::File::APE);
 
 #if TAGLIB_VERSION >= 11200
   return f.save(TagLib::MPEG::File::ID3v2,
-    config->strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
-    config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+    config.strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
+    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
-  return f.save(TagLib::MPEG::File::ID3v2, config->strip, config->id3v2version);
+  return f.save(TagLib::MPEG::File::ID3v2, config.strip, config.id3v2version);
 #endif
 }
 
@@ -234,7 +234,7 @@ void tag_remove_flac(TagLib::Ogg::XiphComment *tag) {
   tag->removeFields(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
 }
 
-bool tag_write_flac(scan_result *scan, Config *config) {
+bool tag_write_flac(scan_result *scan, Config &config) {
   std::string value;
 
   TagLib::FLAC::File f(scan->file);
@@ -243,15 +243,15 @@ bool tag_write_flac(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_flac(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->addField(RG_STRING_UPPER[RG_TRACK_GAIN], value);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->addField(RG_STRING_UPPER[RG_TRACK_PEAK], value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->addField(RG_STRING_UPPER[RG_ALBUM_GAIN], value);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -259,15 +259,15 @@ bool tag_write_flac(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->addField(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS], value);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->addField(RG_STRING_UPPER[RG_TRACK_RANGE], value);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->addField(RG_STRING_UPPER[RG_ALBUM_RANGE], value);
     }
   }
@@ -297,7 +297,7 @@ void tag_remove_ogg(TagLib::Ogg::XiphComment *tag) {
   tag->removeFields(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
 }
 
-void tag_make_ogg(scan_result *scan, Config *config,
+void tag_make_ogg(scan_result *scan, Config &config,
   TagLib::Ogg::XiphComment *tag) {
 
   std::string value;
@@ -305,15 +305,15 @@ void tag_make_ogg(scan_result *scan, Config *config,
   // remove old tags before writing new ones
   tag_remove_ogg(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->addField(RG_STRING_UPPER[RG_TRACK_GAIN], value);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->addField(RG_STRING_UPPER[RG_TRACK_PEAK], value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->addField(RG_STRING_UPPER[RG_ALBUM_GAIN], value);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -321,15 +321,15 @@ void tag_make_ogg(scan_result *scan, Config *config,
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->addField(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS], value);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->addField(RG_STRING_UPPER[RG_TRACK_RANGE], value);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->addField(RG_STRING_UPPER[RG_ALBUM_RANGE], value);
     }
   }
@@ -337,7 +337,7 @@ void tag_make_ogg(scan_result *scan, Config *config,
 
 /*** Ogg: Ogg Vorbis ***/
 
-bool tag_write_ogg_vorbis(scan_result *scan, Config *config) {
+bool tag_write_ogg_vorbis(scan_result *scan, Config &config) {
   TagLib::Ogg::Vorbis::File f(scan->file);
   TagLib::Ogg::XiphComment *tag = f.tag();
   bool do_album = true;
@@ -358,7 +358,7 @@ bool tag_clear_ogg_vorbis(scan_result *scan) {
 
 /*** Ogg: Ogg FLAC ***/
 
-bool tag_write_ogg_flac(scan_result *scan, Config *config) {
+bool tag_write_ogg_flac(scan_result *scan, Config &config) {
   TagLib::Ogg::FLAC::File f(scan->file);
   TagLib::Ogg::XiphComment *tag = f.tag();
 
@@ -378,7 +378,7 @@ bool tag_clear_ogg_flac(scan_result *scan) {
 
 /*** Ogg: Ogg Speex ***/
 
-bool tag_write_ogg_speex(scan_result *scan, Config *config) {
+bool tag_write_ogg_speex(scan_result *scan, Config &config) {
   TagLib::Ogg::Speex::File f(scan->file);
   TagLib::Ogg::XiphComment *tag = f.tag();
 
@@ -448,7 +448,7 @@ void tag_remove_ogg_opus(TagLib::Ogg::XiphComment *tag) {
   tag->removeFields("R128_ALBUM_GAIN");
 }
 
-bool tag_write_ogg_opus(scan_result *scan, Config *config) {
+bool tag_write_ogg_opus(scan_result *scan, Config &config) {
   std::string value;
 
   TagLib::Ogg::Opus::File f(scan->file);
@@ -461,7 +461,7 @@ bool tag_write_ogg_opus(scan_result *scan, Config *config) {
   tag->addField("R128_TRACK_GAIN", value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
+  if (config.do_album) {
     value = fmt::format("{}", gain_to_q78num(scan->album_gain));
     tag->addField("R128_ALBUM_GAIN", value);
   }
@@ -516,11 +516,11 @@ void tag_remove_mp4(TagLib::MP4::Tag *tag) {
   }
 }
 
-bool tag_write_mp4(scan_result *scan, Config *config) {
+bool tag_write_mp4(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
-  if (config->lowercase) {
+  if (config.lowercase) {
     RG_STRING = RG_STRING_LOWER;
   }
 
@@ -530,15 +530,15 @@ bool tag_write_mp4(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_mp4(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->setItem(tagname(RG_STRING[RG_TRACK_GAIN]), TagLib::StringList(value));
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->setItem(tagname(RG_STRING[RG_TRACK_PEAK]), TagLib::StringList(value));
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->setItem(tagname(RG_STRING[RG_ALBUM_GAIN]), TagLib::StringList(value));
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -546,15 +546,15 @@ bool tag_write_mp4(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->setItem(tagname(RG_STRING[RG_REFERENCE_LOUDNESS]), TagLib::StringList(value));
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->setItem(tagname(RG_STRING[RG_TRACK_RANGE]), TagLib::StringList(value));
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->setItem(tagname(RG_STRING[RG_ALBUM_RANGE]), TagLib::StringList(value));
     }
   }
@@ -593,11 +593,11 @@ void tag_remove_asf(TagLib::ASF::Tag *tag) {
   }
 }
 
-bool tag_write_asf(scan_result *scan, Config *config) {
+bool tag_write_asf(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
-  if (config->lowercase) {
+  if (config.lowercase) {
     RG_STRING = RG_STRING_LOWER;
   }
 
@@ -607,15 +607,15 @@ bool tag_write_asf(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_asf(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->setAttribute(RG_STRING[RG_TRACK_GAIN], TagLib::String(value));
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->setAttribute(RG_STRING[RG_TRACK_PEAK], TagLib::String(value));
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->setAttribute(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value));
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -623,15 +623,15 @@ bool tag_write_asf(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->setAttribute(RG_STRING[RG_REFERENCE_LOUDNESS], TagLib::String(value));
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->setAttribute(RG_STRING[RG_TRACK_RANGE], TagLib::String(value));
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->setAttribute(RG_STRING[RG_ALBUM_RANGE], TagLib::String(value));
     }
   }
@@ -677,11 +677,11 @@ void tag_remove_wav(TagLib::ID3v2::Tag *tag) {
 }
 
 // Experimental WAV file tagging within an "ID3 " chunk
-bool tag_write_wav(scan_result *scan, Config *config) {
+bool tag_write_wav(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
-  if (config->lowercase) {
+  if (config.lowercase) {
     RG_STRING = RG_STRING_LOWER;
   }
 
@@ -691,15 +691,15 @@ bool tag_write_wav(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_wav(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -707,15 +707,15 @@ bool tag_write_wav(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_REFERENCE_LOUDNESS]), value);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_RANGE]), value);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_RANGE]), value);
     }
   }
@@ -724,13 +724,13 @@ bool tag_write_wav(scan_result *scan, Config *config) {
 #if TAGLIB_VERSION >= 11200
   return f.save(TagLib::RIFF::WAV::File::AllTags,
     TagLib::RIFF::WAV::File::StripNone,
-    config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
-  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config->id3v2version);
+  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config.id3v2version);
 #endif
 }
 
-bool tag_clear_wav(scan_result *scan, Config *config) {
+bool tag_clear_wav(scan_result *scan, Config &config) {
   TagLib::RIFF::WAV::File f(scan->file);
   TagLib::ID3v2::Tag *tag = f.ID3v2Tag();
 
@@ -740,9 +740,9 @@ bool tag_clear_wav(scan_result *scan, Config *config) {
 #if TAGLIB_VERSION >= 11200
   return f.save(TagLib::RIFF::WAV::File::AllTags,
     TagLib::RIFF::WAV::File::StripNone,
-    config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
-  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config->id3v2version);
+  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config.id3v2version);
 #endif
 }
 
@@ -777,11 +777,11 @@ void tag_remove_aiff(TagLib::ID3v2::Tag *tag) {
 }
 
 // Experimental AIFF file tagging within an "ID3 " chunk
-bool tag_write_aiff(scan_result *scan, Config *config) {
+bool tag_write_aiff(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
-  if (config->lowercase) {
+  if (config.lowercase) {
     RG_STRING = RG_STRING_LOWER;
   }
 
@@ -791,15 +791,15 @@ bool tag_write_aiff(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_aiff(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -807,28 +807,28 @@ bool tag_write_aiff(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_REFERENCE_LOUDNESS]), value);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_RANGE]), value);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_RANGE]), value);
     }
   }
 
   // no stripping
 #if TAGLIB_VERSION >= 11200
-  return f.save(config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+  return f.save(config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
   return f.save();
 #endif
 }
 
-bool tag_clear_aiff(scan_result *scan, Config *config) {
+bool tag_clear_aiff(scan_result *scan, Config &config) {
   TagLib::RIFF::AIFF::File f(scan->file);
   TagLib::ID3v2::Tag *tag = f.tag();
 
@@ -836,7 +836,7 @@ bool tag_clear_aiff(scan_result *scan, Config *config) {
 
   // no stripping
 #if TAGLIB_VERSION >= 11200
-  return f.save(config->id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
+  return f.save(config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
 #else
   return f.save();
 #endif
@@ -862,7 +862,7 @@ void tag_remove_wavpack(TagLib::APE::Tag *tag) {
   tag->removeItem(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
 }
 
-bool tag_write_wavpack(scan_result *scan, Config *config) {
+bool tag_write_wavpack(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
@@ -877,15 +877,15 @@ bool tag_write_wavpack(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_wavpack(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->addValue(RG_STRING[RG_TRACK_GAIN], TagLib::String(value), true);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->addValue(RG_STRING[RG_TRACK_PEAK], TagLib::String(value), true);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->addValue(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value), true);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -893,33 +893,33 @@ bool tag_write_wavpack(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->addValue(RG_STRING[RG_REFERENCE_LOUDNESS], TagLib::String(value), true);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->addValue(RG_STRING[RG_TRACK_RANGE], TagLib::String(value), true);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->addValue(RG_STRING[RG_ALBUM_RANGE], TagLib::String(value), true);
     }
   }
 
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
 
   return f.save();
 }
 
-bool tag_clear_wavpack(scan_result *scan, Config *config) {
+bool tag_clear_wavpack(scan_result *scan, Config &config) {
 
   TagLib::WavPack::File f(scan->file);
   TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
 
   tag_remove_wavpack(tag);
 
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
 
   return f.save();
@@ -945,7 +945,7 @@ void tag_remove_ape(TagLib::APE::Tag *tag) {
   tag->removeItem(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
 }
 
-bool tag_write_ape(scan_result *scan, Config *config) {
+bool tag_write_ape(scan_result *scan, Config &config) {
   std::string value;
   const char **RG_STRING = RG_STRING_UPPER;
 
@@ -960,15 +960,15 @@ bool tag_write_ape(scan_result *scan, Config *config) {
   // remove old tags before writing new ones
   tag_remove_ape(tag);
 
-  value = fmt::format("{:.2f} {}", scan->track_gain, config->unit);
+  value = fmt::format("{:.2f} {}", scan->track_gain, config.unit);
   tag->addValue(RG_STRING[RG_TRACK_GAIN], TagLib::String(value), true);
 
   value = fmt::format("{:.6f}", scan->track_peak);
   tag->addValue(RG_STRING[RG_TRACK_PEAK], TagLib::String(value), true);
 
   // Only write album tags if in album mode (would be zero otherwise)
-  if (config->do_album) {
-    value = fmt::format("{:.2f} {}", scan->album_gain, config->unit);
+  if (config.do_album) {
+    value = fmt::format("{:.2f} {}", scan->album_gain, config.unit);
     tag->addValue(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value), true);
 
     value = fmt::format("{:.6f}", scan->album_peak);
@@ -976,33 +976,33 @@ bool tag_write_ape(scan_result *scan, Config *config) {
   }
 
   // extra tags mode -s e or -s l
-  if (config->mode == 'e' || config->mode == 'l') {
+  if (config.mode == 'e' || config.mode == 'l') {
     value = fmt::format("{:.2f} LUFS", scan->loudness_reference);
     tag->addValue(RG_STRING[RG_REFERENCE_LOUDNESS], TagLib::String(value), true);
 
-    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config->unit);
+    value = fmt::format("{:.2f} {}", scan->track_loudness_range, config.unit);
     tag->addValue(RG_STRING[RG_TRACK_RANGE], TagLib::String(value), true);
 
-    if (config->do_album) {
-      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config->unit);
+    if (config.do_album) {
+      value = fmt::format("{:.2f} {}", scan->album_loudness_range, config.unit);
       tag->addValue(RG_STRING[RG_ALBUM_RANGE], TagLib::String(value), true);
     }
   }
 
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::APE::File::TagTypes::ID3v1);
 
   return f.save();
 }
 
-bool tag_clear_ape(scan_result *scan, Config *config) {
+bool tag_clear_ape(scan_result *scan, Config &config) {
 
   TagLib::WavPack::File f(scan->file);
   TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
 
   tag_remove_ape(tag);
 
-  if (config->strip)
+  if (config.strip)
     f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
 
   return f.save();

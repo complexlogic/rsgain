@@ -115,47 +115,47 @@ void quit(int status)
     exit(status);
 }
 
-void parse_pregain(const char *value, Config *config)
+void parse_pregain(const char *value, Config &config)
 {
     char *rest = NULL;
-    config->pre_gain = strtod(value, &rest);
+    config.pre_gain = strtod(value, &rest);
 
     if (!rest ||
         (rest == value) ||
-        !isfinite(config->pre_gain))
+        !isfinite(config.pre_gain))
         output_fail("Invalid pregain value '{}' (dB/LU)", value);
 }
 
-void parse_mode(const char *value, Config *config)
+void parse_mode(const char *value, Config &config)
 {
     // for mp3gain compatibilty, include modes that do nothing
     char *valid_modes = "cdielavsr";
-    config->mode = value[0];
-    if (strchr(valid_modes, config->mode) == NULL)
+    config.mode = value[0];
+    if (strchr(valid_modes, config.mode) == NULL)
         output_fail("Invalid tag mode: '{}'", value);
-    if (config->mode == 'l') {
-        config->unit = UNIT_LU;
+    if (config.mode == 'l') {
+        config.unit = UNIT_LU;
     }
 }
 
-void parse_id3v2version(const char *value, Config *config)
+void parse_id3v2version(const char *value, Config &config)
 {
-    config->id3v2version = atoi(value);
-    if (!(config->id3v2version == 3) && !(config->id3v2version == 4))
+    config.id3v2version = atoi(value);
+    if (!(config.id3v2version == 3) && !(config.id3v2version == 4))
         output_fail("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
 }
 
-void parse_max_true_peak_level(const char *value, Config *config)
+void parse_max_true_peak_level(const char *value, Config &config)
 {
     // new style, argument in dBTP, sets max. true peak level
-    config->no_clip = true;
+    config.no_clip = true;
 
     char *rest = NULL;
-    config->max_true_peak_level = strtod(value, &rest);
+    config.max_true_peak_level = strtod(value, &rest);
 
     if (!rest ||
         (rest == value) ||
-        !isfinite(config->pre_gain))
+        !isfinite(config.pre_gain))
         output_fail("Invalid max. true peak level '{}' (dBTP)", value);
 }
 
@@ -267,12 +267,12 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'K': {
-                parse_max_true_peak_level(optarg, &config);
+                parse_max_true_peak_level(optarg, config);
                 break;
             }
 
             case 'd': {
-                parse_pregain(optarg, &config);
+                parse_pregain(optarg, config);
                 break;
             }
 
@@ -285,7 +285,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 's': {
-                parse_mode(optarg, &config);
+                parse_mode(optarg, config);
                 break;
             }
 
@@ -298,7 +298,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'I':
-                parse_id3v2version(optarg, &config);
+                parse_id3v2version(optarg, config);
                 break;
 
             case '?':
@@ -322,7 +322,7 @@ static void custom_mode(int argc, char *argv[])
         fmt::print("Error: No files specified\n");
         quit(EXIT_FAILURE);
     }
-    scan(nb_files, argv + optind, &config);
+    scan(nb_files, argv + optind, config);
 }
 
 // Parse main arguments

@@ -282,7 +282,7 @@ static int handler(void *user, const char *section, const char *name, const char
         convert_bool(value, configs[file_type].do_album);
     }
     else if (MATCH(name, "Mode")) {
-        parse_mode(value, &configs[file_type]);
+        parse_mode(value, configs[file_type]);
     }
     else if (MATCH(name, "ClippingProtection")) {
         convert_bool(value, configs[file_type].no_clip);
@@ -294,13 +294,13 @@ static int handler(void *user, const char *section, const char *name, const char
         convert_bool(value, configs[file_type].strip);
     }
     else if (MATCH(name, "ID3v2Version")) {
-        parse_id3v2version(value, &configs[file_type]);
+        parse_id3v2version(value, configs[file_type]);
     }
     else if (MATCH(name, "Pregain")) {
-        parse_pregain(value, &configs[file_type]);
+        parse_pregain(value, configs[file_type]);
     }
     else if (MATCH(name, "MaxTruePeakLevel")) {
-        parse_max_true_peak_level(value, &configs[file_type]);
+        parse_max_true_peak_level(value, configs[file_type]);
     }
     return 0;
 }
@@ -338,13 +338,12 @@ void copy_string_alloc(char **dest, const char *string)
   }
 }
 
-Job::Job(const std::vector<std::u8string> &file_list, const FileType file_type, const std::filesystem::path &path) {
+Job::Job(const std::vector<std::u8string> &file_list, const FileType file_type, const std::filesystem::path &path) : config(configs[file_type]){
     nb_files = file_list.size();
     files = (char**) malloc(sizeof(char*) * nb_files);
     for (int i = 0; i < nb_files; i++) {
         copy_string_alloc(files + i, (char*) file_list[i].c_str());
     }
-    config = configs + file_type;
     directory = path.u8string();
 }
 Job::~Job() {

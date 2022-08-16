@@ -26,10 +26,10 @@ typedef struct {
 extern "C" {
 #endif
 void quit(int status);
-void parse_pregain(const char *value, Config *config);
-void parse_mode(const char *value, Config *config);
-void parse_id3v2version(const char *value, Config *config);
-void parse_max_true_peak_level(const char *value, Config *config);
+void parse_pregain(const char *value, Config &config);
+void parse_mode(const char *value, Config &config);
+void parse_id3v2version(const char *value, Config &config);
+void parse_max_true_peak_level(const char *value, Config &config);
 #ifdef __cplusplus
 }
 #endif

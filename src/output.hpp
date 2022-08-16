@@ -57,18 +57,10 @@
 
 extern int quiet;
 extern int disable_progress_bar;
-/*
-void fmt::print(const char *fmt, ...);
-void output_ok(const char *fmt, ...);
-void output_warn(const char *fmt, ...);
-void output_error(const char *fmt, ...);
-void output_fail(const char *fmt, ...);
-*/
 
-#define output_ok(format, ...) fmt::print(OK_PREFIX format __VA_OPT__(,) __VA_ARGS__)
-#define output_warn(format, ...) fmt::print(WARN_PREFIX format __VA_OPT__(,) __VA_ARGS__)
-#define output_error(format, ...) fmt::print(ERROR_PREFIX format __VA_OPT__(,) __VA_ARGS__)
-#define output_fail(format, ...) fmt::print(FAIL_PREFIX format __VA_OPT__(,) __VA_ARGS__)
-
+#define output_ok(format, ...) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_warn(format, ...) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) fmt::print(ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...) fmt::print(FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
 void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w);

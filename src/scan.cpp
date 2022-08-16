@@ -117,7 +117,7 @@ void scan_deinit() {
     free(scan_states);
 }
 
-bool scan(int nb_files, char **files, Config *config)
+bool scan(int nb_files, char **files, Config &config)
 {
     bool error = false;
     scan_init(nb_files);
@@ -398,12 +398,12 @@ end:
     return error;
 }
 
-void apply_gain(int nb_files, char *files[], Config *config)
+void apply_gain(int nb_files, char *files[], Config &config)
 {
     int i;
     // check for different file (codec) types in an album and warn
     // (including Opus might mess up album gain)
-    if (config->do_album) {
+    if (config.do_album) {
         if (scan_album_has_different_containers() || scan_album_has_different_codecs()) {
             output_warn("You have different file types in the same album!");
             if (scan_album_has_opus())
@@ -411,47 +411,47 @@ void apply_gain(int nb_files, char *files[], Config *config)
         }
     }
 
-    if (config->tab_output)
+    if (config.tab_output)
         fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tWill_clip\tClip_prevent\tGain\tNew_Peak\tNew_Peak_dBTP\n", stdout);
 
     for (i = 0; i < nb_files; i++) {
         bool will_clip = false;
         double tgain = 1.0; // "gained" track peak
         double tnew;
-        double tpeak = pow(10.0, config->max_true_peak_level / 20.0); // track peak limit
+        double tpeak = pow(10.0, config.max_true_peak_level / 20.0); // track peak limit
         double again = 1.0; // "gained" album peak
         double anew;
-        double apeak = pow(10.0, config->max_true_peak_level / 20.0); // album peak limit
+        double apeak = pow(10.0, config.max_true_peak_level / 20.0); // album peak limit
         bool tclip = false;
         bool aclip = false;
 
-        scan_result *scan = scan_get_track_result(i, config->pre_gain);
+        scan_result *scan = scan_get_track_result(i, config.pre_gain);
 
         if (scan == NULL)
             continue;
 
-        if (config->do_album)
-            scan_set_album_result(scan, config->pre_gain);
+        if (config.do_album)
+            scan_set_album_result(scan, config.pre_gain);
 
         // Check if track or album will clip, and correct if so requested (-k/-K)
 
         // track peak after gain
         tgain = pow(10.0, scan->track_gain / 20.0) * scan->track_peak;
         tnew = tgain;
-        if (config->do_album) {
+        if (config.do_album) {
             // album peak after gain
             again = pow(10.0, scan->album_gain / 20.0) * scan->album_peak;
             anew = again;
         }
 
-        if ((tgain > tpeak) || (config->do_album && (again > apeak)))
+        if ((tgain > tpeak) || (config.do_album && (again > apeak)))
             will_clip = true;
 
         // printf("\ntrack: {:.2f} LU, peak {:.6f}; album: {:.2f} LU, peak {:.6f}\ntrack: {:.6f}, {:.6f}; album: {:.6f}, {:.6f}; Clip: {}\n",
         // 	scan->track_gain, scan->track_peak, scan->album_gain, scan->album_peak,
         // 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
 
-        if (will_clip && config->no_clip) {
+        if (will_clip && config.no_clip) {
             if (tgain > tpeak) {
                 // set new track peak = minimum of peak after gain and peak limit
                 tnew = FFMIN(tgain, tpeak);
@@ -459,7 +459,7 @@ void apply_gain(int nb_files, char *files[], Config *config)
                 tclip = true;
             }
 
-            if (config->do_album && (again > apeak)) {
+            if (config.do_album && (again > apeak)) {
                 anew = FFMIN(again, apeak);
                 scan->album_gain = scan->album_gain - (log10(again/anew) * 20.0);
                 aclip = true;
@@ -472,7 +472,7 @@ void apply_gain(int nb_files, char *files[], Config *config)
             // 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
         }
 
-        switch (config->mode) {
+        switch (config.mode) {
             case 'c': /* check tags */
                 break;
 
@@ -657,30 +657,30 @@ void apply_gain(int nb_files, char *files[], Config *config)
                 break;
         }
 
-        if (config->tab_output) {
+        if (config.tab_output) {
             // output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
             fmt::print("{}\t", scan->file);
             fmt::print("{:.2f} LUFS\t", scan->track_loudness);
-            fmt::print("{:.2f} {}\t", scan->track_loudness_range, config->unit);
+            fmt::print("{:.2f} {}\t", scan->track_loudness_range, config.unit);
             fmt::print("{:.6f}\t", scan->track_peak);
             fmt::print("{:.2f} dBTP\t", 20.0 * log10(scan->track_peak));
             fmt::print("{:.2f} LUFS\t", scan->loudness_reference);
             fmt::print("{}\t", will_clip ? "Y" : "N");
             fmt::print("{}\t", tclip ? "Y" : "N");
-            fmt::print("{:.2f} {}\t", scan->track_gain, config->unit);
+            fmt::print("{:.2f} {}\t", scan->track_gain, config.unit);
             fmt::print("{:.6f}\t", tnew);
             fmt::print("{:.2f} dBTP\n", 20.0 * log10(tnew));
 
-            if ((i == (nb_files - 1)) && config->do_album) {
+            if ((i == (nb_files - 1)) && config.do_album) {
                 fmt::print("{}\t", "Album");
                 fmt::print("{:.2f} LUFS\t", scan->album_loudness);
-                fmt::print("{:.2f} {}\t", scan->album_loudness_range, config->unit);
+                fmt::print("{:.2f} {}\t", scan->album_loudness_range, config.unit);
                 fmt::print("{:.6f}\t", scan->album_peak);
                 fmt::print("{:.2f} dBTP\t", 20.0 * log10(scan->album_peak));
                 fmt::print("{:.2f} LUFS\t", scan->loudness_reference);
                 fmt::print("{}\t", (!aclip && (again > apeak)) ? "Y" : "N");
                 fmt::print("{}\t", aclip ? "Y" : "N");
-                fmt::print("{:.2f} {}\t", scan->album_gain, config->unit);
+                fmt::print("{:.2f} {}\t", scan->album_gain, config.unit);
                 fmt::print("{:.6f}\t", anew);
                 fmt::print("{:.2f} dBTP\n", 20.0 * log10(anew));
             }
@@ -689,34 +689,34 @@ void apply_gain(int nb_files, char *files[], Config *config)
             fmt::print("\nTrack: {}\n", scan->file);
 
             fmt::print(" Loudness: {:8.2f} LUFS\n", scan->track_loudness);
-            fmt::print(" Range:    {:8.2f} {}\n", scan->track_loudness_range, config->unit);
+            fmt::print(" Range:    {:8.2f} {}\n", scan->track_loudness_range, config.unit);
             fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", scan->track_peak, 20.0 * log10(scan->track_peak));
             if (scan->codec_id == AV_CODEC_ID_OPUS) {
                 // also show the Q7.8 number that goes into R128_TRACK_GAIN
-                fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->track_gain, config->unit,
+                fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->track_gain, config.unit,
                  gain_to_q78num(scan->track_gain),
                  tclip ? " (corrected to prevent clipping)" : "");
             } else {
-                fmt::print(" Gain:     {:8.2f} {}{}\n", scan->track_gain, config->unit,
+                fmt::print(" Gain:     {:8.2f} {}{}\n", scan->track_gain, config.unit,
                  tclip ? " (corrected to prevent clipping)" : "");
             }
 
-            if (config->warn_clip && will_clip)
+            if (config.warn_clip && will_clip)
                 output_error("The track will clip");
 
-            if ((i == (nb_files - 1)) && config->do_album) {
+            if ((i == (nb_files - 1)) && config.do_album) {
                 fmt::print("\nAlbum:\n");
 
                 fmt::print(" Loudness: {:8.2f} LUFS\n", scan->album_loudness);
-                fmt::print(" Range:    {:8.2f} {}\n", scan->album_loudness_range, config->unit);
+                fmt::print(" Range:    {:8.2f} {}\n", scan->album_loudness_range, config.unit);
                 fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", scan->album_peak, 20.0 * log10(scan->album_peak));
                 if (scan->codec_id == AV_CODEC_ID_OPUS) {
                     // also show the Q7.8 number that goes into R128_ALBUM_GAIN
-                    fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->album_gain, config->unit,
+                    fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->album_gain, config.unit,
                     gain_to_q78num(scan->album_gain),
                         aclip ? " (corrected to prevent clipping)" : "");
                 } else {
-                    fmt::print(" Gain:     {:8.2f} {}{}\n", scan->album_gain, config->unit,
+                    fmt::print(" Gain:     {:8.2f} {}{}\n", scan->album_gain, config.unit,
                         aclip ? " (corrected to prevent clipping)" : "");
                 }
             }

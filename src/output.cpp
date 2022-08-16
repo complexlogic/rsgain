@@ -52,24 +52,18 @@ extern HANDLE console;
 #include "output.hpp"
 #include "config.h"
 
+#ifdef _WIN32
+#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
+#else
+#define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
+#endif
 
 int quiet = 0;
 int disable_progress_bar = 0;
 extern int multithread;
 
 static void get_screen_size(unsigned *w, unsigned *h);
-static void print_buffer(const char *buffer, int length, FILE *stream);
 void quit(int status);
-
-static void print_buffer(const char *buffer, int length, FILE *stream)
-{
-	#ifdef _WIN32
-	WriteConsoleA(console, buffer, length, NULL, NULL);
-    #else
-	fputs(buffer, stream);
-    #endif
-}
-
 
 void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 	int i;
@@ -89,7 +83,6 @@ void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 #endif
 
 			show_bar = 1;
-
 			break;
 
 		case 1: /* draw */
@@ -105,26 +98,18 @@ void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
 				buffer = new char[w + 3];
 			}
 			
-
 			ratio = x / (double) n;
 			c     = ratio * w;
 			
 			// Only update if the progress bar has incremented
 			if (c != prev_c) {
-				fmt::print(" {}% [", std::round(ratio * 100));
-				for (i = 0; i < c; i++)
-					buffer[i] = '=';
-
-				for (i = c; i < w; i++)
-					buffer[i] = ' ';
-
+				fmt::print(" {:3.0f}% [", ratio * 100);
+				memset(buffer, '=', c);
+				memset(buffer + c, ' ', w - c);
 				buffer[w] = ']';
 				buffer[w + 1] = '\r';
 				buffer[w + 2] = '\0';
 				print_buffer(buffer, w + 2, stdout);
-				#ifndef _WIN32
-				fflush(stdout);
-				#endif
 				prev_c = c;
 			}
 			break;
