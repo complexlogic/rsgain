@@ -65,86 +65,73 @@ extern int multithread;
 static void get_screen_size(unsigned *w, unsigned *h);
 void quit(int status);
 
-void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w) {
-	int i;
-	static int show_bar = 0;
-	int c;
-	static int prev_c = -1;
-	static char *buffer = NULL;
-	static double ratio;
-	
-	switch (ctrl) {
-		case 0: /* init */
-			if (quiet || multithread)
-				break;
-#ifndef _WIN32
-			if (!isatty(fileno(stdout)))
-				break;
-#endif
 
-			show_bar = 1;
-			break;
-
-		case 1: /* draw */
-			if (show_bar != 1)
-				return;
-
-			if ((x != n) && (x % (n / 100 + 1) != 0))
-				return;
-
-			if (w == 0) {
-				get_screen_size(&w, NULL);
-				w -= 8;
-				buffer = new char[w + 3];
-			}
-			
-			ratio = x / (double) n;
-			c     = ratio * w;
-			
-			// Only update if the progress bar has incremented
-			if (c != prev_c) {
-				fmt::print(" {:3.0f}% [", ratio * 100);
-				memset(buffer, '=', c);
-				memset(buffer + c, ' ', w - c);
-				buffer[w] = ']';
-				buffer[w + 1] = '\r';
-				buffer[w + 2] = '\0';
-				print_buffer(buffer, w + 2, stdout);
-				prev_c = c;
-			}
-			break;
-
-		case 2: /* end */
-			if (show_bar == 1) {
-				print_buffer("\n", 1, stdout);
-				delete buffer;
-				buffer = NULL;
-			}
-			break;
-	}
+void ProgressBar::begin(int start, int len)
+{
+	this->start = start;
+	this->len = len;
+	w_prev = -1;
+	c_prev = -1;
+	pos_prev = -1;
 }
 
-static void get_screen_size(unsigned *w, unsigned *h) {
-  
-	#ifdef _WIN32
-	CONSOLE_SCREEN_BUFFER_INFO info;
-	GetConsoleScreenBufferInfo(console, &info);
-	if (w != NULL) {
-		*w = info.srWindow.Right - info.srWindow.Left + 1;
-	}
-	if (h != NULL) {
-		*h = info.srWindow.Bottom - info.srWindow.Top + 1;
-	}
-  
-	#else
-	struct winsize ws;
-	if (ioctl(fileno(stdout), TIOCGWINSZ, &ws) < 0 || !ws.ws_row || !ws.ws_col)
+void ProgressBar::update(int pos)
+{
+	int w, c;
+	if (pos == pos_prev)
 		return;
 
-	if (w != NULL)
-		*w = ws.ws_col;
+	w = this->get_console_width() - 8;
+	if (w != w_prev) {
+		delete buffer;
+		buffer = new char[w + 3];
+	}
+	float percent = ((float) pos / (float) len);
+	c = (int) (percent * (float) w);
 
-	if (h != NULL)
-		*h = ws.ws_row;
-	#endif
+	// Only output if we've actually made progess, or the console width changed
+	if (w != w_prev || c != c_prev) {
+		fmt::print(" {:3.0f}% [", percent * 100.f);
+		int i;
+		for (i = 0; i < c; i++)
+			buffer[i] = '=';
+		
+		for (i; i < w; i++)
+			buffer[i] = ' ';
+
+		buffer[w] = ']';
+		buffer[w + 1] = '\r';
+		buffer[w + 2] = '\0';
+		print_buffer(buffer, w + 2, stdout);
+	}
+
+	c_prev = c;
+	w_prev = w;
+	pos_prev = pos;
 }
+
+void ProgressBar::complete()
+{
+	if (c_prev != w_prev)
+		this->update(len);
+}
+
+void ProgressBar::finish()
+{
+	delete buffer;
+	buffer = NULL;
+	fmt::print("\n");
+}
+
+inline int ProgressBar::get_console_width()
+{
+#ifdef _WIN32
+	GetConsoleScreenBufferInfo(console, &info);
+	return info.srWindow.Right - info.srWindow.Left + 1;
+#else
+	if (ioctl(fileno(stdout), TIOCGWINSZ, &ws) < 0 || !ws.ws_col)
+		return 0;
+	return ws.ws_col;
+#endif
+}
+

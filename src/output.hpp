@@ -30,6 +30,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __unix__
+#include <unistd.h>
+#include <syslog.h>
+#include <limits.h>
+#include <sys/ioctl.h>
+#endif
+
+
 #include <fmt/core.h>
 
 #define COLOR_GREEN	"[1;32m"
@@ -58,9 +66,34 @@
 extern int quiet;
 extern int disable_progress_bar;
 
-#define output_ok(format, ...) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_warn(format, ...) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_error(format, ...) fmt::print(ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_fail(format, ...) fmt::print(FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_ok(format, ...)    if (!quiet) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_warn(format, ...)  if (!quiet) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) if (!quiet) fmt::print(ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...)  if (!quiet) fmt::print(FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
-void progress_bar(unsigned ctrl, unsigned long x, unsigned long n, unsigned w);
+
+class ProgressBar {
+    private:
+        int c_prev;
+        int w_prev;
+        int pos_prev;
+        int start;
+        int len;
+        char *buffer;
+
+#ifdef _WIN32
+        CONSOLE_SCREEN_BUFFER_INFO info;
+#else
+        struct winsize ws;
+#endif
+        int get_console_width();
+
+
+    public:
+        ProgressBar(void) : buffer(NULL) {};
+        void begin(int start, int len);
+        void update(int pos);
+        void complete(void);
+        void finish(void);
+};
+

@@ -325,7 +325,6 @@ static void load_overrides(const char *overrides_file)
     }
 }
 
-
 void copy_string_alloc(char **dest, const char *string)
 {
   int length = strlen(string);

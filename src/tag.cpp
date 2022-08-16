@@ -53,7 +53,6 @@
 #include <mp4file.h>
 #include <opusfile.h>
 #include <asffile.h>
-// #include <rifffile.h>
 #include <wavfile.h>
 #include <aifffile.h>
 #include <wavpackfile.h>
@@ -75,6 +74,7 @@ enum RG_ENUM {
     RG_ALBUM_RANGE,
     RG_REFERENCE_LOUDNESS
 };
+
 
 static const char *RG_STRING_UPPER[] = {
     "REPLAYGAIN_TRACK_GAIN",

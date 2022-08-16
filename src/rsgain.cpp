@@ -68,6 +68,7 @@ static inline void help_easy(void);
 
 // Global variables
 int multithread = 0;
+ProgressBar progress_bar;
 
 #ifdef _WIN32
 HANDLE console;
@@ -129,7 +130,7 @@ void parse_pregain(const char *value, Config &config)
 void parse_mode(const char *value, Config &config)
 {
     // for mp3gain compatibilty, include modes that do nothing
-    char *valid_modes = "cdielavsr";
+    const char *valid_modes = "cdielavsr";
     config.mode = value[0];
     if (strchr(valid_modes, config.mode) == NULL)
         output_fail("Invalid tag mode: '{}'", value);

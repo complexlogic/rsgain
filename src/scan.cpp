@@ -51,9 +51,9 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
-extern "C" {
-    extern int multithread;
-}
+extern int multithread;
+extern ProgressBar progress_bar;
+
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
 
@@ -132,11 +132,12 @@ bool scan(int nb_files, char **files, Config &config)
 
 bool scan_file(const char *file, unsigned index, std::mutex *m) {
     int rc, stream_id = -1;
-    double start = 0, len = 0;
+    int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data = NULL;
     char infotext[20];
     char infobuf[512];
     bool error = false;
+    bool output_progress = !quiet && !multithread;
     std::unique_lock<std::mutex> *lk = NULL;
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
@@ -144,11 +145,11 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
         output_ok("Scanning '{}' ...", file);
 
     // FFmpeg 5.0 workaround
-    #if LIBAVCODEC_VERSION_MAJOR >= 59 
+#if LIBAVCODEC_VERSION_MAJOR >= 59 
     const AVCodec *codec = NULL;
-    #else
+#else
     AVCodec *codec = NULL;
-    #endif
+#endif
 
     AVPacket packet;
     AVCodecContext *ctx = NULL;
@@ -158,7 +159,6 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     ebur128_state **ebur128 = &scan_states[index];
 
     int buffer_size = 192000 + AV_INPUT_BUFFER_PADDING_SIZE;
-
     uint8_t *buffer = (uint8_t*) malloc(sizeof(uint8_t) * buffer_size);
 
     if (index >= scan_nb_files) {
@@ -187,7 +187,6 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
-
         output_fail("Could not find stream info: {}", errbuf);
         error = true;
         goto end;
@@ -232,7 +231,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     if (ctx->bits_per_raw_sample > 0 || ctx->bits_per_coded_sample > 0) {
         snprintf(infotext, 
             sizeof(infotext), 
-            "{} bit, ",
+            "%d bit, ",
             ctx->bits_per_raw_sample > 0 ? ctx->bits_per_raw_sample : ctx->bits_per_coded_sample
         );
     }
@@ -298,14 +297,13 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     }
 
     if (container->streams[stream_id]->start_time != AV_NOPTS_VALUE)
-        start = container->streams[stream_id]->start_time *
-                av_q2d(container->streams[stream_id]->time_base);
+        start = container->streams[stream_id]->start_time * av_q2d(container->streams[stream_id]->time_base);
 
     if (container->streams[stream_id]->duration != AV_NOPTS_VALUE)
-        len   = container->streams[stream_id]->duration *
-                av_q2d(container->streams[stream_id]->time_base);
+        len  = container->streams[stream_id]->duration * av_q2d(container->streams[stream_id]->time_base);
 
-    progress_bar(0, 0, 0, 0);
+    if (output_progress)
+        progress_bar.begin(start, len);
     if (lk != NULL)
         lk->unlock();
     
@@ -327,7 +325,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                     break;
                 }
                 if (rc >= 0) {
-                    double pos = frame->pkt_dts*av_q2d(container->streams[stream_id]->time_base);
+                    pos = frame->pkt_dts*av_q2d(container->streams[stream_id]->time_base);
 
                     // Convert frame with swresample if necessary
                     if (swr != NULL) {
@@ -342,11 +340,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
 
                         swr_out_data = (uint8_t*) av_malloc(out_size);
 
-                        if (swr_convert(swr, 
-                        (uint8_t**) &swr_out_data, 
-                        frame->nb_samples,
-                        (const uint8_t**) frame->data, 
-                        frame->nb_samples) < 0) {
+                        if (swr_convert(swr, (uint8_t**) &swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                             output_fail("Cannot convert");
                             error = true;
                             av_free(swr_out_data);
@@ -367,8 +361,8 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                     if (rc != EBUR128_SUCCESS)
                         output_error("Error filtering");
 
-                    if (pos >= 0)
-                        progress_bar(1, pos - start, len, 0);
+                    if (pos >= 0 && output_progress)
+                        progress_bar.update(pos);
                 }
             }
             av_frame_unref(frame);
@@ -378,10 +372,12 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     }
 
     // complete progress bar for very short files (only cosmetic)
-    progress_bar(1, len, len, 0);
+    if (output_progress)
+        progress_bar.complete();
 
 end:
-    progress_bar(2, 0, 0, 0);
+    if (output_progress)
+        progress_bar.finish();
 
     av_frame_free(&frame);
     
