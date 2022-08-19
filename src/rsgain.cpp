@@ -116,48 +116,43 @@ void quit(int status)
     exit(status);
 }
 
-void parse_pregain(const char *value, Config &config)
+void parse_target_loudness(const char *value, Config &config)
 {
-    char *rest = NULL;
-    config.pre_gain = strtod(value, &rest);
-
-    if (!rest ||
-        (rest == value) ||
-        !isfinite(config.pre_gain))
-        output_fail("Invalid pregain value '{}' (dB/LU)", value);
+    int loudness = atoi(value);
+    if (loudness < MIN_TARGET_LOUDNESS || loudness > MAX_TARGET_LOUDNESS) {
+        output_error("Invalid target loudness value '{}'", value);
+        return;
+    }
+    config.target_loudness = loudness;        
 }
 
 void parse_mode(const char *value, Config &config)
 {
-    // for mp3gain compatibilty, include modes that do nothing
-    const char *valid_modes = "cdielavsr";
-    config.mode = value[0];
-    if (strchr(valid_modes, config.mode) == NULL)
-        output_fail("Invalid tag mode: '{}'", value);
-    if (config.mode == 'l') {
-        config.unit = UNIT_LU;
+    std::string_view valid_modes = "dis";
+    size_t pos = valid_modes.find_first_of(*value);
+    if (pos != std::string::npos) {
+        config.mode = valid_modes[pos];
     }
+    else {
+        output_error("Invalid tag mode: '{}'", value);
+    }        
 }
 
-void parse_id3v2version(const char *value, Config &config)
+void parse_id3v2_version(const char *value, Config &config)
 {
     config.id3v2version = atoi(value);
     if (!(config.id3v2version == 3) && !(config.id3v2version == 4))
-        output_fail("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
+        output_error("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
 }
 
-void parse_max_true_peak_level(const char *value, Config &config)
+void parse_max_peak_level(const char *value, Config &config)
 {
-    // new style, argument in dBTP, sets max. true peak level
-    config.no_clip = true;
-
     char *rest = NULL;
-    config.max_true_peak_level = strtod(value, &rest);
+    float max_peak = strtod(value, &rest);
+    if (rest != NULL ||(rest == value) || !isfinite(max_peak))
+        output_error("Invalid max peak level '{}'", value);
 
-    if (!rest ||
-        (rest == value) ||
-        !isfinite(config.pre_gain))
-        output_fail("Invalid max. true peak level '{}' (dBTP)", value);
+    config.max_peak_level = max_peak;
 }
 
 // Parse Easy Mode command line arguments
@@ -171,7 +166,7 @@ static void easy_mode(int argc, char *argv[])
         { "quiet",        no_argument,       NULL, 'q' },
 
         { "multithread",  required_argument, NULL, 'm' },
-        { "override",  required_argument, NULL, 'o' },
+        { "override",     required_argument, NULL, 'o' },
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -211,36 +206,35 @@ static void custom_mode(int argc, char *argv[])
     int rc, i;
     unsigned nb_files   = 0;
 
-    const char *short_opts = "+rackK:d:Oqs:LSI:h?";
+    const char *short_opts = "+ackK:tl:Oqs:LSI:h?";
     static struct option long_opts[] = {
-        { "track",        no_argument,       NULL, 'r' },
-        { "album",        no_argument,       NULL, 'a' },
+        { "album",         no_argument,       NULL, 'a' },
 
-        { "clip",         no_argument,       NULL, 'c' },
-        { "noclip",       no_argument,       NULL, 'k' },
-        { "maxtpl",       required_argument, NULL, 'K' },
+        { "no-clip",       no_argument,       NULL, 'k' },
+        { "max-peak",      required_argument, NULL, 'K' },
+        { "true-peak",     required_argument, NULL, 't' },
 
-        { "pregain",      required_argument, NULL, 'd' },
 
-        { "output",       no_argument,       NULL, 'O' },
-        { "quiet",        no_argument,       NULL, 'q' },
+        { "loudness",      required_argument, NULL, 'l' },
 
-        { "tagmode",      required_argument, NULL, 's' },
-        { "lowercase",    no_argument,       NULL, 'L' },
-        { "striptags",    no_argument,       NULL, 'S' },
-        { "id3v2version", required_argument, NULL, 'I' },
+        { "output",        no_argument,       NULL, 'O' },
+        { "quiet",         no_argument,       NULL, 'q' },
 
-        { "help",         no_argument,       NULL, 'h' },
+        { "tagmode",       required_argument, NULL, 's' },
+        { "lowercase",     no_argument,       NULL, 'L' },
+        { "strip-tags",    no_argument,       NULL, 'S' },
+        { "id3v2-version", required_argument, NULL, 'I' },
+
+        { "help",         no_argument,        NULL, 'h' },
         { 0, 0, 0, 0 }
     };
 
     Config config = {
         .mode = 's',
-        .unit = UNIT_DB,
-        .pre_gain = 0.0f,
-        .max_true_peak_level = 0.f,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = EBU_R128_MAX_PEAK,
+        .true_peak = false,
         .no_clip = false,
-        .warn_clip = true,
         .do_album = false,
         .tab_output = false,
         .lowercase = false,
@@ -250,16 +244,8 @@ static void custom_mode(int argc, char *argv[])
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
         switch (rc) {
-            case 'r':
-                /* noop */
-                break;
-
             case 'a':
                 config.do_album = true;
-                break;
-
-            case 'c':
-                config.warn_clip = false;
                 break;
 
             case 'k':
@@ -268,12 +254,18 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'K': {
-                parse_max_true_peak_level(optarg, config);
+                config.no_clip = true;
+                parse_max_peak_level(optarg, config);
                 break;
             }
 
-            case 'd': {
-                parse_pregain(optarg, config);
+            case 't': {
+                config.true_peak = true;
+                break;
+            }
+
+            case 'l': {
+                parse_target_loudness(optarg, config);
                 break;
             }
 
@@ -299,7 +291,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'I':
-                parse_id3v2version(optarg, config);
+                parse_id3v2_version(optarg, config);
                 break;
 
             case '?':
@@ -323,7 +315,11 @@ static void custom_mode(int argc, char *argv[])
         fmt::print("Error: No files specified\n");
         quit(EXIT_FAILURE);
     }
-    scan(nb_files, argv + optind, config);
+
+    ScanJob job;
+    if (job.add_files(argv + optind, nb_files))
+        quit(EXIT_FAILURE);
+    job.scan(config);
 }
 
 // Parse main arguments
@@ -443,34 +439,30 @@ static inline void help_custom(void) {
 
     fmt::print("\n");
 
-    CMD_HELP("--track",  "-r", "Calculate track gain only (default)");
-    CMD_HELP("--album",  "-a", "Calculate album gain (and track gain)");
+    CMD_HELP("--album",  "-a", "Calculate album gain and peak");
 
     fmt::print("\n");
 
-    CMD_HELP("--clip",   "-c", "Ignore clipping warning");
-    CMD_HELP("--noclip", "-k", "Lower track/album gain to avoid clipping (<= -1 dBTP)");
-    CMD_HELP("--maxtpl=n", "-K n", "Avoid clipping; max. true peak level = n dBTP");
+    CMD_HELP("--no-clip", "-k", "Lower track/album gain to avoid clipping (<= -1 dBTP)");
+    CMD_HELP("--max-peak=n", "-K n", "Avoid clipping; max. true peak level = n dBTP");
+    CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
 
-    CMD_HELP("--pregain=n",  "-d n",  "Apply n dB/LU pre-gain value (-5 for -23 LUFS target)");
+    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
 
     fmt::print("\n");
 
+    CMD_HELP("--tagmode=s", "-s s", "Scan files but don't write ReplayGain tags (default)");
     CMD_HELP("--tagmode=d", "-s d",  "Delete ReplayGain tags from files");
-    CMD_HELP("--tagmode=i", "-s i",  "Write ReplayGain 2.0 tags to files");
-    CMD_HELP("--tagmode=e", "-s e",  "like '-s i', plus extra tags (reference, ranges)");
-    CMD_HELP("--tagmode=l", "-s l",  "like '-s e', but LU units instead of dB");
-
-    CMD_HELP("--tagmode=s", "-s s",  "Don't write ReplayGain tags (default)");
+    CMD_HELP("--tagmode=i", "-s i",  "Scan and write ReplayGain 2.0 tags to files");
 
     fmt::print("\n");
 
     CMD_HELP("--lowercase", "-L", "Force lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
-    CMD_HELP("--striptags", "-S", "Strip tag types other than ID3v2 from MP2/MP3");
+    CMD_HELP("--strip-tags", "-S", "Strip tag types other than ID3v2 from MP2/MP3");
     CMD_CONT("Strip tag types other than APEv2 from WavPack/APE");
-    CMD_HELP("--id3v2version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
-    CMD_HELP("--id3v2version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF (default)");
+    CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
+    CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF (default)");
 
     fmt::print("\n");
 

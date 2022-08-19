@@ -1,0 +1,16 @@
+ 
+{
+  "name": "rsgain",
+  "version": "2.0.1",
+  "dependencies": [
+    "libebur128",
+    "taglib",
+    {
+      "name": "ffmpeg",
+      "features": ["avcodec", "avformat", "swresample"]
+    },
+    "fmt",
+    "inih",
+    "getopt"
+  ]
+} 

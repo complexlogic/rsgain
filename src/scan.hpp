@@ -2,51 +2,79 @@
 #define HAS_SCAN_H
 
 #include <mutex>
+#include <vector>
+#include <filesystem>
+#include <ebur128.h>
 #include "scan.hpp"
 
-typedef struct {
-	char *file;
-	char *container;
-	int   codec_id;
+#define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
+//#define LUFS_TO_RG(L) (-18 - L)
 
+typedef enum {
+    INVALID = -1,
+    MP2,
+    MP3,
+    FLAC,
+    OGG,
+    OPUS,
+    M4A,
+    WMA,
+    WAV,
+    AIFF,
+    WAVPACK,
+    APE
+} FileType;
+
+struct extension_type {
+    const char *extension;
+    FileType file_type;
+};
+
+typedef struct ScanResult {
 	double track_gain;
 	double track_peak;
-
 	double track_loudness;
-	double track_loudness_range;
 
 	double album_gain;
 	double album_peak;
-
 	double album_loudness;
-	double album_loudness_range;
+} ScanResult;
 
-	double loudness_reference;
-} scan_result;
+typedef struct Track{
+	std::string path;
+	FileType type;
+	std::string container;
+	ScanResult result;
+	int codec_id;
+	ebur128_state *ebur128;
+	bool tclip;
+	bool aclip;
 
-enum AV_CONTAINER_ID {
-    AV_CONTAINER_ID_MP3,
-		AV_CONTAINER_ID_FLAC,
-		AV_CONTAINER_ID_OGG,
-		AV_CONTAINER_ID_MP4,
-		AV_CONTAINER_ID_ASF,
-		AV_CONTAINER_ID_WAV,
-		AV_CONTAINER_ID_WV,
-		AV_CONTAINER_ID_AIFF,
-		AV_CONTAINER_ID_APE
+	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL), tclip(false), aclip(false) {};
+	~Track();
+	bool scan(Config &config, std::mutex *ffmpeg_mutex);
+	int calculate_loudness(Config &config);
+} Track;
+
+class ScanJob {
+	private:
+		std::vector<Track> tracks;
+
+		void apply_gain(Config &config);
+		void calculate_album_loudness(Config &config);
+
+	public:
+		FileType type;
+		int nb_files;
+		std::string path;
+		bool error;
+		int clippings_prevented;
+
+		ScanJob() : nb_files(0), error(false), clippings_prevented(0) {};
+		int add_files(char **files, int nb_files);
+		FileType add_directory(std::filesystem::path &path);
+		bool scan(Config &config, std::mutex *ffmpeg_mutex = NULL);
 };
 
-bool scan(int nb_files, char **files, Config &config);
-int name_to_id(const char *str);
-int scan_init(unsigned nb_files);
-void scan_deinit();
-bool scan_file(const char *file, unsigned index, std::mutex *m);
-void apply_gain(int nb_files, char *files[], Config &config);
-scan_result *scan_get_track_result(unsigned index, double pre_gain);
-double scan_get_album_peak();
-void scan_set_album_result(scan_result *result, double pre_amp);
-int scan_album_has_different_codecs(void);
-int scan_album_has_different_containers(void);
-int scan_album_has_opus(void);
 
 #endif

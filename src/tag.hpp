@@ -32,40 +32,40 @@
 
 
 void taglib_get_version(std::string &buffer);
-bool tag_write_mp3(scan_result *scan, Config &config);
-bool tag_clear_mp3(scan_result *scan, Config &config);
+bool tag_write_mp3(Track &track, Config &config);
+bool tag_clear_mp3(Track &track, Config &config);
 
-bool tag_write_flac(scan_result *scan, Config &config);
-bool tag_clear_flac(scan_result *scan);
+bool tag_write_flac(Track &track, Config &config);
+bool tag_clear_flac(Track &track);
 
-bool tag_write_ogg_vorbis(scan_result *scan, Config &config);
-bool tag_clear_ogg_vorbis(scan_result *scan);
+bool tag_write_ogg_vorbis(Track &track, Config &config);
+bool tag_clear_ogg_vorbis(Track &track);
 
-bool tag_write_ogg_flac(scan_result *scan, Config &config);
-bool tag_clear_ogg_flac(scan_result *scan);
+bool tag_write_ogg_flac(Track &track, Config &config);
+bool tag_clear_ogg_flac(Track &track);
 
-bool tag_write_ogg_speex(scan_result *scan, Config &config);
-bool tag_clear_ogg_speex(scan_result *scan);
+bool tag_write_ogg_speex(Track &track, Config &config);
+bool tag_clear_ogg_speex(Track &track);
 
-bool tag_write_ogg_opus(scan_result *scan, Config &config);
-bool tag_clear_ogg_opus(scan_result *scan);
+bool tag_write_ogg_opus(Track &track, Config &config);
+bool tag_clear_ogg_opus(Track &track);
 
-bool tag_write_mp4(scan_result *scan, Config &config);
-bool tag_clear_mp4(scan_result *scan);
+bool tag_write_mp4(Track &track, Config &config);
+bool tag_clear_mp4(Track &track);
 
-bool tag_write_asf(scan_result *scan, Config &config);
-bool tag_clear_asf(scan_result *scan);
+bool tag_write_asf(Track &track, Config &config);
+bool tag_clear_asf(Track &track);
 
-bool tag_write_wav(scan_result *scan, Config &config);
-bool tag_clear_wav(scan_result *scan, Config &config);
+bool tag_write_wav(Track &track, Config &config);
+bool tag_clear_wav(Track &track, Config &config);
 
-bool tag_write_aiff(scan_result *scan, Config &config);
-bool tag_clear_aiff(scan_result *scan, Config &config);
+bool tag_write_aiff(Track &track, Config &config);
+bool tag_clear_aiff(Track &track, Config &config);
 
-bool tag_write_wavpack(scan_result *scan, Config &config);
-bool tag_clear_wavpack(scan_result *scan, Config &config);
+bool tag_write_wavpack(Track &track, Config &config);
+bool tag_clear_wavpack(Track &track, Config &config);
 
-bool tag_write_ape(scan_result *scan, Config &config);
-bool tag_clear_ape(scan_result *scan, Config &config);
+bool tag_write_ape(Track &track, Config &config);
+bool tag_clear_ape(Track &track, Config &config);
 
 int gain_to_q78num(double gain);

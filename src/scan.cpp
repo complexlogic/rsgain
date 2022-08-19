@@ -32,6 +32,8 @@
 
 #include <mutex>
 #include <thread>
+#include <set>
+#include <algorithm>
 #include <stdlib.h>
 
 #include <ebur128.h>
@@ -44,7 +46,6 @@ extern "C" {
 #include <libavutil/opt.h>
 }
 
-#define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 
 #include "rsgain.hpp"
 #include "scan.hpp"
@@ -54,87 +55,137 @@ extern "C" {
 extern int multithread;
 extern ProgressBar progress_bar;
 
-
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
 
-static ebur128_state **scan_states     = NULL;
-static enum AVCodecID *scan_codecs     = NULL;
-static char          **scan_files      = NULL;
-static char          **scan_containers = NULL;
-static int             scan_nb_files   = 0;
-
-#define LUFS_TO_RG(L) (-18 - L)
-
-
-// FFmpeg container short names
-static const char *AV_CONTAINER_NAME[] = {
-    "mp3",
-    "flac",
-    "ogg",
-    "mov,mp4,m4a,3gp,3g2,mj2",
-    "asf",
-    "wav",
-    "wv",
-    "aiff",
-    "ape"
+static const struct extension_type extensions[] {
+    {".mp2",  MP2},
+    {".mp3",  MP3},
+    {".flac", FLAC},
+    {".ogg",  OGG},
+    {".oga",  OGG},
+    {".spx",  OGG},
+    {".opus", OPUS},
+    {".m4a",  M4A},
+    {".wma",  WMA},
+    {".wav",  WAV},
+    {".aiff", AIFF},
+    {".aif",  AIFF},
+    {".snd",  AIFF},
+    {".wv",   WAVPACK},
+    {".ape",  APE}
 };
 
-int name_to_id(const char *str) {
-    int i;
-    for (i = 0;  i < sizeof(AV_CONTAINER_NAME) / sizeof(AV_CONTAINER_NAME[0]);  i++) {
-        if (!strcmp (str, AV_CONTAINER_NAME[i])) {
-            return i;
+
+// A function to determine a file type
+inline static FileType determine_filetype(const std::string &extension)
+{
+    auto it = std::find_if(std::cbegin(extensions), 
+                  std::cend(extensions), 
+                  [&](auto &e) {return extension == e.extension;}
+              );
+    return it == std::cend(extensions) ? INVALID : (FileType) (it - std::cbegin(extensions));
+}
+
+// A function to determine if a given file is a given type
+inline static bool is_type(const std::string &extension, const FileType file_type)
+{
+    auto it = std::find_if(std::cbegin(extensions), 
+                  std::cend(extensions), 
+                  [&](auto &e) {return extension == e.extension;}
+              );
+   return it == std::cend(extensions) || it->file_type != file_type ? false : true;
+}
+
+
+FileType ScanJob::add_directory(std::filesystem::path &path)
+{
+    std::set<FileType> extensions;
+    std::vector<std::string> file_list;
+    FileType file_type;
+    size_t num_extensions;
+
+    // Determine directory filetype
+    for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
+        if (!entry.is_regular_file() || !entry.path().has_extension()) {
+            continue;
+        }
+        file_type = determine_filetype(entry.path().extension().string());
+        if (file_type != INVALID) {
+            extensions.insert(file_type);
         }
     }
-    return -1; // error
-}
-
-int scan_init(unsigned nb_files) {
-    av_log_set_callback(scan_av_log);
-    scan_nb_files = nb_files;
-    scan_states = (ebur128_state**) malloc(sizeof(ebur128_state *) * scan_nb_files);
-    memset(scan_states, NULL, sizeof(ebur128_state*) * scan_nb_files);
-    
-    scan_files = (char**) malloc(sizeof(char *) * scan_nb_files);
-    memset(scan_files, NULL, sizeof(char*) * scan_nb_files);
-
-    scan_containers = (char**) malloc(sizeof(char *) * scan_nb_files);
-    memset(scan_containers, NULL, sizeof(char*) * scan_nb_files);
-
-    scan_codecs = (enum AVCodecID*) malloc(sizeof(enum AVCodecID) * scan_nb_files);
-    return 0;
-}
-
-void scan_deinit() {
-    int i;
-    for (i = 0; i < scan_nb_files; i++) {
-        if (scan_states[i] != NULL)
-            ebur128_destroy(&scan_states[i]);
-        free(scan_files[i]);
-    free(scan_containers[i]);
+    num_extensions = extensions.size();
+    if (num_extensions != 1) {
+        return INVALID;
     }
+    file_type = *extensions.begin();
 
-    free(scan_states);
+    // Generate vector of files with directory file type
+    for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
+        if (!entry.is_regular_file() || !entry.path().has_extension()) {
+            continue;
+        }
+        if (is_type(entry.path().extension().string(), file_type)) {
+            tracks.push_back(Track(entry.path().string(), file_type));
+        }
+    }
+    type = file_type;
+    nb_files = tracks.size();
+    this->path = path.string();
+    return nb_files ? file_type : INVALID;
 }
 
-bool scan(int nb_files, char **files, Config &config)
+int ScanJob::add_files(char **files, int nb_files)
 {
-    bool error = false;
-    scan_init(nb_files);
-    for (int i = 0; i < nb_files && !error; i++) {
-        error = scan_file(files[i], i, NULL);
+    FileType file_type;
+    std::filesystem::path path;
+    for (int i = 0; i < nb_files; i++) {
+        path = files[i];
+        file_type = determine_filetype(path.extension().string());
+        if (file_type == INVALID) {
+            output_error("File '{}' is not of a supported type", files[i]);
+        }
+        else {
+            tracks.push_back(Track(path.string(), file_type));
+        }
     }
-    if (!error)
-        apply_gain(nb_files, files, config);
-    scan_deinit();
-    return error;
+    this->nb_files = tracks.size();
+    return this->nb_files ? 0 : 1;
 }
 
-bool scan_file(const char *file, unsigned index, std::mutex *m) {
+bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
+{
+    //std::mutex *ffmpeg_mutex = NULL;
+    //bool error = false;
+    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
+        error = track->scan(config, ffmpeg_mutex);
+    }
+    if (error)
+        return true;
+
+    this->apply_gain(config);
+    if (config.no_clip) {
+        for (Track &track : tracks) {
+            if (track.aclip || track.tclip)
+                clippings_prevented++;
+        }
+    }
+    return false;
+}
+
+Track::~Track()
+{
+    if (ebur128 != NULL)
+        ebur128_destroy(&ebur128);
+}
+
+bool Track::scan(Config &config, std::mutex *m)
+{
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data = NULL;
-    char infotext[20];
+    int ebur128_flags;
+    std::string infotext;
     char infobuf[512];
     bool error = false;
     bool output_progress = !quiet && !multithread;
@@ -142,7 +193,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (!multithread)
-        output_ok("Scanning '{}' ...", file);
+        output_ok("Scanning '{}' ...", path);
 
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
@@ -152,26 +203,18 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
 #endif
 
     AVPacket packet;
-    AVCodecContext *ctx = NULL;
+    AVCodecContext *codec_ctx = NULL;
     AVFrame *frame = NULL;
     SwrContext *swr = NULL;
-    AVFormatContext *container = NULL;
-    ebur128_state **ebur128 = &scan_states[index];
+    AVFormatContext *format_ctx = NULL;
 
     int buffer_size = 192000 + AV_INPUT_BUFFER_PADDING_SIZE;
     uint8_t *buffer = (uint8_t*) malloc(sizeof(uint8_t) * buffer_size);
 
-    if (index >= scan_nb_files) {
-        output_error("Index too high");
-        free(buffer);
-        return -1;
-    }
-
-    scan_files[index] = strdup(file);
-
     if (lk != NULL)
         lk->lock();
-    rc = avformat_open_input(&container, file, NULL, NULL);
+    av_log_set_callback(scan_av_log);
+    rc = avformat_open_input(&format_ctx, path.c_str(), NULL, NULL);
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
@@ -179,11 +222,12 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
         error = true;
         goto end;
     }
-    scan_containers[index] = strdup(container->iformat->name);
-    if (!multithread)
-        output_ok("Container: {} [{}]", container->iformat->long_name, container->iformat->name);
 
-    rc = avformat_find_stream_info(container, NULL);
+    container = format_ctx->iformat->name;
+    if (!multithread)
+        output_ok("Container: {} [{}]", format_ctx->iformat->long_name, format_ctx->iformat->name);
+
+    rc = avformat_find_stream_info(format_ctx, NULL);
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
@@ -193,7 +237,7 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     }
 
     /* select the audio stream */
-    stream_id = av_find_best_stream(container, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
+    stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
 
     if (stream_id < 0) {
         output_fail("Could not find audio stream");
@@ -202,17 +246,17 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     }
         
     /* create decoding context */
-    ctx = avcodec_alloc_context3(codec);
-    if (!ctx) {
+    codec_ctx = avcodec_alloc_context3(codec);
+    if (!codec_ctx) {
         output_fail("Could not allocate audio codec context!");
         error = true;
         goto end;
     }
 
-    avcodec_parameters_to_context(ctx, container->streams[stream_id]->codecpar);
+    avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
 
     /* init the audio decoder */
-    rc = avcodec_open2(ctx, codec, NULL);
+    rc = avcodec_open2(codec_ctx, codec, NULL);
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
@@ -222,49 +266,45 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
     }
 
     // try to get default channel layout (they aren’t specified in .wav files)
-    if (!ctx->channel_layout)
-        ctx->channel_layout = av_get_default_channel_layout(ctx->channels);
+    if (!codec_ctx->channel_layout)
+        codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
 
     // show some information about the file
     // only show bits/sample where it makes sense
     infotext[0] = '\0';
-    if (ctx->bits_per_raw_sample > 0 || ctx->bits_per_coded_sample > 0) {
-        snprintf(infotext, 
-            sizeof(infotext), 
-            "%d bit, ",
-            ctx->bits_per_raw_sample > 0 ? ctx->bits_per_raw_sample : ctx->bits_per_coded_sample
-        );
+    if (codec_ctx->bits_per_raw_sample > 0 || codec_ctx->bits_per_coded_sample > 0) {
+        infotext = fmt::format("{} bit, ", codec_ctx->bits_per_raw_sample > 0 ? codec_ctx->bits_per_raw_sample : codec_ctx->bits_per_coded_sample);
     }
 
-    av_get_channel_layout_string(infobuf, sizeof(infobuf), -1, ctx->channel_layout);
+    av_get_channel_layout_string(infobuf, sizeof(infobuf), -1, codec_ctx->channel_layout);
     if (!multithread)
         output_ok("Stream #{}: {}, {}{} Hz, {} ch, {}",
             stream_id, 
             codec->long_name, 
             infotext, 
-            ctx->sample_rate, 
-            ctx->channels, 
+            codec_ctx->sample_rate, 
+            codec_ctx->channels, 
             infobuf
         );
 
-    scan_codecs[index] = codec->id;
+    codec_id = codec->id;
     av_init_packet(&packet);
     packet.data = buffer;
     packet.size = buffer_size;
 
     // Only initialize swresample if we need to convert the format
-    if (ctx->sample_fmt != OUTPUT_FORMAT) {
+    if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
         swr = swr_alloc();
-        av_opt_set_channel_layout(swr, "in_channel_layout", ctx->channel_layout, 0);
-        av_opt_set_channel_layout(swr, "out_channel_layout", ctx->channel_layout, 0);
+        av_opt_set_channel_layout(swr, "in_channel_layout", codec_ctx->channel_layout, 0);
+        av_opt_set_channel_layout(swr, "out_channel_layout", codec_ctx->channel_layout, 0);
 
-        av_opt_set_int(swr, "in_channel_count",  ctx->channels, 0);
-        av_opt_set_int(swr, "out_channel_count", ctx->channels, 0);
+        av_opt_set_int(swr, "in_channel_count",  codec_ctx->channels, 0);
+        av_opt_set_int(swr, "out_channel_count", codec_ctx->channels, 0);
 
-        av_opt_set_int(swr, "in_sample_rate", ctx->sample_rate, 0);
-        av_opt_set_int(swr, "out_sample_rate", ctx->sample_rate, 0);
+        av_opt_set_int(swr, "in_sample_rate", codec_ctx->sample_rate, 0);
+        av_opt_set_int(swr, "out_sample_rate", codec_ctx->sample_rate, 0);
 
-        av_opt_set_sample_fmt(swr, "in_sample_fmt", ctx->sample_fmt, 0);
+        av_opt_set_sample_fmt(swr, "in_sample_fmt", codec_ctx->sample_fmt, 0);
         av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
 
         rc = swr_init(swr);
@@ -277,13 +317,14 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
         }
     }
 
-    *ebur128 = ebur128_init(
-                   ctx->channels, 
-                   ctx->sample_rate,
-                   EBUR128_MODE_S | EBUR128_MODE_I | EBUR128_MODE_LRA |
-                   EBUR128_MODE_SAMPLE_PEAK | EBUR128_MODE_TRUE_PEAK
+    ebur128_flags = EBUR128_MODE_I;
+    config.true_peak ? ebur128_flags |= EBUR128_MODE_TRUE_PEAK : ebur128_flags |= EBUR128_MODE_SAMPLE_PEAK;
+    ebur128 = ebur128_init(
+                   codec_ctx->channels, 
+                   codec_ctx->sample_rate,
+                   ebur128_flags
                 );
-    if (*ebur128 == NULL) {
+    if (ebur128 == NULL) {
         output_fail("Could not initialize EBU R128 scanner");
         error = true;
         goto end;
@@ -296,36 +337,36 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
         goto end;
     }
 
-    if (container->streams[stream_id]->start_time != AV_NOPTS_VALUE)
-        start = container->streams[stream_id]->start_time * av_q2d(container->streams[stream_id]->time_base);
+    if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
+        start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
 
-    if (container->streams[stream_id]->duration != AV_NOPTS_VALUE)
-        len  = container->streams[stream_id]->duration * av_q2d(container->streams[stream_id]->time_base);
+    if (format_ctx->streams[stream_id]->duration != AV_NOPTS_VALUE)
+        len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
 
     if (output_progress)
         progress_bar.begin(start, len);
     if (lk != NULL)
         lk->unlock();
     
-    while (av_read_frame(container, &packet) >= 0) {
+    while (av_read_frame(format_ctx, &packet) >= 0) {
         if (packet.stream_index == stream_id) {
-            rc = avcodec_send_packet(ctx, &packet);
+            rc = avcodec_send_packet(codec_ctx, &packet);
             if (rc < 0) {
-                output_error("Error while sending a packet to the decoder");
+                //output_error("Error while sending a packet to the decoder");
                 continue;
             }
 
             while (rc >= 0) {
-                rc = avcodec_receive_frame(ctx, frame);
+                rc = avcodec_receive_frame(codec_ctx, frame);
                 if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF) {
                     break;
                 } 
                 else if (rc < 0) {
-                    output_error("Error while receiving a frame from the decoder");
+                    //output_error("Error while receiving a frame from the decoder");
                     break;
                 }
                 if (rc >= 0) {
-                    pos = frame->pkt_dts*av_q2d(container->streams[stream_id]->time_base);
+                    pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
                     // Convert frame with swresample if necessary
                     if (swr != NULL) {
@@ -346,20 +387,20 @@ bool scan_file(const char *file, unsigned index, std::mutex *m) {
                             av_free(swr_out_data);
                             goto end;
                         }
-                        rc = ebur128_add_frames_short(*ebur128, 
+                        rc = ebur128_add_frames_short(ebur128, 
                                  (short *) swr_out_data, 
                                  frame->nb_samples
                              );
                         av_free(swr_out_data);
                     }
                     else {
-                        rc = ebur128_add_frames_short(*ebur128, 
+                        rc = ebur128_add_frames_short(ebur128, 
                                  (short *) frame->data[0], 
                                  frame->nb_samples
                              );
                     }
-                    if (rc != EBUR128_SUCCESS)
-                        output_error("Error filtering");
+                    //if (rc != EBUR128_SUCCESS)
+                        //output_error("Error filtering");
 
                     if (pos >= 0 && output_progress)
                         progress_bar.update(pos);
@@ -386,168 +427,144 @@ end:
         swr_free(&swr);
     }
 
-    avcodec_close(ctx);
-    avformat_close_input(&container);
+    avcodec_close(codec_ctx);
+    avformat_close_input(&format_ctx);
     
     free(buffer);
     delete lk;
     return error;
 }
 
-void apply_gain(int nb_files, char *files[], Config &config)
+int Track::calculate_loudness(Config &config) {
+    unsigned channel = 0;
+    double track_loudness, track_peak;
+    int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
+
+    if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
+        track_loudness = config.target_loudness;
+
+    std::vector<double> peaks(ebur128->channels);
+    for (double &pk : peaks)
+        get_peak(ebur128, channel++, &pk);
+
+    track_peak = *std::max_element(peaks.begin(), peaks.end());
+
+    result.track_gain           = config.target_loudness - track_loudness;
+    result.track_peak           = track_peak;
+    result.track_loudness       = track_loudness;
+    return 0;
+}
+
+void ScanJob::apply_gain(Config &config)
 {
-    int i;
-    // check for different file (codec) types in an album and warn
-    // (including Opus might mess up album gain)
-    if (config.do_album) {
-        if (scan_album_has_different_containers() || scan_album_has_different_codecs()) {
-            output_warn("You have different file types in the same album!");
-            if (scan_album_has_opus())
-                output_fail("Cannot calculate correct album gain when mixing Opus and non-Opus files!");
+    // Track calculations
+    for (Track &track : tracks)
+        track.calculate_loudness(config);
+
+    // Album calculations
+    if (config.do_album)
+        this->calculate_album_loudness(config);
+
+    // Check if track or album will clip, and correct if so requested (-k/-K)
+    if (config.no_clip) {
+        double t_new_peak = 1.0; // "gained" track peak
+        double a_new_peak = 1.0; // "gained" album peak
+        double max_peak = pow(10.0, config.max_peak_level / 20.f); // track/album peak limit
+
+        // Track clipping
+        for (Track &track : tracks) {
+            t_new_peak = pow(10.0, track.result.track_gain / 20.f) * track.result.track_peak;
+            if (t_new_peak > max_peak) {
+                track.result.track_gain -= 20.f * log10(t_new_peak / max_peak);
+                track.tclip = true;
+            }
+        }
+
+        // Album clipping
+        if (config.do_album) {
+            a_new_peak = pow(10.0, tracks[0].result.album_gain / 20.f) * tracks[0].result.album_peak;
+            if (a_new_peak > max_peak) {
+                double adjustment = 20.f * log10(a_new_peak / max_peak);
+                for (Track &track : tracks) {
+                    track.result.album_gain -= adjustment;
+                    track.aclip = true;
+                }
+            }
         }
     }
 
     if (config.tab_output)
-        fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tWill_clip\tClip_prevent\tGain\tNew_Peak\tNew_Peak_dBTP\n", stdout);
+        fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tClip_prevent\tGain\n", stdout);
 
-    for (i = 0; i < nb_files; i++) {
-        bool will_clip = false;
-        double tgain = 1.0; // "gained" track peak
-        double tnew;
-        double tpeak = pow(10.0, config.max_true_peak_level / 20.0); // track peak limit
-        double again = 1.0; // "gained" album peak
-        double anew;
-        double apeak = pow(10.0, config.max_true_peak_level / 20.0); // album peak limit
-        bool tclip = false;
-        bool aclip = false;
-
-        scan_result *scan = scan_get_track_result(i, config.pre_gain);
-
-        if (scan == NULL)
-            continue;
-
-        if (config.do_album)
-            scan_set_album_result(scan, config.pre_gain);
-
-        // Check if track or album will clip, and correct if so requested (-k/-K)
-
-        // track peak after gain
-        tgain = pow(10.0, scan->track_gain / 20.0) * scan->track_peak;
-        tnew = tgain;
-        if (config.do_album) {
-            // album peak after gain
-            again = pow(10.0, scan->album_gain / 20.0) * scan->album_peak;
-            anew = again;
-        }
-
-        if ((tgain > tpeak) || (config.do_album && (again > apeak)))
-            will_clip = true;
-
-        // printf("\ntrack: {:.2f} LU, peak {:.6f}; album: {:.2f} LU, peak {:.6f}\ntrack: {:.6f}, {:.6f}; album: {:.6f}, {:.6f}; Clip: {}\n",
-        // 	scan->track_gain, scan->track_peak, scan->album_gain, scan->album_peak,
-        // 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
-
-        if (will_clip && config.no_clip) {
-            if (tgain > tpeak) {
-                // set new track peak = minimum of peak after gain and peak limit
-                tnew = FFMIN(tgain, tpeak);
-                scan->track_gain = scan->track_gain - (log10(tgain/tnew) * 20.0);
-                tclip = true;
-            }
-
-            if (config.do_album && (again > apeak)) {
-                anew = FFMIN(again, apeak);
-                scan->album_gain = scan->album_gain - (log10(again/anew) * 20.0);
-                aclip = true;
-            }
-
-            will_clip = false;
-
-            // fmt::print("\nAfter clipping prevention:\ntrack: {:.2f} LU, peak {:.6f}; album: {:.2f} LU, peak {:.6f}\ntrack: {:.6f}, {:.6f}; album: {:.6f}, {:.6f}; Clip: {}\n",
-            // 	scan->track_gain, scan->track_peak, scan->album_gain, scan->album_peak,
-            // 	tgain, tpeak, again, apeak, will_clip ? "Yes" : "No");
-        }
-
+    // Tag the files
+    for (Track &track : tracks) {
         switch (config.mode) {
             case 'c': /* check tags */
                 break;
 
             case 'd': /* delete tags */
-                switch (name_to_id(scan->container)) {
+                switch (track.type) {
 
-                    case AV_CONTAINER_ID_MP3:
-                        if (!tag_clear_mp3(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case MP3:
+                        if (!tag_clear_mp3(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_FLAC:
-                        if (!tag_clear_flac(scan))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case FLAC:
+                        if (!tag_clear_flac(track))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_OGG:
-                        // must separate because TagLib uses fifferent File classes
-                        switch (scan->codec_id) {
+                    case OGG:
+                        // must separate because TagLib uses different File classes
+                        switch (track.codec_id) {
                             // Opus needs special handling (different RG tags, -23 LUFS ref.)
                             case AV_CODEC_ID_OPUS:
-                                if (!tag_clear_ogg_opus(scan))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_clear_ogg_opus(track))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_VORBIS:
-                                if (!tag_clear_ogg_vorbis(scan))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_clear_ogg_vorbis(track))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_FLAC:
-                                if (!tag_clear_ogg_flac(scan))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_clear_ogg_flac(track))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_SPEEX:
-                                if (!tag_clear_ogg_speex(scan))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_clear_ogg_speex(track))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
-                            default:
-                                output_error("Codec 0x{:x} in {} container not supported",
-                                    scan->codec_id, scan->container);
-                                break;
                         }
                         break;
 
-                    case AV_CONTAINER_ID_MP4:
-                        if (!tag_clear_mp4(scan))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case M4A:
+                        if (!tag_clear_mp4(track))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_ASF:
-                        if (!tag_clear_asf(scan))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case WAV:
+                        if (!tag_clear_wav(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_WAV:
-                        if (!tag_clear_wav(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case AIFF:
+                        if (!tag_clear_aiff(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_AIFF:
-                        if (!tag_clear_aiff(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case WAVPACK:
+                        if (!tag_clear_wavpack(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_WV:
-                        if (!tag_clear_wavpack(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
-                        break;
-
-                    case AV_CONTAINER_ID_APE:
-                        if (!tag_clear_ape(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
-                        break;
-
-                    default:
-                        output_error("File type not supported: {}", scan->container);
+                    case APE:
+                        if (!tag_clear_ape(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
                 }
                 break;
@@ -555,81 +572,67 @@ void apply_gain(int nb_files, char *files[], Config &config)
             case 'i': /* ID3v2 tags */
             case 'e': /* same as 'i' plus extra tags */
             case 'l': /* same as 'e' but in LU/LUFS units (instead of 'dB')*/
-                switch (name_to_id(scan->container)) {
+                switch (track.type) {
 
-                    case AV_CONTAINER_ID_MP3:
-                        if (!tag_write_mp3(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case MP3:
+                        if (!tag_write_mp3(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_FLAC:
-                        if (!tag_write_flac(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case FLAC:
+                        if (!tag_write_flac(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_OGG:
+                    case OGG:
                         // must separate because TagLib uses fifferent File classes
-                        switch (scan->codec_id) {
+                        switch (track.codec_id) {
                             // Opus needs special handling (different RG tags, -23 LUFS ref.)
                             case AV_CODEC_ID_OPUS:
-                                if (!tag_write_ogg_opus(scan, config))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_write_ogg_opus(track, config))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_VORBIS:
-                                if (!tag_write_ogg_vorbis(scan, config))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_write_ogg_vorbis(track, config))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_FLAC:
-                                if (!tag_write_ogg_flac(scan, config))
-                                    output_error("Couldn't write to: {}", scan->file);
+                                if (!tag_write_ogg_flac(track, config))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
 
                             case AV_CODEC_ID_SPEEX:
-                                if (!tag_write_ogg_speex(scan, config))
-                                    output_error("Couldn't write to: {}", scan->file);
-                                break;
-
-                            default:
-                                output_error("Codec 0x{:x} in {} container not supported",
-                                    scan->codec_id, scan->container);
+                                if (!tag_write_ogg_speex(track, config))
+                                    output_error("Couldn't write to: {}", track.path);
                                 break;
                         }
                         break;
 
-                    case AV_CONTAINER_ID_MP4:
-                        if (!tag_write_mp4(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case M4A:
+                        if (!tag_write_mp4(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_ASF:
-                        if (!tag_write_asf(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case WAV:
+                        if (!tag_write_wav(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_WAV:
-                        if (!tag_write_wav(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case AIFF:
+                        if (!tag_write_aiff(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_AIFF:
-                        if (!tag_write_aiff(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
+                    case WAVPACK:
+                        if (!tag_write_wavpack(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
 
-                    case AV_CONTAINER_ID_WV:
-                        if (!tag_write_wavpack(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
-                        break;
-
-                    case AV_CONTAINER_ID_APE:
-                        if (!tag_write_ape(scan, config))
-                            output_error("Couldn't write to: {}", scan->file);
-                        break;
-
-                    default:
-                        output_error("File type not supported: {}", scan->container);
+                    case APE:
+                        if (!tag_write_ape(track, config))
+                            output_error("Couldn't write to: {}", track.path);
                         break;
                 }
                 break;
@@ -652,204 +655,99 @@ void apply_gain(int nb_files, char *files[], Config &config)
                 output_error("Invalid tag mode");
                 break;
         }
+        if (!quiet && !multithread) {
+            if (config.tab_output) {
+                // output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
+                fmt::print("{}\t", track.path);
+                fmt::print("{:.2f} LUFS\t", track.result.track_loudness);
+                fmt::print("{:.6f}\t", track.result.track_peak);
+                fmt::print("{:.2f} dBTP\t", 20.0 * log10(track.result.track_peak));
+                //fmt::print("{}\t", will_clip ? "Y" : "N");
+                fmt::print("{}\t", track.tclip ? "Y" : "N");
+                fmt::print("{:.2f} dB\t", track.result.track_gain);
+            // fmt::print("{:.6f}\t", tnew);
+                //fmt::print("{:.2f} dBTP\n", 20.0 * log10(tnew));
 
-        if (config.tab_output) {
-            // output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
-            fmt::print("{}\t", scan->file);
-            fmt::print("{:.2f} LUFS\t", scan->track_loudness);
-            fmt::print("{:.2f} {}\t", scan->track_loudness_range, config.unit);
-            fmt::print("{:.6f}\t", scan->track_peak);
-            fmt::print("{:.2f} dBTP\t", 20.0 * log10(scan->track_peak));
-            fmt::print("{:.2f} LUFS\t", scan->loudness_reference);
-            fmt::print("{}\t", will_clip ? "Y" : "N");
-            fmt::print("{}\t", tclip ? "Y" : "N");
-            fmt::print("{:.2f} {}\t", scan->track_gain, config.unit);
-            fmt::print("{:.6f}\t", tnew);
-            fmt::print("{:.2f} dBTP\n", 20.0 * log10(tnew));
-
-            if ((i == (nb_files - 1)) && config.do_album) {
-                fmt::print("{}\t", "Album");
-                fmt::print("{:.2f} LUFS\t", scan->album_loudness);
-                fmt::print("{:.2f} {}\t", scan->album_loudness_range, config.unit);
-                fmt::print("{:.6f}\t", scan->album_peak);
-                fmt::print("{:.2f} dBTP\t", 20.0 * log10(scan->album_peak));
-                fmt::print("{:.2f} LUFS\t", scan->loudness_reference);
-                fmt::print("{}\t", (!aclip && (again > apeak)) ? "Y" : "N");
-                fmt::print("{}\t", aclip ? "Y" : "N");
-                fmt::print("{:.2f} {}\t", scan->album_gain, config.unit);
-                fmt::print("{:.6f}\t", anew);
-                fmt::print("{:.2f} dBTP\n", 20.0 * log10(anew));
-            }
-        } else {
-            // output something human-readable
-            fmt::print("\nTrack: {}\n", scan->file);
-
-            fmt::print(" Loudness: {:8.2f} LUFS\n", scan->track_loudness);
-            fmt::print(" Range:    {:8.2f} {}\n", scan->track_loudness_range, config.unit);
-            fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", scan->track_peak, 20.0 * log10(scan->track_peak));
-            if (scan->codec_id == AV_CODEC_ID_OPUS) {
-                // also show the Q7.8 number that goes into R128_TRACK_GAIN
-                fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->track_gain, config.unit,
-                 gain_to_q78num(scan->track_gain),
-                 tclip ? " (corrected to prevent clipping)" : "");
-            } else {
-                fmt::print(" Gain:     {:8.2f} {}{}\n", scan->track_gain, config.unit,
-                 tclip ? " (corrected to prevent clipping)" : "");
-            }
-
-            if (config.warn_clip && will_clip)
-                output_error("The track will clip");
-
-            if ((i == (nb_files - 1)) && config.do_album) {
-                fmt::print("\nAlbum:\n");
-
-                fmt::print(" Loudness: {:8.2f} LUFS\n", scan->album_loudness);
-                fmt::print(" Range:    {:8.2f} {}\n", scan->album_loudness_range, config.unit);
-                fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", scan->album_peak, 20.0 * log10(scan->album_peak));
-                if (scan->codec_id == AV_CODEC_ID_OPUS) {
-                    // also show the Q7.8 number that goes into R128_ALBUM_GAIN
-                    fmt::print(" Gain:     {:8.2f} {} ({}){}\n", scan->album_gain, config.unit,
-                    gain_to_q78num(scan->album_gain),
-                        aclip ? " (corrected to prevent clipping)" : "");
-                } else {
-                    fmt::print(" Gain:     {:8.2f} {}{}\n", scan->album_gain, config.unit,
-                        aclip ? " (corrected to prevent clipping)" : "");
+                if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+                    fmt::print("{}\t", "Album");
+                    fmt::print("{:.2f} LUFS\t", track.result.album_loudness);
+                    fmt::print("{:.6f}\t", track.result.album_peak);
+                    fmt::print("{:.2f} dBTP\t", 20.0 * log10(track.result.album_peak));
+                    //fmt::print("{}\t", (!aclip && (again > max_peak)) ? "Y" : "N");
+                    fmt::print("{}\t", track.aclip ? "Y" : "N");
+                    fmt::print("{:.2f} dB\t", track.result.album_gain);
+                    //fmt::print("{:.6f}\t", anew);
+                    //fmt::print("{:.2f} dBTP\n", 20.0 * log10(anew));
                 }
+            } else {
+                // output something human-readable
+                fmt::print("\nTrack: {}\n", track.path);
+
+                fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
+                fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
+                if (track.codec_id == AV_CODEC_ID_OPUS) {
+                    // also show the Q7.8 number that goes into R128_TRACK_GAIN
+                    fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
+                        track.result.track_gain,
+                        gain_to_q78num(track.result.track_gain),
+                        track.tclip ? " (corrected to prevent clipping)" : ""
+                    );
+                } else {
+                    fmt::print(" Gain:     {:8.2f} dB{}\n", 
+                        track.result.track_gain, 
+                        track.tclip ? " (corrected to prevent clipping)" : ""
+                    );
+                }
+
+            // if (config.warn_clip && will_clip)
+                //   output_error("The track will clip"); 
+
+                if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+                    fmt::print("\nAlbum:\n");
+                    fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
+                    fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
+                    if (track.codec_id == AV_CODEC_ID_OPUS) {
+                        // also show the Q7.8 number that goes into R128_ALBUM_GAIN
+                        fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
+                            track.result.album_gain,
+                            gain_to_q78num(track.result.album_gain),
+                            track.aclip ? " (corrected to prevent clipping)" : ""
+                        );
+                    } else {
+                        fmt::print(" Gain:     {:8.2f} dB{}\n", 
+                            track.result.album_gain,
+                            track.aclip ? " (corrected to prevent clipping)" : ""
+                        );
+                    }
+                }
+                fmt::print("\n");
             }
-            fmt::print("\n");
         }
-        free(scan);
     }
 }
 
+void ScanJob::calculate_album_loudness(Config &config) {
+    double album_loudness, album_peak;
 
-scan_result *scan_get_track_result(unsigned index, double pre_gain) {
-    unsigned ch;
+    int nb_states = tracks.size();
+    std::vector<ebur128_state*> states(nb_states);
+    for (const Track &track : tracks)
+        states[&track - &tracks[0]] = track.ebur128;
 
-    double global, range, peak = 0.0;
+    if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
+        album_loudness = 0.0;
 
-    scan_result *result = NULL;
-    ebur128_state *ebur128 = NULL;
-
-    if (index >= scan_nb_files) {
-        output_error("Index too high");
-        return NULL;
+    album_peak = std::max_element(tracks.begin(),
+                     tracks.end(),
+                     [](auto &a, auto &b) {return a.result.track_peak < b.result.track_peak;}
+                 )->result.track_peak;
+    
+    double album_gain = config.target_loudness - album_loudness;
+    for (Track &track : tracks) {
+        track.result.album_gain = album_gain;
+        track.result.album_peak = album_peak;
+        track.result.album_loudness = album_loudness;
     }
-
-    result = (scan_result*) malloc(sizeof(scan_result));
-    ebur128 = scan_states[index];
-
-    if (ebur128_loudness_global(ebur128, &global) != EBUR128_SUCCESS)
-        global = 0.0;
-
-    if (ebur128_loudness_range(ebur128, &range) != EBUR128_SUCCESS)
-        range = 0.0;
-
-    for (ch = 0; ch < ebur128->channels; ch++) {
-        double tmp;
-
-        if (ebur128_true_peak(ebur128, ch, &tmp) != EBUR128_SUCCESS)
-            continue;
-
-        peak = FFMAX(peak, tmp);
-    }
-
-  // Opus is always based on -23 LUFS, we have to adapt
-  if (scan_codecs[index] == AV_CODEC_ID_OPUS)
-    pre_gain = pre_gain - 5.0f;
-
-    result->file                 = scan_files[index];
-    result->container            = scan_containers[index];
-    result->codec_id             = scan_codecs[index];
-
-    result->track_gain           = LUFS_TO_RG(global) + pre_gain;
-    result->track_peak           = peak;
-    result->track_loudness       = global;
-    result->track_loudness_range = range;
-
-    result->album_gain           = 0.f;
-    result->album_peak           = 0.f;
-    result->album_loudness       = 0.f;
-    result->album_loudness_range = 0.f;
-
-  result->loudness_reference   = LUFS_TO_RG(-pre_gain);
-
-    return result;
-}
-
-int scan_album_has_different_containers() {
-  int i;
-  for (i = 0; i < scan_nb_files; i++) {
-    if (strcmp(scan_containers[0], scan_containers[i]))
-      return 1; // true
-  }
-  return 0; // false
-}
-
-int scan_album_has_different_codecs() {
-  int i;
-  for (i = 0; i < scan_nb_files; i++) {
-    if (scan_codecs[0] != scan_codecs[i])
-      return 1; // true
-  }
-  return 0; // false
-}
-
-int scan_album_has_opus() {
-  int i;
-  for (i = 0; i < scan_nb_files; i++) {
-    if (scan_codecs[i] == AV_CODEC_ID_OPUS)
-      return 1;
-  }
-  return 0;
-}
-
-double scan_get_album_peak() {
-  double peak = 0.0;
-  int i;
-  unsigned ch;
-  ebur128_state *ebur128 = NULL;
-
-  for (i = 0; i < scan_nb_files; i++) {
-    ebur128 = scan_states[i];
-
-    for (ch = 0; ch < ebur128->channels; ch++) {
-          double tmp;
-
-          if (ebur128_true_peak(ebur128, ch, &tmp) != EBUR128_SUCCESS)
-              continue;
-
-          peak = FFMAX(peak, tmp);
-      }
-  }
-  return peak;
-}
-
-void scan_set_album_result(scan_result *result, double pre_gain) {
-    double global, range;
-
-    if (ebur128_loudness_global_multiple(
-        scan_states, scan_nb_files, &global
-    ) != EBUR128_SUCCESS)
-        global = 0.0;
-
-    if (ebur128_loudness_range_multiple(
-        scan_states, scan_nb_files, &range
-    ) != EBUR128_SUCCESS)
-        range = 0.0;
-
-  // Opus is always based on -23 LUFS, we have to adapt
-  // When we arrive here, it’s already verified that the album
-  // does NOT mix Opus and non-Opus tracks,
-  // so we can safely reduce the pre-gain to arrive at -23 LUFS.
-  if (scan_album_has_opus())
-    pre_gain = pre_gain - 5.0f;
-
-    result->album_gain           = LUFS_TO_RG(global) + pre_gain;
-    // Calculate correct album peak (v0.2.1)
-    result->album_peak           = scan_get_album_peak();
-    result->album_loudness       = global;
-    result->album_loudness_range = range;
 }
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args) {

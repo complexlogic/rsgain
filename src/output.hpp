@@ -37,6 +37,9 @@
 #include <sys/ioctl.h>
 #endif
 
+#ifdef _WIN32
+#include <windows.h>
+#endif
 
 #include <fmt/core.h>
 
@@ -71,7 +74,6 @@ extern int disable_progress_bar;
 #define output_error(format, ...) if (!quiet) fmt::print(ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 #define output_fail(format, ...)  if (!quiet) fmt::print(FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
-
 class ProgressBar {
     private:
         int c_prev;
@@ -86,6 +88,7 @@ class ProgressBar {
 #else
         struct winsize ws;
 #endif
+
         int get_console_width();
 
 

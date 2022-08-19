@@ -41,6 +41,9 @@ if (WIN32)
   find_path(LIBEBUR128_INCLUDE_DIR "ebur128.h" REQUIRED)
   find_library(LIBEBUR128 ebur128 REQUIRED)
   
+  find_path(FMT_INCLUDE_DIR "fmt/core.h" REQUIRED)
+  find_library(FMT fmt REQUIRED)
+  
   find_path(GETOPT_INCLUDE_DIR "getopt.h" REQUIRED)
   find_library(GETOPT getopt REQUIRED)
   
@@ -50,7 +53,8 @@ if (WIN32)
   include_directories(
     ${FFMPEG_INCLUDE_DIRS} 
     ${TAGLIB_INCLUDE_DIR} 
-    ${LIBEBUR128_INCLUDE_DIR} 
+    ${LIBEBUR128_INCLUDE_DIR}
+	${FMT_INCLUDE_DIR}
     ${GETOPT_INCLUDE_DIR}
     ${INIH_INCLUDE_DIR}
     ${PROJECT_BINARY_DIR}
@@ -59,6 +63,7 @@ if (WIN32)
     ${FFMPEG_LIBRARIES} 
     ${TAGLIB} 
     ${LIBEBUR128} 
+	${FMT}
     ${GETOPT}
     ${INIH}
   )

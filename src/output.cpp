@@ -53,7 +53,8 @@ extern HANDLE console;
 #include "config.h"
 
 #ifdef _WIN32
-#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
+//#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
+#define print_buffer(buffer, length, stream) fmt::print("{}", buffer);
 #else
 #define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
 #endif
@@ -86,6 +87,7 @@ void ProgressBar::update(int pos)
 		delete buffer;
 		buffer = new char[w + 3];
 	}
+
 	float percent = ((float) pos / (float) len);
 	c = (int) (percent * (float) w);
 
