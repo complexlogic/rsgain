@@ -7,15 +7,16 @@ rsgain builds natively on Unix and Windows, and features a cross-platform CMake 
 	+ libavcodec
 	+ libswresample
 	+ libavutil
+- fmt
 - inih
 
-rsgain uses a few C++20 features, and as such requires a relatively modern compiler to build:
+rsgain uses the C++20 standard, and as such requires a relatively modern compiler to build:
 - On Windows, use Visual Studio 2022
 - On Linux, use GCC 11 or later if possible. rsgain will also build with GCC 10, but the time elapsed statistical output will be disabled (no effect on core functionality). GCC versions 9 and earlier are not supported.
 - On macOS, the latest available Xcode for your machine should work.
 
 ## Unix
-Before starting, make sure you have the build tools Git, CMake and pkg-config installed.
+Before starting, make sure you have the devlopment tools Git, CMake and pkg-config installed.
 
 Install the required dependencies:
 
@@ -60,7 +61,7 @@ sudo make install
 By default, this will install rsgain with a prefix of `/usr/local`. If you want a different prefix, re-run the CMake generation step with `-DCMAKE_INSTALL_PREFIX=prefix`.
 
 ## Windows
-The Windows toolchain consists of Visual Studio and vcpkg in addition to Git  and CMake. Before starting, make sure that Visual Studio is installed with C++ core desktop features and C++ CMake tools.
+The Windows toolchain consists of Visual Studio and vcpkg in addition to Git and CMake. Before starting, make sure that Visual Studio is installed with C++ core desktop features and C++ CMake tools.
 
 Clone the master repo and create a build directory:
 ```

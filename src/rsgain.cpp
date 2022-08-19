@@ -149,7 +149,7 @@ void parse_max_peak_level(const char *value, Config &config)
 {
     char *rest = NULL;
     float max_peak = strtod(value, &rest);
-    if (rest != NULL ||(rest == value) || !isfinite(max_peak))
+    if (rest == value || !isfinite(max_peak))
         output_error("Invalid max peak level '{}'", value);
 
     config.max_peak_level = max_peak;
@@ -169,7 +169,7 @@ static void easy_mode(int argc, char *argv[])
         { "override",     required_argument, NULL, 'o' },
         { 0, 0, 0, 0 }
     };
-    while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
+    while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
         switch (rc) {
             case 'h':
                 help_easy();
@@ -213,7 +213,6 @@ static void custom_mode(int argc, char *argv[])
         { "no-clip",       no_argument,       NULL, 'k' },
         { "max-peak",      required_argument, NULL, 'K' },
         { "true-peak",     required_argument, NULL, 't' },
-
 
         { "loudness",      required_argument, NULL, 'l' },
 
@@ -312,13 +311,15 @@ static void custom_mode(int argc, char *argv[])
 
     nb_files = argc - optind;
     if (!nb_files) {
-        fmt::print("Error: No files specified\n");
+        output_fail("No files were specified\n");
         quit(EXIT_FAILURE);
     }
 
     ScanJob job;
-    if (job.add_files(argv + optind, nb_files))
+    if (job.add_files(argv + optind, nb_files)) {
+        output_fail("No valid files were specified");
         quit(EXIT_FAILURE);
+    }
     job.scan(config);
 }
 
@@ -369,7 +370,7 @@ int main(int argc, char *argv[]) {
         custom_mode(num_subargs, subargs);
     }
     else {
-        fmt::print("Error: Unrecognized command \"{}\"\n", command);
+        output_fail("Unrecognized command '{}'\n", command);
         quit(EXIT_FAILURE);
     }
     quit(EXIT_SUCCESS);
@@ -524,4 +525,19 @@ static void version(void) {
     fmt::print("\n");
     fmt::print("Built with:\n");
     PRINT_LIB("taglib", taglib_version);
+    fmt::print("\n");
+#ifdef __GNUC__
+    fmt::print("Compiler:   GCC {}.{}\n", __GNUC__, __GNUC_MINOR__);
+#endif
+
+#ifdef __clang__
+    fmt::print("Compiler:   Clang {}.{}.{}\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#endif
+
+#ifdef _MSC_VER
+    fmt::print("Compiler:   Microsoft C/C++ {:.2f}\n", (float) _MSC_VER / 100.0f);
+#endif
+
+    fmt::print("Build date: " __DATE__ "\n");
+    fmt::print("\n");
 }
