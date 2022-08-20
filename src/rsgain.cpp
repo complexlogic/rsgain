@@ -212,7 +212,7 @@ static void custom_mode(int argc, char *argv[])
         .tab_output = false,
         .lowercase = false,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -410,8 +410,8 @@ static inline void help_custom(void) {
     CMD_CONT("This is non-standard but sometimes needed");
     CMD_HELP("--strip-tags", "-S", "Strip tag types other than ID3v2 from MP2/MP3");
     CMD_CONT("Strip tag types other than APEv2 from WavPack/APE");
-    CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
-    CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF (default)");
+    CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF (default)");
+    CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
 
     fmt::print("\n");
 

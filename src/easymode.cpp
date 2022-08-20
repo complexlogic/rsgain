@@ -68,7 +68,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = false,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // OGG config
@@ -82,7 +82,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = false,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // OPUS config
@@ -96,7 +96,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = false,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // M4A config
@@ -110,7 +110,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = true,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // WMA config
@@ -124,7 +124,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = true,
         .strip = false,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // WAV config
@@ -166,7 +166,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = false,
         .strip = true,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 
     // APE config
@@ -180,7 +180,7 @@ static Config configs[] = {
         .tab_output = false,
         .lowercase = false,
         .strip = true,
-        .id3v2version = 4
+        .id3v2version = 3
     },
 };
 
