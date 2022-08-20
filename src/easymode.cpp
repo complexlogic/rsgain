@@ -281,7 +281,7 @@ int handler(void *user, const char *section, const char *name, const char *value
     if (MATCH(name, "Album")) {
         convert_bool(value, configs[file_type].do_album);
     }
-    else if (MATCH(name, "Mode")) {
+    else if (MATCH(name, "TagMode")) {
         parse_tag_mode(value, configs[file_type].tag_mode);
     }
     else if (MATCH(name, "ClipMode")) {
