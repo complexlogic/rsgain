@@ -12,11 +12,11 @@
 #define EBU_R128_MAX_PEAK -1.f
 
 typedef struct {
-	char mode;
+	char tag_mode;
 	double target_loudness;
 	double max_peak_level;
 	bool true_peak;
-	bool no_clip;
+	char clip_mode;
 	bool do_album;
 	bool tab_output;
 	bool lowercase;
@@ -30,7 +30,8 @@ extern "C" {
 #endif
 void quit(int status);
 void parse_target_loudness(const char *value, Config &config);
-void parse_mode(const char *value, Config &config);
+void parse_tag_mode(const char *value, Config &config);
+bool parse_clip_mode(const char *value, char &mode);
 void parse_id3v2_version(const char *value, Config &config);
 void parse_max_peak_level(const char *value, Config &config);
 #ifdef __cplusplus

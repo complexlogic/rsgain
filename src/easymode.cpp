@@ -27,11 +27,11 @@ static Config configs[] = {
     
     // MP2 config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -41,11 +41,11 @@ static Config configs[] = {
 
     // MP3 config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -55,11 +55,11 @@ static Config configs[] = {
 
     // FLAC config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = false,
@@ -69,11 +69,11 @@ static Config configs[] = {
 
     // OGG config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = false,
@@ -83,11 +83,11 @@ static Config configs[] = {
 
     // OPUS config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = false,
@@ -97,11 +97,11 @@ static Config configs[] = {
 
     // M4A config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -111,11 +111,11 @@ static Config configs[] = {
 
     // WMA config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -125,11 +125,11 @@ static Config configs[] = {
 
     // WAV config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -139,11 +139,11 @@ static Config configs[] = {
 
     // AIFF config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = true,
@@ -153,11 +153,11 @@ static Config configs[] = {
 
     // WAVPACK config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = false,
@@ -167,11 +167,11 @@ static Config configs[] = {
 
     // APE config
     {
-        .mode = 'i',
+        .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = true,
-        .no_clip = true,
+        .clip_mode = 'p',
         .do_album = true,
         .tab_output = false,
         .lowercase = false,
@@ -224,10 +224,10 @@ static int handler(void *user, const char *section, const char *name, const char
         convert_bool(value, configs[file_type].do_album);
     }
     else if (MATCH(name, "Mode")) {
-        parse_mode(value, configs[file_type]);
+        parse_tag_mode(value, configs[file_type]);
     }
-    else if (MATCH(name, "ClippingProtection")) {
-        convert_bool(value, configs[file_type].no_clip);
+    else if (MATCH(name, "ClipMode")) {
+        parse_clip_mode(value, configs[file_type].clip_mode);
     }
     else if (MATCH(name, "Lowercase")) {
         convert_bool(value, configs[file_type].lowercase);

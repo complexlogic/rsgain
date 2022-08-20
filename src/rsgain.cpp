@@ -126,16 +126,28 @@ void parse_target_loudness(const char *value, Config &config)
     config.target_loudness = loudness;        
 }
 
-void parse_mode(const char *value, Config &config)
+void parse_tag_mode(const char *value, Config &config)
 {
     std::string_view valid_modes = "dis";
     size_t pos = valid_modes.find_first_of(*value);
     if (pos != std::string::npos) {
-        config.mode = valid_modes[pos];
+        config.tag_mode = valid_modes[pos];
     }
     else {
         output_error("Invalid tag mode: '{}'", value);
     }        
+}
+
+bool parse_clip_mode(const char *value, char &mode)
+{
+    static const std::string_view valid_modes = "npa";
+    size_t pos = valid_modes.find_first_of(*value);
+    if (pos != std::string::npos) {
+        mode = valid_modes[pos];
+        return true;
+    }
+    output_error("Invalid clip mode: '{}'", value);
+    return false;
 }
 
 void parse_id3v2_version(const char *value, Config &config)
@@ -206,11 +218,11 @@ static void custom_mode(int argc, char *argv[])
     int rc, i;
     unsigned nb_files   = 0;
 
-    const char *short_opts = "+ackK:tl:Oqs:LSI:h?";
+    const char *short_opts = "+ac:K:tl:Oqs:LSI:h?";
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
 
-        { "no-clip",       no_argument,       NULL, 'k' },
+        { "clip-mode",       no_argument,     NULL, 'c' },
         { "max-peak",      required_argument, NULL, 'K' },
         { "true-peak",     required_argument, NULL, 't' },
 
@@ -229,11 +241,11 @@ static void custom_mode(int argc, char *argv[])
     };
 
     Config config = {
-        .mode = 's',
+        .tag_mode = 's',
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = EBU_R128_MAX_PEAK,
         .true_peak = false,
-        .no_clip = false,
+        .clip_mode = 'n',
         .do_album = false,
         .tab_output = false,
         .lowercase = false,
@@ -247,13 +259,11 @@ static void custom_mode(int argc, char *argv[])
                 config.do_album = true;
                 break;
 
-            case 'k':
-                // old-style, no argument, now defaults to -1 dBTP max. true peak level
-                config.no_clip = true;
+            case 'c':
+                parse_clip_mode(optarg, config.clip_mode);
                 break;
 
             case 'K': {
-                config.no_clip = true;
                 parse_max_peak_level(optarg, config);
                 break;
             }
@@ -277,7 +287,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 's': {
-                parse_mode(optarg, config);
+                parse_tag_mode(optarg, config);
                 break;
             }
 
@@ -308,7 +318,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
         }
     }
-
+    
     nb_files = argc - optind;
     if (!nb_files) {
         output_fail("No files were specified\n");
@@ -432,29 +442,28 @@ static inline void help_custom(void) {
 
     fmt::print("  Custom Mode allows the user to specify the options to scan the files with. The\n");
     fmt::print("  list of files to scan must be listed explicitly after the options.\n");
-
     fmt::print("\n");
+    
     fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
-
     CMD_HELP("--help",     "-h", "Show this help");
-
     fmt::print("\n");
 
     CMD_HELP("--album",  "-a", "Calculate album gain and peak");
-
-    fmt::print("\n");
-
-    CMD_HELP("--no-clip", "-k", "Lower track/album gain to avoid clipping (<= -1 dBTP)");
-    CMD_HELP("--max-peak=n", "-K n", "Avoid clipping; max. true peak level = n dBTP");
-    CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
-
-    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
-
     fmt::print("\n");
 
     CMD_HELP("--tagmode=s", "-s s", "Scan files but don't write ReplayGain tags (default)");
     CMD_HELP("--tagmode=d", "-s d",  "Delete ReplayGain tags from files");
     CMD_HELP("--tagmode=i", "-s i",  "Scan and write ReplayGain 2.0 tags to files");
+    fmt::print("\n");
+
+    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
+    fmt::print("\n");
+
+    CMD_HELP("--clip-mode n", "-c n", "No clipping protection (default)");
+    CMD_HELP("--clip-mode p", "-c p", "Clipping protection enabled for positive gain values only");
+    CMD_HELP("--clip-mode a", "-c a", "Clipping protection always enabled");
+    CMD_HELP("--max-peak=n", "-K n", "Use max peak level n dB for clipping protection");
+    CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
 
     fmt::print("\n");
 
@@ -527,17 +536,16 @@ static void version(void) {
     PRINT_LIB("taglib", taglib_version);
     fmt::print("\n");
 #ifdef __GNUC__
-    fmt::print("Compiler:   GCC {}.{}\n", __GNUC__, __GNUC_MINOR__);
+    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   GCC {}.{}\n", __GNUC__, __GNUC_MINOR__);
 #endif
 
 #ifdef __clang__
-    fmt::print("Compiler:   Clang {}.{}.{}\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   Clang {}.{}.{}\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #endif
 
 #ifdef _MSC_VER
-    fmt::print("Compiler:   Microsoft C/C++ {:.2f}\n", (float) _MSC_VER / 100.0f);
+    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   Microsoft C/C++ {:.2f}\n", (float) _MSC_VER / 100.0f);
 #endif
 
-    fmt::print("Build date: " __DATE__ "\n");
-    fmt::print("\n");
+    fmt::print(COLOR_YELLOW "Build date:" COLOR_OFF " " __DATE__ "\n");
 }

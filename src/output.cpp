@@ -53,8 +53,8 @@ extern HANDLE console;
 #include "config.h"
 
 #ifdef _WIN32
-//#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
-#define print_buffer(buffer, length, stream) fmt::print("{}", buffer);
+#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
+//#define print_buffer(buffer, length, stream) fmt::print("{}", buffer);
 #else
 #define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
 #endif
@@ -91,7 +91,7 @@ void ProgressBar::update(int pos)
 	float percent = ((float) pos / (float) len);
 	c = (int) (percent * (float) w);
 
-	// Only output if we've actually made progess, or the console width changed
+	// Only output if we've actually made progess since last call, or the console width changed
 	if (w != w_prev || c != c_prev) {
 		fmt::print(" {:3.0f}% [", percent * 100.f);
 		int i;

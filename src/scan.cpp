@@ -46,7 +46,6 @@ extern "C" {
 #include <libavutil/opt.h>
 }
 
-
 #include "rsgain.hpp"
 #include "scan.hpp"
 #include "output.hpp"
@@ -95,7 +94,6 @@ inline static bool is_type(const std::string &extension, const FileType file_typ
               );
    return it == std::cend(extensions) || it->file_type != file_type ? false : true;
 }
-
 
 FileType ScanJob::add_directory(std::filesystem::path &path)
 {
@@ -155,8 +153,6 @@ int ScanJob::add_files(char **files, int nb_files)
 
 bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
 {
-    //std::mutex *ffmpeg_mutex = NULL;
-    //bool error = false;
     for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
         error = track->scan(config, ffmpeg_mutex);
     }
@@ -164,7 +160,7 @@ bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
         return true;
 
     this->apply_gain(config);
-    if (config.no_clip) {
+    if (config.clip_mode != 'n') {
         for (Track &track : tracks) {
             if (track.aclip || track.tclip)
                 clippings_prevented++;
@@ -193,7 +189,7 @@ bool Track::scan(Config &config, std::mutex *m)
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (!multithread)
-        output_ok("Scanning '{}' ...", path);
+        output_ok("Scanning '{}'", path);
 
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
@@ -332,7 +328,7 @@ bool Track::scan(Config &config, std::mutex *m)
 
     frame = av_frame_alloc();
     if (frame == NULL) {
-        output_fail("OOM");
+        output_fail("Out of memory");
         error = true;
         goto end;
     }
@@ -352,19 +348,17 @@ bool Track::scan(Config &config, std::mutex *m)
         if (packet.stream_index == stream_id) {
             rc = avcodec_send_packet(codec_ctx, &packet);
             if (rc < 0) {
-                //output_error("Error while sending a packet to the decoder");
                 continue;
             }
 
             while (rc >= 0) {
                 rc = avcodec_receive_frame(codec_ctx, frame);
-                if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF) {
+                if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF)
                     break;
-                } 
-                else if (rc < 0) {
-                    //output_error("Error while receiving a frame from the decoder");
+
+                else if (rc < 0)
                     break;
-                }
+
                 if (rc >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
@@ -394,13 +388,8 @@ bool Track::scan(Config &config, std::mutex *m)
                         av_free(swr_out_data);
                     }
                     else {
-                        rc = ebur128_add_frames_short(ebur128, 
-                                 (short *) frame->data[0], 
-                                 frame->nb_samples
-                             );
+                        ebur128_add_frames_short(ebur128, (short *) frame->data[0], frame->nb_samples);
                     }
-                    //if (rc != EBUR128_SUCCESS)
-                        //output_error("Error filtering");
 
                     if (pos >= 0 && output_progress)
                         progress_bar.update(pos);
@@ -412,7 +401,7 @@ bool Track::scan(Config &config, std::mutex *m)
     av_packet_unref(&packet);
     }
 
-    // complete progress bar for very short files (only cosmetic)
+    // Make sure progress bar finished at 100%
     if (output_progress)
         progress_bar.complete();
 
@@ -435,26 +424,6 @@ end:
     return error;
 }
 
-int Track::calculate_loudness(Config &config) {
-    unsigned channel = 0;
-    double track_loudness, track_peak;
-    int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
-
-    if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
-        track_loudness = config.target_loudness;
-
-    std::vector<double> peaks(ebur128->channels);
-    for (double &pk : peaks)
-        get_peak(ebur128, channel++, &pk);
-
-    track_peak = *std::max_element(peaks.begin(), peaks.end());
-
-    result.track_gain           = config.target_loudness - track_loudness;
-    result.track_peak           = track_peak;
-    result.track_loudness       = track_loudness;
-    return 0;
-}
-
 void ScanJob::apply_gain(Config &config)
 {
     // Track calculations
@@ -465,26 +434,35 @@ void ScanJob::apply_gain(Config &config)
     if (config.do_album)
         this->calculate_album_loudness(config);
 
-    // Check if track or album will clip, and correct if so requested (-k/-K)
-    if (config.no_clip) {
-        double t_new_peak = 1.0; // "gained" track peak
-        double a_new_peak = 1.0; // "gained" album peak
-        double max_peak = pow(10.0, config.max_peak_level / 20.f); // track/album peak limit
+    // Check clipping conditions
+    if (config.clip_mode != 'n') {
+        double t_new_peak; // Track peak after application of gain
+        double a_new_peak; // Album peak after application of gain
+        double max_peak = pow(10.0, config.max_peak_level / 20.f);
 
         // Track clipping
         for (Track &track : tracks) {
-            t_new_peak = pow(10.0, track.result.track_gain / 20.f) * track.result.track_peak;
-            if (t_new_peak > max_peak) {
-                track.result.track_gain -= 20.f * log10(t_new_peak / max_peak);
-                track.tclip = true;
+            if (config.clip_mode == 'a' || (config.clip_mode == 'p' && (track.result.track_gain > 0.f))) {
+                t_new_peak = pow(10.0, track.result.track_gain / 20.f) * track.result.track_peak;
+                if (t_new_peak > max_peak) {
+                    double adjustment = 20.f * log10(t_new_peak / max_peak);
+                    if (config.clip_mode == 'p' && adjustment > track.result.track_gain)
+                        adjustment = track.result.track_gain;
+                    track.result.track_gain -= adjustment;
+                    track.tclip = true;
+                }
             }
         }
 
         // Album clipping
-        if (config.do_album) {
-            a_new_peak = pow(10.0, tracks[0].result.album_gain / 20.f) * tracks[0].result.album_peak;
+        double album_gain = tracks[0].result.album_gain;
+        double album_peak = tracks[0].result.album_peak;
+        if (config.do_album && (config.clip_mode == 'a' || (config.clip_mode == 'p' && album_gain > 0.f))) {
+            a_new_peak = pow(10.0, album_gain / 20.f) * album_peak;
             if (a_new_peak > max_peak) {
                 double adjustment = 20.f * log10(a_new_peak / max_peak);
+                if (config.clip_mode == 'p' && adjustment > album_gain)
+                    adjustment = album_gain;
                 for (Track &track : tracks) {
                     track.result.album_gain -= adjustment;
                     track.aclip = true;
@@ -498,13 +476,12 @@ void ScanJob::apply_gain(Config &config)
 
     // Tag the files
     for (Track &track : tracks) {
-        switch (config.mode) {
+        switch (config.tag_mode) {
             case 'c': /* check tags */
                 break;
 
             case 'd': /* delete tags */
                 switch (track.type) {
-
                     case MP3:
                         if (!tag_clear_mp3(track, config))
                             output_error("Couldn't write to: {}", track.path);
@@ -538,7 +515,6 @@ void ScanJob::apply_gain(Config &config)
                                 if (!tag_clear_ogg_speex(track))
                                     output_error("Couldn't write to: {}", track.path);
                                 break;
-
                         }
                         break;
 
@@ -570,10 +546,7 @@ void ScanJob::apply_gain(Config &config)
                 break;
 
             case 'i': /* ID3v2 tags */
-            case 'e': /* same as 'i' plus extra tags */
-            case 'l': /* same as 'e' but in LU/LUFS units (instead of 'dB')*/
                 switch (track.type) {
-
                     case MP3:
                         if (!tag_write_mp3(track, config))
                             output_error("Couldn't write to: {}", track.path);
@@ -637,24 +610,10 @@ void ScanJob::apply_gain(Config &config)
                 }
                 break;
 
-            case 'a': /* APEv2 tags */
-                output_error("APEv2 tags are not supported");
-                break;
-
-            case 'v': /* Vorbis Comments tags */
-                output_error("Vorbis Comment tags are not supported");
-                break;
-
             case 's': /* skip tags */
                 break;
-
-            case 'r': /* force re-calculation */
-                break;
-
-            default:
-                output_error("Invalid tag mode");
-                break;
         }
+
         if (!quiet && !multithread) {
             if (config.tab_output) {
                 // output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
@@ -679,10 +638,11 @@ void ScanJob::apply_gain(Config &config)
                     //fmt::print("{:.6f}\t", anew);
                     //fmt::print("{:.2f} dBTP\n", 20.0 * log10(anew));
                 }
-            } else {
-                // output something human-readable
+            } 
+            
+            // Human-readable output
+            else {
                 fmt::print("\nTrack: {}\n", track.path);
-
                 fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
                 fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
                 if (track.codec_id == AV_CODEC_ID_OPUS) {
@@ -690,12 +650,12 @@ void ScanJob::apply_gain(Config &config)
                     fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                         track.result.track_gain,
                         gain_to_q78num(track.result.track_gain),
-                        track.tclip ? " (corrected to prevent clipping)" : ""
+                        track.tclip ? " (adjusted to prevent clipping)" : ""
                     );
                 } else {
                     fmt::print(" Gain:     {:8.2f} dB{}\n", 
                         track.result.track_gain, 
-                        track.tclip ? " (corrected to prevent clipping)" : ""
+                        track.tclip ? " (adjusted to prevent clipping)" : ""
                     );
                 }
 
@@ -711,12 +671,12 @@ void ScanJob::apply_gain(Config &config)
                         fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                             track.result.album_gain,
                             gain_to_q78num(track.result.album_gain),
-                            track.aclip ? " (corrected to prevent clipping)" : ""
+                            track.aclip ? " (adjusted to prevent clipping)" : ""
                         );
                     } else {
                         fmt::print(" Gain:     {:8.2f} dB{}\n", 
                             track.result.album_gain,
-                            track.aclip ? " (corrected to prevent clipping)" : ""
+                            track.aclip ? " (adjusted to prevent clipping)" : ""
                         );
                     }
                 }
@@ -726,16 +686,34 @@ void ScanJob::apply_gain(Config &config)
     }
 }
 
+int Track::calculate_loudness(Config &config) {
+    unsigned channel = 0;
+    double track_loudness, track_peak;
+
+    if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
+        track_loudness = config.target_loudness;
+
+    std::vector<double> peaks(ebur128->channels);
+    int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
+    for (double &pk : peaks)
+        get_peak(ebur128, channel++, &pk);
+    track_peak = *std::max_element(peaks.begin(), peaks.end());
+
+    result.track_gain           = config.target_loudness - track_loudness;
+    result.track_peak           = track_peak;
+    result.track_loudness       = track_loudness;
+    return 0;
+}
+
 void ScanJob::calculate_album_loudness(Config &config) {
     double album_loudness, album_peak;
-
     int nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
     for (const Track &track : tracks)
         states[&track - &tracks[0]] = track.ebur128;
 
     if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
-        album_loudness = 0.0;
+        album_loudness = config.target_loudness;
 
     album_peak = std::max_element(tracks.begin(),
                      tracks.end(),
