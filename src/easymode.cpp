@@ -37,7 +37,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = true,
         .id3v2version = 3
@@ -51,7 +51,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = true,
         .id3v2version = 3
@@ -65,7 +65,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = false,
         .id3v2version = 3
@@ -79,7 +79,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = false,
         .id3v2version = 3
@@ -93,7 +93,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = false,
         .id3v2version = 3
@@ -107,7 +107,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = false,
         .id3v2version = 3
@@ -121,7 +121,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = false,
         .id3v2version = 3
@@ -135,7 +135,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = false,
         .id3v2version = 3
@@ -149,7 +149,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = true,
         .strip = false,
         .id3v2version = 3
@@ -163,7 +163,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = true,
         .id3v2version = 3
@@ -177,7 +177,7 @@ static Config configs[] = {
         .true_peak = true,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = true,
         .id3v2version = 3
@@ -189,7 +189,7 @@ void easy_mode(int argc, char *argv[])
 {
     int rc, i;
     char *overrides_file = NULL;
-    const char *short_opts = "+hql:m:o:";
+    const char *short_opts = "+hql:m:o:O";
     static struct option long_opts[] = {
         { "help",         no_argument,       NULL, 'h' },
         { "quiet",        no_argument,       NULL, 'q' },
@@ -198,6 +198,7 @@ void easy_mode(int argc, char *argv[])
 
         { "multithread",  required_argument, NULL, 'm' },
         { "override",     required_argument, NULL, 'o' },
+        { "output",       required_argument, NULL, 'O' },
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
@@ -227,6 +228,10 @@ void easy_mode(int argc, char *argv[])
             
             case 'o':
                 overrides_file = optarg;
+                break;
+            case 'O':
+                for (auto it = std::begin(configs); it != std::end(configs); ++it)
+                    it->tab_output = TYPE_FILE;
                 break;
         }
     }
@@ -578,6 +583,7 @@ static inline void help_easy(void) {
     CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--override=p", "-o p", "Load override settings from path p");
+    CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
 
     fmt::print("\n");
 

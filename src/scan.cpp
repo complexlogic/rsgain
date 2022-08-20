@@ -34,6 +34,7 @@
 #include <thread>
 #include <set>
 #include <algorithm>
+#include <filesystem>
 #include <stdlib.h>
 
 #include <ebur128.h>
@@ -480,8 +481,20 @@ void ScanJob::calculate_loudness(Config &config)
 
 void ScanJob::tag_tracks(Config &config)
 {
-    if (config.tab_output)
-        fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stdout);
+    std::FILE *stream = NULL;
+    if (config.tab_output != TYPE_NONE) {
+        if (config.tab_output == TYPE_FILE) {
+            std::filesystem::path dir_basename = std::filesystem::canonical(path).filename();
+            std::filesystem::path output_file = std::filesystem::path(path) / dir_basename; 
+            output_file += ".csv";
+            stream = fopen(output_file.string().c_str(), "wb");
+        }
+        else {
+            stream = stdout;
+        }
+        if (stream != NULL)
+            fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stream);
+    }
 
     // Tag the files
     for (Track &track : tracks) {
@@ -624,25 +637,25 @@ void ScanJob::tag_tracks(Config &config)
         }
 
         if ((!quiet || config.tag_mode) && !multithread && config.tag_mode != 'd') {
-            if (config.tab_output) {
+            if (config.tab_output && stream != NULL) {
                 // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
-                fmt::print("{}\t", track.path);
-                fmt::print("{:.2f}\t", track.result.track_loudness);
-                fmt::print("{:.2f}\t", track.result.track_gain);
-                fmt::print("{:.6f}\t", track.result.track_peak);
-                fmt::print("{:.2f}\t", 20.0 * log10(track.result.track_peak));
-                fmt::print("{}\t", config.true_peak ? "True" : "Sample");
-                fmt::print("{}\t", track.tclip ? "Y" : "N");
-                fmt::print("\n");
+                fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());
+                fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
+                fmt::print(stream, "{:.2f}\t", track.result.track_gain);
+                fmt::print(stream, "{:.6f}\t", track.result.track_peak);
+                fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
+                fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
+                fmt::print(stream, "{}\t", track.tclip ? "Y" : "N");
+                fmt::print(stream, "\n");
                 if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
-                    fmt::print("{}\t", "Album");
-                    fmt::print("{:.2f}\t", track.result.album_loudness);
-                    fmt::print("{:.2f}\t", track.result.album_gain);
-                    fmt::print("{:.6f}\t", track.result.album_peak);
-                    fmt::print("{:.2f}\t", 20.0 * log10(track.result.album_peak));
-                    fmt::print("{}\t", config.true_peak ? "True" : "Sample");
-                    fmt::print("{}\n", track.aclip ? "Y" : "N");
-                    fmt::print("\n");
+                    fmt::print(stream, "{}\t", "Album");
+                    fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
+                    fmt::print(stream, "{:.2f}\t", track.result.album_gain);
+                    fmt::print(stream, "{:.6f}\t", track.result.album_peak);
+                    fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
+                    fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
+                    fmt::print(stream, "{}\n", track.aclip ? "Y" : "N");
+                    fmt::print(stream, "\n");
                 }
             } 
             
@@ -687,6 +700,8 @@ void ScanJob::tag_tracks(Config &config)
             }
         }
     }
+    if (config.tab_output == TYPE_FILE && stream != NULL)
+        fclose(stream);
 }
 
 int Track::calculate_loudness(Config &config) {

@@ -209,7 +209,7 @@ static void custom_mode(int argc, char *argv[])
         .true_peak = false,
         .clip_mode = 'n',
         .do_album = false,
-        .tab_output = false,
+        .tab_output = TYPE_NONE,
         .lowercase = false,
         .strip = false,
         .id3v2version = 3
@@ -241,7 +241,7 @@ static void custom_mode(int argc, char *argv[])
             }
 
             case 'O':
-                config.tab_output = true;
+                config.tab_output = TYPE_STDOUT;
                 quiet = 1;
                 break;
 
@@ -416,7 +416,7 @@ static inline void help_custom(void) {
 
     fmt::print("\n");
 
-    CMD_HELP("--output", "-O",  "Database-friendly tab-delimited list output");
+    CMD_HELP("--output", "-O",  "Output tab-delimited scan data to stdout");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
     fmt::print("\n");

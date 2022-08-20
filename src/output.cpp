@@ -63,9 +63,6 @@ int quiet = 0;
 int disable_progress_bar = 0;
 extern int multithread;
 
-static void get_screen_size(unsigned *w, unsigned *h);
-void quit(int status);
-
 
 void ProgressBar::begin(int start, int len)
 {
@@ -74,7 +71,6 @@ void ProgressBar::begin(int start, int len)
 	w_prev = -1;
 	c_prev = -1;
 	pos_prev = -1;
-	//buffer = new char[150];
 }
 
 void ProgressBar::update(int pos)
@@ -83,10 +79,9 @@ void ProgressBar::update(int pos)
 	if (pos == pos_prev)
 		return;
 
-	w = this->get_console_width();
-	if (!w)
+	w = this->get_console_width() - 8;
+	if (w <= 0)
 		return;
-	w -= 8;
 	if (w != w_prev) {
 		delete buffer;
 		buffer = new char[w + 3];
@@ -95,8 +90,8 @@ void ProgressBar::update(int pos)
 	float percent = ((float) pos / (float) len);
 	c = (int) (percent * (float) w);
 
-	// Only output if we've actually made progess since last call, or the console width changed
-	if (w != w_prev || c != c_prev) {
+	// Only output if we've actually made progess since last the call, or the console width changed
+	if (c != c_prev || w != w_prev) {
 		fmt::print(" {:3.0f}% [", percent * 100.f);
 		int i;
 		for (i = 0; i < c; i++)
@@ -125,7 +120,6 @@ void ProgressBar::complete()
 void ProgressBar::finish()
 {
 	delete buffer;
-	//free(buffer);
 	buffer = NULL;
 	fmt::print("\n");
 }

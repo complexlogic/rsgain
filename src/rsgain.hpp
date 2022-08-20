@@ -11,6 +11,12 @@
 #define RG_TARGET_LOUDNESS -18.f
 #define EBU_R128_MAX_PEAK -1.f
 
+typedef enum {
+	TYPE_NONE,
+	TYPE_STDOUT,
+	TYPE_FILE,
+} OutputType;
+
 typedef struct {
 	char tag_mode;
 	double target_loudness;
@@ -18,7 +24,7 @@ typedef struct {
 	bool true_peak;
 	char clip_mode;
 	bool do_album;
-	bool tab_output;
+	OutputType tab_output;
 	bool lowercase;
 	bool strip;
 	int id3v2version;
