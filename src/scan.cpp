@@ -153,19 +153,24 @@ int ScanJob::add_files(char **files, int nb_files)
 
 bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
 {
-    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
-        error = track->scan(config, ffmpeg_mutex);
+    if (config.tag_mode != 'd') {
+        for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
+            error = track->scan(config, ffmpeg_mutex);
+        }
+        if (error)
+            return true;
+        this->calculate_loudness(config);
     }
-    if (error)
-        return true;
 
-    this->apply_gain(config);
+    // Collect clipping stats
     if (config.clip_mode != 'n') {
         for (Track &track : tracks) {
             if (track.aclip || track.tclip)
                 clippings_prevented++;
         }
     }
+
+    this->tag_tracks(config);
     return false;
 }
 
@@ -424,7 +429,7 @@ end:
     return error;
 }
 
-void ScanJob::apply_gain(Config &config)
+void ScanJob::calculate_loudness(Config &config)
 {
     // Track calculations
     for (Track &track : tracks)
@@ -470,17 +475,19 @@ void ScanJob::apply_gain(Config &config)
             }
         }
     }
+}
 
+void ScanJob::tag_tracks(Config &config)
+{
     if (config.tab_output)
-        fputs("File\tLoudness\tRange\tTrue_Peak\tTrue_Peak_dBTP\tReference\tClip_prevent\tGain\n", stdout);
+        fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stdout);
 
     // Tag the files
     for (Track &track : tracks) {
         switch (config.tag_mode) {
-            case 'c': /* check tags */
-                break;
 
-            case 'd': /* delete tags */
+            // Delete tags
+            case 'd':
                 switch (track.type) {
                     case MP3:
                         if (!tag_clear_mp3(track, config))
@@ -545,7 +552,8 @@ void ScanJob::apply_gain(Config &config)
                 }
                 break;
 
-            case 'i': /* ID3v2 tags */
+            // Write tags
+            case 'i':
                 switch (track.type) {
                     case MP3:
                         if (!tag_write_mp3(track, config))
@@ -560,7 +568,6 @@ void ScanJob::apply_gain(Config &config)
                     case OGG:
                         // must separate because TagLib uses fifferent File classes
                         switch (track.codec_id) {
-                            // Opus needs special handling (different RG tags, -23 LUFS ref.)
                             case AV_CODEC_ID_OPUS:
                                 if (!tag_write_ogg_opus(track, config))
                                     output_error("Couldn't write to: {}", track.path);
@@ -610,41 +617,40 @@ void ScanJob::apply_gain(Config &config)
                 }
                 break;
 
-            case 's': /* skip tags */
+            // Don't tag, only display values
+            case 's':
                 break;
         }
 
-        if (!quiet && !multithread) {
+        if ((!quiet || config.tag_mode) && !multithread && config.tag_mode != 'd') {
             if (config.tab_output) {
-                // output new style list: File;Loudness;Range;Gain;Reference;Peak;Peak dBTP;Clipping;Clip-prevent
+                // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
                 fmt::print("{}\t", track.path);
-                fmt::print("{:.2f} LUFS\t", track.result.track_loudness);
+                fmt::print("{:.2f}\t", track.result.track_loudness);
+                fmt::print("{:.2f}\t", track.result.track_gain);
                 fmt::print("{:.6f}\t", track.result.track_peak);
-                fmt::print("{:.2f} dBTP\t", 20.0 * log10(track.result.track_peak));
-                //fmt::print("{}\t", will_clip ? "Y" : "N");
+                fmt::print("{:.2f}\t", 20.0 * log10(track.result.track_peak));
+                fmt::print("{}\t", config.true_peak ? "True" : "Sample");
                 fmt::print("{}\t", track.tclip ? "Y" : "N");
-                fmt::print("{:.2f} dB\t", track.result.track_gain);
-            // fmt::print("{:.6f}\t", tnew);
-                //fmt::print("{:.2f} dBTP\n", 20.0 * log10(tnew));
-
+                fmt::print("\n");
                 if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
                     fmt::print("{}\t", "Album");
-                    fmt::print("{:.2f} LUFS\t", track.result.album_loudness);
+                    fmt::print("{:.2f}\t", track.result.album_loudness);
+                    fmt::print("{:.2f}\t", track.result.album_gain);
                     fmt::print("{:.6f}\t", track.result.album_peak);
-                    fmt::print("{:.2f} dBTP\t", 20.0 * log10(track.result.album_peak));
-                    //fmt::print("{}\t", (!aclip && (again > max_peak)) ? "Y" : "N");
-                    fmt::print("{}\t", track.aclip ? "Y" : "N");
-                    fmt::print("{:.2f} dB\t", track.result.album_gain);
-                    //fmt::print("{:.6f}\t", anew);
-                    //fmt::print("{:.2f} dBTP\n", 20.0 * log10(anew));
+                    fmt::print("{:.2f}\t", 20.0 * log10(track.result.album_peak));
+                    fmt::print("{}\t", config.true_peak ? "True" : "Sample");
+                    fmt::print("{}\n", track.aclip ? "Y" : "N");
+                    fmt::print("\n");
                 }
+
             } 
             
             // Human-readable output
             else {
                 fmt::print("\nTrack: {}\n", track.path);
                 fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
-                fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
+                fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
                 if (track.codec_id == AV_CODEC_ID_OPUS) {
                     // also show the Q7.8 number that goes into R128_TRACK_GAIN
                     fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
@@ -659,13 +665,10 @@ void ScanJob::apply_gain(Config &config)
                     );
                 }
 
-            // if (config.warn_clip && will_clip)
-                //   output_error("The track will clip"); 
-
                 if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
                     fmt::print("\nAlbum:\n");
                     fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
-                    fmt::print(" Peak:     {:8.6f} ({:.2f} dBTP)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
+                    fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
                     if (track.codec_id == AV_CODEC_ID_OPUS) {
                         // also show the Q7.8 number that goes into R128_ALBUM_GAIN
                         fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 

@@ -242,6 +242,7 @@ static void custom_mode(int argc, char *argv[])
 
             case 'O':
                 config.tab_output = true;
+                quiet = 1;
                 break;
 
             case 'q':

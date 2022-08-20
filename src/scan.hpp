@@ -60,8 +60,9 @@ class ScanJob {
 	private:
 		std::vector<Track> tracks;
 
-		void apply_gain(Config &config);
+		void calculate_loudness(Config &config);
 		void calculate_album_loudness(Config &config);
+		void tag_tracks(Config &config);
 
 	public:
 		FileType type;

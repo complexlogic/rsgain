@@ -74,6 +74,7 @@ void ProgressBar::begin(int start, int len)
 	w_prev = -1;
 	c_prev = -1;
 	pos_prev = -1;
+	//buffer = new char[150];
 }
 
 void ProgressBar::update(int pos)
@@ -82,7 +83,10 @@ void ProgressBar::update(int pos)
 	if (pos == pos_prev)
 		return;
 
-	w = this->get_console_width() - 8;
+	w = this->get_console_width();
+	if (!w)
+		return;
+	w -= 8;
 	if (w != w_prev) {
 		delete buffer;
 		buffer = new char[w + 3];
@@ -121,6 +125,7 @@ void ProgressBar::complete()
 void ProgressBar::finish()
 {
 	delete buffer;
+	//free(buffer);
 	buffer = NULL;
 	fmt::print("\n");
 }
