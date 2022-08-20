@@ -29,11 +29,11 @@ typedef struct {
 extern "C" {
 #endif
 void quit(int status);
-void parse_target_loudness(const char *value, Config &config);
-void parse_tag_mode(const char *value, Config &config);
+bool parse_target_loudness(const char *value, double &target_loudness);
+bool parse_tag_mode(const char *value, char &mode);
 bool parse_clip_mode(const char *value, char &mode);
-void parse_id3v2_version(const char *value, Config &config);
-void parse_max_peak_level(const char *value, Config &config);
+bool parse_id3v2_version(const char *value, int &version);
+bool parse_max_peak_level(const char *value, double &peak);
 #ifdef __cplusplus
 }
 #endif

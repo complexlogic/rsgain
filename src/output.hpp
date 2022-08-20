@@ -91,7 +91,6 @@ class ProgressBar {
 
         int get_console_width();
 
-
     public:
         ProgressBar(void) : buffer(NULL) {};
         void begin(int start, int len);

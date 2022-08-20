@@ -64,7 +64,6 @@ void set_cursor_visibility(BOOL setting, BOOL *previous);
 static void help_main(void);
 static void version(void);
 static inline void help_custom(void);
-static inline void help_easy(void);
 
 // Global variables
 int multithread = 0;
@@ -116,26 +115,27 @@ void quit(int status)
     exit(status);
 }
 
-void parse_target_loudness(const char *value, Config &config)
+bool parse_target_loudness(const char *value, double &target_loudness)
 {
     int loudness = atoi(value);
     if (loudness < MIN_TARGET_LOUDNESS || loudness > MAX_TARGET_LOUDNESS) {
         output_error("Invalid target loudness value '{}'", value);
-        return;
+        return false;
     }
-    config.target_loudness = loudness;        
+    target_loudness = (double) loudness;
+    return true;  
 }
 
-void parse_tag_mode(const char *value, Config &config)
+bool parse_tag_mode(const char *value, char &mode)
 {
     std::string_view valid_modes = "dis";
     size_t pos = valid_modes.find_first_of(*value);
     if (pos != std::string::npos) {
-        config.tag_mode = valid_modes[pos];
+        mode = valid_modes[pos];
+        return true;
     }
-    else {
-        output_error("Invalid tag mode: '{}'", value);
-    }        
+    output_error("Invalid tag mode: '{}'", value);
+    return false;        
 }
 
 bool parse_clip_mode(const char *value, char &mode)
@@ -150,66 +150,28 @@ bool parse_clip_mode(const char *value, char &mode)
     return false;
 }
 
-void parse_id3v2_version(const char *value, Config &config)
+bool parse_id3v2_version(const char *value, int &version)
 {
-    config.id3v2version = atoi(value);
-    if (!(config.id3v2version == 3) && !(config.id3v2version == 4))
+    int id3v2version = atoi(value);
+    if (!(id3v2version == 3) && !(id3v2version == 4)) {
         output_error("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
+        return false;
+    }
+    version = id3v2version;
+    return false;
 }
 
-void parse_max_peak_level(const char *value, Config &config)
+bool parse_max_peak_level(const char *value, double &peak)
 {
     char *rest = NULL;
     float max_peak = strtod(value, &rest);
-    if (rest == value || !isfinite(max_peak))
+    if (rest == value || !isfinite(max_peak)) {
         output_error("Invalid max peak level '{}'", value);
-
-    config.max_peak_level = max_peak;
-}
-
-// Parse Easy Mode command line arguments
-static void easy_mode(int argc, char *argv[])
-{
-    int rc, i;
-    char *overrides_file = NULL;
-    const char *short_opts = "+hqm:o:";
-    static struct option long_opts[] = {
-        { "help",         no_argument,       NULL, 'h' },
-        { "quiet",        no_argument,       NULL, 'q' },
-
-        { "multithread",  required_argument, NULL, 'm' },
-        { "override",     required_argument, NULL, 'o' },
-        { 0, 0, 0, 0 }
-    };
-    while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
-        switch (rc) {
-            case 'h':
-                help_easy();
-                quit(EXIT_SUCCESS);
-                break;
-
-            case 'q':
-                quiet = true;
-                break;
-            
-            case 'm':
-                multithread = atoi(optarg);
-                if (multithread < 2)
-                    multithread = 0;
-                break;
-            
-            case 'o':
-                overrides_file = optarg;
-                break;
-        }
+        return false;
     }
 
-    if (argc == optind) {
-        fmt::print("Error: You must specific the directory to scan\n");
-        quit(EXIT_FAILURE);
-    }
-
-    scan_easy(argv[optind], overrides_file);
+    peak = max_peak;
+    return true;
 }
 
 // Parse Custom Mode command line arguments
@@ -222,7 +184,7 @@ static void custom_mode(int argc, char *argv[])
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
 
-        { "clip-mode",       no_argument,     NULL, 'c' },
+        { "clip-mode",     no_argument,       NULL, 'c' },
         { "max-peak",      required_argument, NULL, 'K' },
         { "true-peak",     required_argument, NULL, 't' },
 
@@ -264,7 +226,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'K': {
-                parse_max_peak_level(optarg, config);
+                parse_max_peak_level(optarg, config.max_peak_level);
                 break;
             }
 
@@ -274,7 +236,7 @@ static void custom_mode(int argc, char *argv[])
             }
 
             case 'l': {
-                parse_target_loudness(optarg, config);
+                parse_target_loudness(optarg, config.target_loudness);
                 break;
             }
 
@@ -287,7 +249,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 's': {
-                parse_tag_mode(optarg, config);
+                parse_tag_mode(optarg, config.tag_mode);
                 break;
             }
 
@@ -300,7 +262,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'I':
-                parse_id3v2_version(optarg, config);
+                parse_id3v2_version(optarg, config.id3v2version);
                 break;
 
             case '?':
@@ -318,7 +280,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
         }
     }
-    
+
     nb_files = argc - optind;
     if (!nb_files) {
         output_fail("No files were specified\n");
@@ -373,7 +335,7 @@ int main(int argc, char *argv[]) {
     char **subargs = argv + optind;
     int num_subargs = argc - optind;
     optind = 1;
-    if (!strcmp(command, "easy")) {
+    if (MATCH(command, "easy")) {
         easy_mode(num_subargs, subargs);
     }
     else if (!strcmp(command, "custom")) {
@@ -411,29 +373,6 @@ static void help_main(void) {
 
     fmt::print("\n\n");
     fmt::print("Please report any issues to " PROJECT_URL "/issues\n\n");
-}
-
-
-static inline void help_easy(void) {
-    fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
-
-    fmt::print("  Easy Mode recursively scans a directory using the recommended settings for each\n");
-    fmt::print("  file type. Easy Mode assumes that you have your music library organized with each album\n");
-    fmt::print("  in its own folder.\n");
-
-    fmt::print("\n");
-    fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
-
-    CMD_HELP("--help",     "-h", "Show this help");
-    CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
-    fmt::print("\n");
-    CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
-    CMD_HELP("--override=p", "-o p", "Load override settings from path p");
-
-    fmt::print("\n");
-
-    fmt::print("Please report any issues to " PROJECT_URL "/issues\n");
-    fmt::print("\n");
 }
 
 

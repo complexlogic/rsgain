@@ -58,4 +58,5 @@ struct overrides_section {
     FileType file_type;
 };
 
+void easy_mode(int argc, char *argv[]);
 void scan_easy(const char *directory, const char *overrides_file);
