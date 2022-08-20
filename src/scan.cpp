@@ -203,14 +203,11 @@ bool Track::scan(Config &config, std::mutex *m)
     AVCodec *codec = NULL;
 #endif
 
-    AVPacket packet;
+    AVPacket *packet = NULL;
     AVCodecContext *codec_ctx = NULL;
     AVFrame *frame = NULL;
     SwrContext *swr = NULL;
     AVFormatContext *format_ctx = NULL;
-
-    int buffer_size = 192000 + AV_INPUT_BUFFER_PADDING_SIZE;
-    uint8_t *buffer = (uint8_t*) malloc(sizeof(uint8_t) * buffer_size);
 
     if (lk != NULL)
         lk->lock();
@@ -219,7 +216,7 @@ bool Track::scan(Config &config, std::mutex *m)
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
-        output_fail("Could not open input: {}", errbuf);
+        output_error("Could not open input: '{}'", errbuf);
         error = true;
         goto end;
     }
@@ -232,41 +229,41 @@ bool Track::scan(Config &config, std::mutex *m)
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
-        output_fail("Could not find stream info: {}", errbuf);
+        output_error("Could not find stream info: {}", errbuf);
         error = true;
         goto end;
     }
 
-    /* select the audio stream */
+    // Select the best audio stream
     stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
 
     if (stream_id < 0) {
-        output_fail("Could not find audio stream");
+        output_error("Could not find audio stream");
         error = true;
         goto end;
     }
         
-    /* create decoding context */
+    // Create the codec context
     codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx) {
-        output_fail("Could not allocate audio codec context!");
+        output_error("Could not allocate audio codec context");
         error = true;
         goto end;
     }
 
     avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
 
-    /* init the audio decoder */
+    // Initialize the decoder
     rc = avcodec_open2(codec_ctx, codec, NULL);
     if (rc < 0) {
         char errbuf[2048];
         av_strerror(rc, errbuf, 2048);
-        output_fail("Could not open codec: {}", errbuf);
+        output_error("Could not open codec: '{}'", errbuf);
         error = true;
         goto end;
     }
 
-    // try to get default channel layout (they aren’t specified in .wav files)
+    // Try to get default channel layout
     if (!codec_ctx->channel_layout)
         codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
 
@@ -287,11 +284,7 @@ bool Track::scan(Config &config, std::mutex *m)
             codec_ctx->channels, 
             infobuf
         );
-
     codec_id = codec->id;
-    av_init_packet(&packet);
-    packet.data = buffer;
-    packet.size = buffer_size;
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
@@ -306,13 +299,13 @@ bool Track::scan(Config &config, std::mutex *m)
         av_opt_set_int(swr, "out_sample_rate", codec_ctx->sample_rate, 0);
 
         av_opt_set_sample_fmt(swr, "in_sample_fmt", codec_ctx->sample_fmt, 0);
-        av_opt_set_sample_fmt(swr, "out_sample_fmt", AV_SAMPLE_FMT_S16, 0);
+        av_opt_set_sample_fmt(swr, "out_sample_fmt", OUTPUT_FORMAT, 0);
 
         rc = swr_init(swr);
         if (rc < 0) {
             char errbuf[2048];
             av_strerror(rc, errbuf, 2048);
-            output_fail("Could not open SWResample: {}", errbuf);
+            output_error("Could not open SWResample: {}", errbuf);
             error = true;
             goto end;
         }
@@ -326,14 +319,23 @@ bool Track::scan(Config &config, std::mutex *m)
                    ebur128_flags
                 );
     if (ebur128 == NULL) {
-        output_fail("Could not initialize EBU R128 scanner");
+        output_error("Could not initialize libebur128 scanner");
         error = true;
         goto end;
     }
 
+    // Allocate AVPacket structure
+    packet = av_packet_alloc();
+    if (packet == NULL) {
+        output_error("Could not allocate packet");
+        error = true;
+        goto end;
+    }
+
+    // Alocate AVFrame structure
     frame = av_frame_alloc();
     if (frame == NULL) {
-        output_fail("Out of memory");
+        output_error("Could not allocate frame");
         error = true;
         goto end;
     }
@@ -349,9 +351,9 @@ bool Track::scan(Config &config, std::mutex *m)
     if (lk != NULL)
         lk->unlock();
     
-    while (av_read_frame(format_ctx, &packet) >= 0) {
-        if (packet.stream_index == stream_id) {
-            rc = avcodec_send_packet(codec_ctx, &packet);
+    while (av_read_frame(format_ctx, packet) >= 0) {
+        if (packet->stream_index == stream_id) {
+            rc = avcodec_send_packet(codec_ctx, packet);
             if (rc < 0) {
                 continue;
             }
@@ -381,7 +383,7 @@ bool Track::scan(Config &config, std::mutex *m)
                         swr_out_data = (uint8_t*) av_malloc(out_size);
 
                         if (swr_convert(swr, (uint8_t**) &swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
-                            output_fail("Cannot convert");
+                            output_error("Could not convert frame");
                             error = true;
                             av_free(swr_out_data);
                             goto end;
@@ -402,11 +404,10 @@ bool Track::scan(Config &config, std::mutex *m)
             }
             av_frame_unref(frame);
         }
-
-    av_packet_unref(&packet);
+    av_packet_unref(packet);
     }
 
-    // Make sure progress bar finished at 100%
+    // Make sure progress bar finishes at 100%
     if (output_progress)
         progress_bar.complete();
 
@@ -414,6 +415,7 @@ end:
     if (output_progress)
         progress_bar.finish();
 
+    av_packet_free(&packet);
     av_frame_free(&frame);
     
     if (swr != NULL) {
@@ -424,18 +426,17 @@ end:
     avcodec_close(codec_ctx);
     avformat_close_input(&format_ctx);
     
-    free(buffer);
     delete lk;
     return error;
 }
 
 void ScanJob::calculate_loudness(Config &config)
 {
-    // Track calculations
+    // Track loudness calculations
     for (Track &track : tracks)
         track.calculate_loudness(config);
 
-    // Album calculations
+    // Album loudness calculations
     if (config.do_album)
         this->calculate_album_loudness(config);
 
@@ -643,7 +644,6 @@ void ScanJob::tag_tracks(Config &config)
                     fmt::print("{}\n", track.aclip ? "Y" : "N");
                     fmt::print("\n");
                 }
-
             } 
             
             // Human-readable output
