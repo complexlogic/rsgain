@@ -26,20 +26,15 @@ typedef struct {
 	bool do_album;
 	OutputType tab_output;
 	bool lowercase;
-	bool strip;
 	int id3v2version;
+	bool opus_r128;
+	bool strip; // DEPRECATED
 } Config;
 
 
-#ifdef __cplusplus
-extern "C" {
-#endif
 void quit(int status);
 bool parse_target_loudness(const char *value, double &target_loudness);
 bool parse_tag_mode(const char *value, char &mode);
 bool parse_clip_mode(const char *value, char &mode);
 bool parse_id3v2_version(const char *value, int &version);
 bool parse_max_peak_level(const char *value, double &peak);
-#ifdef __cplusplus
-}
-#endif

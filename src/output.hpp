@@ -97,4 +97,3 @@ class ProgressBar {
         void complete(void);
         void finish(void);
 };
-

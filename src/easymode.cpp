@@ -39,8 +39,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = true,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // MP3 config
@@ -53,8 +53,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = true,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // FLAC config
@@ -67,8 +67,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // OGG config
@@ -81,8 +81,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // OPUS config
@@ -95,8 +95,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // M4A config
@@ -109,8 +109,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // WMA config
@@ -123,8 +123,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // WAV config
@@ -137,8 +137,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // AIFF config
@@ -151,8 +151,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = true,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // WAVPACK config
@@ -165,8 +165,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = true,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 
     // APE config
@@ -179,8 +179,8 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = true,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     },
 };
 
@@ -244,7 +244,6 @@ void easy_mode(int argc, char *argv[])
     scan_easy(argv[optind], overrides_file);
 }
 
-
 static void convert_bool(const char *value, bool &setting)
 {
     if(MATCH(value, "True") || MATCH(value, "true")) {
@@ -295,9 +294,6 @@ int handler(void *user, const char *section, const char *name, const char *value
     else if (MATCH(name, "Lowercase")) {
         convert_bool(value, configs[file_type].lowercase);
     }
-    else if (MATCH(name, "Strip")) {
-        convert_bool(value, configs[file_type].strip);
-    }
     else if (MATCH(name, "ID3v2Version")) {
         parse_id3v2_version(value, configs[file_type].id3v2version);
     }
@@ -309,6 +305,9 @@ int handler(void *user, const char *section, const char *name, const char *value
     }
     else if (MATCH(name, "TruePeak")) {
         convert_bool(value, configs[file_type].true_peak);
+    }
+    else if (MATCH(name, "R128Tags")) {
+        convert_bool(value, configs[file_type].opus_r128);
     }
     return 0;
 }
@@ -389,7 +388,6 @@ void WorkerThread::work()
     return;
 }
 
-
 bool WorkerThread::wait()
 {
     std::unique_lock lk(thread_mutex, std::try_to_lock);
@@ -402,7 +400,6 @@ bool WorkerThread::wait()
     thread->join();
     return true;
 }
-
 
 void scan_easy(const char *directory, const char *overrides_file)
 {
@@ -443,9 +440,8 @@ void scan_easy(const char *directory, const char *overrides_file)
     std::deque<std::filesystem::path> directories;
     directories.push_back(path);
     for (const std::filesystem::directory_entry &entry : std::filesystem::recursive_directory_iterator(path)) {
-        if (entry.is_directory()) {
+        if (entry.is_directory())
             directories.push_back(entry.path());
-        }
     }
 
     // Multithread scannning
@@ -488,11 +484,10 @@ void scan_easy(const char *directory, const char *overrides_file)
             directories.pop_front();
         }
 
-        // Wait for threads to finish scanning
+        // Wait for worker threads to finish scanning
         while (worker_threads.size()) {
-            for (auto wt = worker_threads.begin(); wt != worker_threads.end();) {
+            for (auto wt = worker_threads.begin(); wt != worker_threads.end();)
                 (*wt)->wait() ? worker_threads.erase(wt) : ++wt;
-            }
 
             if (worker_threads.size())
                 main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));

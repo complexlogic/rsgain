@@ -180,7 +180,7 @@ static void custom_mode(int argc, char *argv[])
     int rc, i;
     unsigned nb_files   = 0;
 
-    const char *short_opts = "+ac:K:tl:Oqs:LSI:h?";
+    const char *short_opts = "+ac:K:tl:Oqs:LSI:oh?";
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
 
@@ -195,10 +195,9 @@ static void custom_mode(int argc, char *argv[])
 
         { "tagmode",       required_argument, NULL, 's' },
         { "lowercase",     no_argument,       NULL, 'L' },
-        { "strip-tags",    no_argument,       NULL, 'S' },
         { "id3v2-version", required_argument, NULL, 'I' },
-
-        { "help",         no_argument,        NULL, 'h' },
+        { "opus-r128",     no_argument,       NULL, 'o' },
+        { "help",          no_argument,       NULL, 'h' },
         { 0, 0, 0, 0 }
     };
 
@@ -211,8 +210,8 @@ static void custom_mode(int argc, char *argv[])
         .do_album = false,
         .tab_output = TYPE_NONE,
         .lowercase = false,
-        .strip = false,
-        .id3v2version = 3
+        .id3v2version = 3,
+        .opus_r128 = false
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -258,12 +257,12 @@ static void custom_mode(int argc, char *argv[])
                 config.lowercase = true;
                 break;
 
-            case 'S':
-                config.strip = true;
-                break;
-
             case 'I':
                 parse_id3v2_version(optarg, config.id3v2version);
+                break;
+
+            case 'o':
+                config.opus_r128 = true;
                 break;
 
             case '?':
@@ -343,7 +342,7 @@ int main(int argc, char *argv[]) {
         custom_mode(num_subargs, subargs);
     }
     else {
-        output_fail("Unrecognized command '{}'\n", command);
+        output_fail("Invalid command '{}'\n", command);
         quit(EXIT_FAILURE);
     }
     quit(EXIT_SUCCESS);
@@ -409,10 +408,10 @@ static inline void help_custom(void) {
 
     CMD_HELP("--lowercase", "-L", "Force lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
-    CMD_HELP("--strip-tags", "-S", "Strip tag types other than ID3v2 from MP2/MP3");
-    CMD_CONT("Strip tag types other than APEv2 from WavPack/APE");
     CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF (default)");
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
+    CMD_HELP("--opus-r128", "-o", "Write RFC 7845 compliant tags to Opus files (R128_*_GAIN)");
+    CMD_CONT("This does NOT set the target loudness to -23 LUFS");
 
     fmt::print("\n");
 

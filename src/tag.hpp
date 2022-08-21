@@ -30,42 +30,20 @@
 
 #include "scan.hpp"
 
+#define FORMAT_GAIN(gain) fmt::format("{:.2f} dB", gain)
+#define FORMAT_PEAK(peak) fmt::format("{:.6f}", peak)
+#define GAIN_TO_Q78(gain) (int) std::round(gain * 256.f)
 
+void tag_track(Track &track, Config &config);
 void taglib_get_version(std::string &buffer);
-bool tag_write_mp3(Track &track, Config &config);
-bool tag_clear_mp3(Track &track, Config &config);
 
-bool tag_write_flac(Track &track, Config &config);
-bool tag_clear_flac(Track &track);
-
-bool tag_write_ogg_vorbis(Track &track, Config &config);
-bool tag_clear_ogg_vorbis(Track &track);
-
-bool tag_write_ogg_flac(Track &track, Config &config);
-bool tag_clear_ogg_flac(Track &track);
-
-bool tag_write_ogg_speex(Track &track, Config &config);
-bool tag_clear_ogg_speex(Track &track);
-
-bool tag_write_ogg_opus(Track &track, Config &config);
-bool tag_clear_ogg_opus(Track &track);
-
-bool tag_write_mp4(Track &track, Config &config);
-bool tag_clear_mp4(Track &track);
-
-bool tag_write_asf(Track &track, Config &config);
-bool tag_clear_asf(Track &track);
-
-bool tag_write_wav(Track &track, Config &config);
-bool tag_clear_wav(Track &track, Config &config);
-
-bool tag_write_aiff(Track &track, Config &config);
-bool tag_clear_aiff(Track &track, Config &config);
-
-bool tag_write_wavpack(Track &track, Config &config);
-bool tag_clear_wavpack(Track &track, Config &config);
-
-bool tag_write_ape(Track &track, Config &config);
-bool tag_clear_ape(Track &track, Config &config);
-
-int gain_to_q78num(double gain);
+static bool tag_mp3(Track &track, Config &config);
+static bool tag_flac(Track &track, Config &config);
+template<typename T>
+static bool tag_ogg(Track &track, Config &config);
+static bool tag_mp4(Track &track, Config &config);
+template <typename T>
+static bool tag_apev2(Track &track, Config &config);
+static bool tag_wma(Track &track, Config &config);
+template<typename T>
+static bool tag_riff(Track &track, Config &config);

@@ -39,7 +39,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-#define LINE_MAX 2048
 extern HANDLE console;
 #else
 #include <unistd.h>

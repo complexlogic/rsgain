@@ -57,15 +57,31 @@
 #include <aifffile.h>
 #include <wavpackfile.h>
 #include <apefile.h>
+#include <libavcodec/avcodec.h>
 
 #include "rsgain.hpp"
 #include "scan.hpp"
-#include "tag.h"
+#include "tag.hpp"
 #include "output.hpp"
 
-// define possible replaygain tags
+#define tag_error(t) output_error("Couldn't write to: {}", t.path)
 
-enum RG_ENUM {
+template<typename T>
+static void write_rg_tags(const ScanResult &result, Config &config, T&& write_tag);
+static void tag_clear_id3(TagLib::ID3v2::Tag *tag);
+static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &config);
+template<typename T>
+static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag);
+template<typename T>
+static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, ScanResult &result, Config &config);
+static void tag_clear_mp4(TagLib::MP4::Tag *tag);
+static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &config);
+static void tag_clear_apev2(TagLib::APE::Tag *tag);
+static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &config);
+static void tag_clear_asf(TagLib::ASF::Tag *tag);
+static void tag_write_asf(TagLib::ASF::Tag *tag, ScanResult &result, Config &config);
+
+typedef enum {
     RG_TRACK_GAIN,
     RG_TRACK_PEAK,
     RG_TRACK_RANGE,
@@ -73,8 +89,7 @@ enum RG_ENUM {
     RG_ALBUM_PEAK,
     RG_ALBUM_RANGE,
     RG_REFERENCE_LOUDNESS
-};
-
+} RGTag;
 
 static const char *RG_STRING_UPPER[] = {
     "REPLAYGAIN_TRACK_GAIN",
@@ -96,788 +111,343 @@ static const char *RG_STRING_LOWER[] = {
     "replaygain_reference_loudness"
 };
 
-// this is where we store the RG tags in MP4/M4A files
-static const char *RG_ATOM = "----:com.apple.iTunes:";
+enum R128_ENUM {
+    R128_TRACK_GAIN,
+    R128_ALBUM_GAIN,
+};
+
+static const char *R128_STRING[] = {
+  "R128_TRACK_GAIN",
+  "R128_ALBUM_GAIN"
+};
+
+template<std::size_t N, class T>
+constexpr std::size_t array_size(T(&)[N]) {return N;}
+
+void tag_track(Track &track, Config &config)
+{
+  switch (track.type) {
+    case MP2:
+    case MP3:
+        if (!tag_mp3(track, config))
+            tag_error(track);
+        break;
+
+    case FLAC:
+        if (!tag_flac(track, config))
+            tag_error(track);
+        break;
+
+    case OGG:
+        switch (track.codec_id) {
+            case AV_CODEC_ID_OPUS:
+                if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
+                    tag_error(track);
+                break;
+
+            case AV_CODEC_ID_VORBIS:
+                if (!tag_ogg<TagLib::Ogg::Vorbis::File>(track, config))
+                    tag_error(track);
+                break;
+
+            case AV_CODEC_ID_FLAC:
+                if (!tag_ogg<TagLib::Ogg::FLAC::File>(track, config))
+                    tag_error(track);
+                break;
+
+            case AV_CODEC_ID_SPEEX:
+                if (!tag_ogg<TagLib::Ogg::Speex::File>(track, config))
+                    tag_error(track);
+                break;
+        }
+        break;
+
+    case M4A:
+        if (!tag_mp4(track, config))
+            tag_error(track);
+        break;
+
+    case WMA:
+        if (!tag_wma(track, config))
+            tag_error(track);
+        break;
+
+    case WAV:
+        if (!tag_riff<TagLib::RIFF::WAV::File>(track, config))
+            tag_error(track);
+        break;
+
+    case AIFF:
+        if (!tag_riff<TagLib::RIFF::AIFF::File>(track, config))
+            tag_error(track);
+        break;
+
+    case WAVPACK:
+        if (!tag_apev2<TagLib::WavPack::File>(track, config))
+            tag_error(track);
+        break;
+
+    case APE:
+        if (!tag_apev2<TagLib::APE::File>(track, config))
+            tag_error(track);
+        break;
+  }
+}
+
+template<typename T>
+static void write_rg_tags(const ScanResult &result, Config &config, T&& write_tag)
+{
+  write_tag(RG_TRACK_GAIN, FORMAT_GAIN(result.track_gain));
+  write_tag(RG_TRACK_PEAK, FORMAT_PEAK(result.track_peak));
+  if (config.do_album) {
+    write_tag(RG_ALBUM_GAIN, FORMAT_GAIN(result.album_gain));
+    write_tag(RG_ALBUM_PEAK, FORMAT_PEAK(result.album_peak));
+  }
+}
+
+static bool tag_mp3(Track &track, Config &config)
+{
+  TagLib::MPEG::File file(track.path.c_str());
+  TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
+  tag_clear_id3(tag);
+  if (config.tag_mode == 'i')
+    tag_write_id3(tag, track.result, config);
+
+  // Using the deprecated calls until taglib 1.12+ becomes more widely adopted
+  return file.save(TagLib::MPEG::File::ID3v2, false, config.id3v2version);
+}
+
+static bool tag_flac(Track &track, Config &config) 
+{
+  TagLib::FLAC::File file(track.path.c_str());
+  TagLib::Ogg::XiphComment *tag = file.xiphComment(true);
+
+  tag_clear_xiph<TagLib::FLAC::File>(tag);
+  if (config.tag_mode == 'i')
+    tag_write_xiph<TagLib::FLAC::File>(tag, track.result, config);
+  return file.save();
+}
+
+template<typename T>
+static bool tag_ogg(Track &track, Config &config) {
+  T file(track.path.c_str());
+  TagLib::Ogg::XiphComment *tag = file.tag();
+  tag_clear_xiph<T>(tag);
+  if (config.tag_mode == 'i')
+    tag_write_xiph<T>(tag, track.result, config);
+  return file.save();
+}
+
+static bool tag_mp4(Track &track, Config &config)
+{
+  TagLib::MP4::File file(track.path.c_str());
+  TagLib::MP4::Tag *tag = file.tag();
+  tag_clear_mp4(tag);
+  if (config.tag_mode == 'i')
+    tag_write_mp4(tag, track.result, config);
+  
+  return file.save();
+}
+
+template <typename T>
+static bool tag_apev2(Track &track, Config &config)
+{
+  T file(track.path.c_str());
+  TagLib::APE::Tag *tag = file.APETag(true);
+  tag_clear_apev2(tag);
+  if (config.tag_mode == 'i')
+    tag_write_apev2(tag, track.result, config);
+  return file.save();
+}
+
+static bool tag_wma(Track &track, Config &config)
+{
+  TagLib::ASF::File file(track.path.c_str());
+  TagLib::ASF::Tag *tag = file.tag();
+  tag_clear_asf(tag);
+  if (config.tag_mode == 'i')
+    tag_write_asf(tag, track.result, config);
+
+  return file.save();
+}
+
+template<typename T>
+static bool tag_riff(Track &track, Config &config)
+{
+  T file(track.path.c_str());
+  TagLib::ID3v2::Tag *tag;
+  if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>) {
+    tag = file.ID3v2Tag();
+  }
+  else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) {
+    tag = file.tag();
+  }
+  tag_clear_id3(tag);
+  if (config.tag_mode == 'i')
+    tag_write_id3(tag, track.result, config);
+
+  if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>) {
+    return file.save(T::AllTags, false, config.id3v2version);
+  }
+  else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) {
+    return file.save();
+  }
+}
+
+static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
+{
+  TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
+  for (auto it = frames.begin(); it != frames.end(); ++it) {
+    TagLib::ID3v2::UserTextIdentificationFrame *frame =
+     dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
+
+    // this removes all variants of upper-/lower-/mixed-case tags
+    if (frame && frame->fieldList().size() >= 2) {
+      TagLib::String desc = frame->description().upper();
+      auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
+                      std::cend(RG_STRING_UPPER),
+                      [&](const auto &tag_type) {return desc == tag_type;}
+                    );
+      if (rg_tag != std::cend(RG_STRING_UPPER))
+        tag->removeFrame(frame);
+    }
+  }
+}
+
+static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &config)
+{
+  const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+  write_rg_tags(result,
+    config,
+    [&](RGTag rg_tag, const std::string &value) {
+      TagLib::ID3v2::UserTextIdentificationFrame *frame = new TagLib::ID3v2::UserTextIdentificationFrame;
+      frame->setDescription(RG_STRING[rg_tag]);
+      frame->setText(value);
+      tag->addFrame(frame);
+    }
+  );
+}
+
+template<typename T>
+static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
+{
+  const char **RG_STRING = RG_STRING_UPPER;
+  for(int i = 0; i < array_size(RG_STRING_UPPER); i++)
+    tag->removeFields(RG_STRING[i]);
+  
+  if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
+    for (int i = 0; i < array_size(R128_STRING); i++)
+      tag->removeFields(R128_STRING[i]);
+  }
+}
+
+template<typename T>
+static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, ScanResult &result, Config &config)
+{
+  const char **RG_STRING = RG_STRING_UPPER;
+
+  // Opus RFC 7845 tag
+  if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_r128) {
+    tag->addField(R128_STRING[R128_TRACK_GAIN], 
+      fmt::format("{}", GAIN_TO_Q78(result.track_gain))
+    );
+
+    if (config.do_album) {
+      tag->addField(R128_STRING[R128_ALBUM_GAIN], 
+        fmt::format("{}", GAIN_TO_Q78(result.album_gain))
+      );
+    }
+  }
+
+  // Default ReplayGain tag
+  else {
+    write_rg_tags(result,
+      config,
+      [&](RGTag rg_tag, const std::string &value) {
+        tag->addField(RG_STRING[rg_tag], value);
+      }
+    );
+  }
+}
+
+static void tag_clear_mp4(TagLib::MP4::Tag *tag)
+{
+  TagLib::String desc;
+  TagLib::MP4::ItemMap items = tag->itemMap();
+  for(auto it = items.begin(); it != items.end(); ++it) {
+    desc = it->first.upper();
+    auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
+                    std::cend(RG_STRING_UPPER),
+                    [&](const auto &tag_type) {return desc == tag_type;}
+                  );
+    if (rg_tag != std::cend(RG_STRING_UPPER))
+      tag->removeItem(it->first);
+  }
+}
 
 
-/*** MP3 ****/
+static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &config) 
+{
+  const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+  write_rg_tags(result,
+    config,
+    [&](RGTag rg_tag, const std::string &value) {
+      TagLib::String tag_name("----:com.apple.iTunes:");
+      tag_name.append(RG_STRING[rg_tag]);
+      tag->setItem(tag_name, TagLib::StringList(value));
+    }
+  );
+}
+
+static void tag_clear_apev2(TagLib::APE::Tag *tag)
+{
+  const char **RG_STRINGS[] = {RG_STRING_UPPER, RG_STRING_LOWER};
+  static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
+  for (auto RG_STRING : RG_STRINGS) {
+    for (int i = 0; i < array_size(RG_STRING_UPPER); i++)
+      tag->removeItem(RG_STRING[i]);
+  }
+}
+
+static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &config)
+{
+  const char **RG_STRING = RG_STRING_UPPER;
+  write_rg_tags(result,
+    config,
+    [&](RGTag rg_tag, const std::string &value) {
+      tag->addValue(RG_STRING[rg_tag], TagLib::String(value));
+    }
+  );
+}
+
+static void tag_clear_asf(TagLib::ASF::Tag *tag) 
+{
+  TagLib::String desc;
+  TagLib::ASF::AttributeListMap &items = tag->attributeListMap();
+
+  for(auto it = items.begin(); it != items.end(); ++it) {
+    desc = it->first.upper();
+    auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
+                    std::cend(RG_STRING_UPPER),
+                    [&](const auto &tag_type) {return desc == tag_type;}
+                  );
+    if (rg_tag != std::cend(RG_STRING_UPPER))
+      tag->removeItem(it->first);
+  }
+}
+
+static void tag_write_asf(TagLib::ASF::Tag *tag, ScanResult &result, Config &config)
+{
+  const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+  write_rg_tags(result,
+    config,
+    [&](RGTag rg_tag, const std::string &value) {
+      tag->setAttribute(RG_STRING[rg_tag], TagLib::String(value));
+    }
+  );
+}
 
 void taglib_get_version(std::string &buffer)
 {
   buffer = fmt::format("{}.{}.{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION);
-}
-
-
-static void tag_add_txxx(TagLib::ID3v2::Tag *tag, char *name, std::string &value) {
-  TagLib::ID3v2::UserTextIdentificationFrame *frame =
-    new TagLib::ID3v2::UserTextIdentificationFrame;
-
-  frame->setDescription(name);
-  frame->setText(value);
-
-  tag->addFrame(frame);
-}
-
-void tag_remove_mp3(TagLib::ID3v2::Tag *tag) {
-  TagLib::ID3v2::FrameList::Iterator it;
-  TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
-
-  for (it = frames.begin(); it != frames.end(); ++it) {
-    TagLib::ID3v2::UserTextIdentificationFrame *frame =
-     dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
-
-     // this removes all variants of upper-/lower-/mixed-case tags
-    if (frame && frame->fieldList().size() >= 2) {
-      TagLib::String desc = frame->description().upper();
-
-      // also remove (old) reference loudness, it might be wrong after recalc
-      if ((desc == RG_STRING_UPPER[RG_TRACK_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]))
-        tag->removeFrame(frame);
-    }
-  }
-}
-
-// Even if the ReplayGain 2 standard proposes replaygain tags to be uppercase,
-// unfortunately some players only respect the lowercase variant (still).
-// So we use the "lowercase" flag to switch.
-bool tag_write_mp3(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  if (config.lowercase) {
-    RG_STRING = RG_STRING_LOWER;
-  }
-
-  TagLib::MPEG::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.ID3v2Tag(true);
-
-  // remove old tags before writing new ones
-  tag_remove_mp3(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_PEAK]), value);
-  }
-
-  // work around bug taglib/taglib#913: strip APE before ID3v1
-  if (config.strip)
-    f.strip(TagLib::MPEG::File::APE);
-
-#if TAGLIB_VERSION >= 11200
-  return f.save(TagLib::MPEG::File::ID3v2,
-    config.strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
-    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save(TagLib::MPEG::File::ID3v2, config.strip, config.id3v2version);
-#endif
-}
-
-bool tag_clear_mp3(Track &track, Config &config) {
-  TagLib::MPEG::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.ID3v2Tag(true);
-
-  tag_remove_mp3(tag);
-
-  // work around bug taglib/taglib#913: strip APE before ID3v1
-  if (config.strip)
-    f.strip(TagLib::MPEG::File::APE);
-
-#if TAGLIB_VERSION >= 11200
-  return f.save(TagLib::MPEG::File::ID3v2,
-    config.strip ? TagLib::MPEG::File::StripOthers : TagLib::MPEG::File::StripNone,
-    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save(TagLib::MPEG::File::ID3v2, config.strip, config.id3v2version);
-#endif
-}
-
-
-/*** FLAC ****/
-
-void tag_remove_flac(TagLib::Ogg::XiphComment *tag) {
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
-}
-
-bool tag_write_flac(Track &track, Config &config) {
-  std::string value;
-
-  TagLib::FLAC::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.xiphComment(true);
-
-  // remove old tags before writing new ones
-  tag_remove_flac(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->addField(RG_STRING_UPPER[RG_TRACK_GAIN], value);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->addField(RG_STRING_UPPER[RG_TRACK_PEAK], value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->addField(RG_STRING_UPPER[RG_ALBUM_GAIN], value);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->addField(RG_STRING_UPPER[RG_ALBUM_PEAK], value);
-  }
-
-  return f.save();
-}
-
-bool tag_clear_flac(Track &track) {
-  TagLib::FLAC::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.xiphComment(true);
-
-  tag_remove_flac(tag);
-
-  return f.save();
-}
-
-
-/*** Ogg (Vorbis, FLAC, Speex, Opus) ****/
-
-void tag_remove_ogg(TagLib::Ogg::XiphComment *tag) {
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
-}
-
-void tag_make_ogg(Track &track, Config &config,
-  TagLib::Ogg::XiphComment *tag) {
-
-  std::string value;
-
-  // remove old tags before writing new ones
-  tag_remove_ogg(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->addField(RG_STRING_UPPER[RG_TRACK_GAIN], value);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->addField(RG_STRING_UPPER[RG_TRACK_PEAK], value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->addField(RG_STRING_UPPER[RG_ALBUM_GAIN], value);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->addField(RG_STRING_UPPER[RG_ALBUM_PEAK], value);
-  }
-}
-
-/*** Ogg: Ogg Vorbis ***/
-
-bool tag_write_ogg_vorbis(Track &track, Config &config) {
-  TagLib::Ogg::Vorbis::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-  bool do_album = true;
-
-  tag_make_ogg(track, config, tag);
-
-  return f.save();
-}
-
-bool tag_clear_ogg_vorbis(Track &track) {
-  TagLib::Ogg::Vorbis::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_remove_ogg(tag);
-
-  return f.save();
-}
-
-/*** Ogg: Ogg FLAC ***/
-
-bool tag_write_ogg_flac(Track &track, Config &config) {
-  TagLib::Ogg::FLAC::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_make_ogg(track, config, tag);
-
-  return f.save();
-}
-
-bool tag_clear_ogg_flac(Track &track) {
-  TagLib::Ogg::FLAC::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_remove_ogg(tag);
-
-  return f.save();
-}
-
-/*** Ogg: Ogg Speex ***/
-
-bool tag_write_ogg_speex(Track &track, Config &config) {
-  TagLib::Ogg::Speex::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_make_ogg(track, config, tag);
-
-  return f.save();
-}
-
-bool tag_clear_ogg_speex(Track &track) {
-  TagLib::Ogg::Speex::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_remove_ogg(tag);
-
-  return f.save();
-}
-
-/*** Ogg: Opus ****/
-
-// Opus Notes:
-//
-// 1. Opus ONLY uses R128_TRACK_GAIN and (optionally) R128_ALBUM_GAIN
-//    as an ADDITIONAL offset to the header's 'output_gain'.
-// 2. Encoders and muxes set 'output_gain' to zero, so a non-zero 'output_gain' in
-//    the header i supposed to be a change AFTER encoding/muxing.
-// 3. We assume that FFmpeg's avformat does already apply 'output_gain' (???)
-//    so we get get pre-gained data and only have to calculate the difference.
-// 4. Opus adheres to EBU-R128, so the loudness reference is ALWAYS -23 LUFS.
-//    This means we have to adapt for possible `-d n` (`--pregain=n`) changes.
-//    This also means players have to add an extra +5 dB to reach the loudness
-//    ReplayGain 2.0 prescribes (-18 LUFS).
-// 5. Opus R128_* tags use ASCII-encoded Q7.8 numbers with max. 6 places including
-//    the minus sign, and no unit.
-//    See https://en.wikipedia.org/wiki/Q_(number_format)
-// 6. RFC 7845 states: "To avoid confusion with multiple normalization schemes, an
-//    Opus comment header SHOULD NOT contain any of the REPLAYGAIN_TRACK_GAIN,
-//    REPLAYGAIN_TRACK_PEAK, REPLAYGAIN_ALBUM_GAIN, or REPLAYGAIN_ALBUM_PEAK tags, […]"
-//    So we remove REPLAYGAIN_* tags if any are present.
-// 7. RFC 7845 states: "Peak normalizations are difficult to calculate reliably
-//    for lossy codecs because of variation in excursion heights due to decoder
-//    differences. In the authors' investigations, they were not applied
-//    consistently or broadly enough to merit inclusion here."
-//    So there are NO "Peak" type tags. The (oversampled) true peak levels that
-//    libebur128 calculates for us are STILL used for clipping prevention if so
-//    requested. They are also shown in the output, just not stored into tags.
-
-int gain_to_q78num(double gain) {
-  // convert float to Q7.8 number: Q = round(f * 2^8)
-  return (int) round(gain * 256.0);    // 2^8 = 256
-}
-
-void tag_remove_ogg_opus(TagLib::Ogg::XiphComment *tag) {
-  // RFC 7845 states:
-  // To avoid confusion with multiple normalization schemes, an Opus
-  // comment header SHOULD NOT contain any of the REPLAYGAIN_TRACK_GAIN,
-  // REPLAYGAIN_TRACK_PEAK, REPLAYGAIN_ALBUM_GAIN, or
-  // REPLAYGAIN_ALBUM_PEAK tags, […]"
-  // so we remove these if present
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_TRACK_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_GAIN]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_PEAK]);
-  tag->removeFields(RG_STRING_UPPER[RG_ALBUM_RANGE]);
-  tag->removeFields(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
-  tag->removeFields("R128_TRACK_GAIN");
-  tag->removeFields("R128_ALBUM_GAIN");
-}
-
-bool tag_write_ogg_opus(Track &track, Config &config) {
-  std::string value;
-
-  TagLib::Ogg::Opus::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  // remove old tags before writing new ones
-  tag_remove_ogg_opus(tag);
-
-  value = fmt::format("{}", gain_to_q78num(track.result.track_gain));
-  tag->addField("R128_TRACK_GAIN", value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{}", gain_to_q78num(track.result.album_gain));
-    tag->addField("R128_ALBUM_GAIN", value);
-  }
-
-  // extra tags mode -s e or -s l
-  // no extra tags allowed in Opus
-
-  return f.save();
-}
-
-bool tag_clear_ogg_opus(Track &track) {
-  TagLib::Ogg::Opus::File f(track.path.c_str());
-  TagLib::Ogg::XiphComment *tag = f.tag();
-
-  tag_remove_ogg_opus(tag);
-
-  return f.save();
-}
-
-
-/*** MP4 ****/
-
-// build tagging key from RG_ATOM and REPLAYGAIN_* string
-TagLib::String tagname(TagLib::String key) {
-  TagLib::String res = RG_ATOM;
-  return res.append(key);
-}
-
-void tag_remove_mp4(TagLib::MP4::Tag *tag) {
-  TagLib::String desc;
-#if TAGLIB_VERSION >= 11200
-  TagLib::MP4::ItemMap items = tag->itemMap();
-
-  for(TagLib::MP4::ItemMap::Iterator item = items.begin();
-      item != items.end(); ++item)
-#else
-  TagLib::MP4::ItemListMap &items = tag->itemListMap();
-
-  for(TagLib::MP4::ItemListMap::Iterator item = items.begin();
-      item != items.end(); ++item)
-#endif
-  {
-    desc = item->first.upper();
-    if ((desc == tagname(RG_STRING_UPPER[RG_TRACK_GAIN]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_TRACK_PEAK]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_TRACK_RANGE]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_ALBUM_GAIN]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_ALBUM_PEAK]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_ALBUM_RANGE]).upper()) ||
-        (desc == tagname(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]).upper()))
-      tag->removeItem(item->first);
-  }
-}
-
-bool tag_write_mp4(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  if (config.lowercase) {
-    RG_STRING = RG_STRING_LOWER;
-  }
-
-  TagLib::MP4::File f(track.path.c_str());
-  TagLib::MP4::Tag *tag = f.tag();
-
-  // remove old tags before writing new ones
-  tag_remove_mp4(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->setItem(tagname(RG_STRING[RG_TRACK_GAIN]), TagLib::StringList(value));
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->setItem(tagname(RG_STRING[RG_TRACK_PEAK]), TagLib::StringList(value));
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->setItem(tagname(RG_STRING[RG_ALBUM_GAIN]), TagLib::StringList(value));
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->setItem(tagname(RG_STRING[RG_ALBUM_PEAK]), TagLib::StringList(value));
-  }
-
-  return f.save();
-}
-
-bool tag_clear_mp4(Track &track) {
-  TagLib::MP4::File f(track.path.c_str());
-  TagLib::MP4::Tag *tag = f.tag();
-
-  tag_remove_mp4(tag);
-
-  return f.save();
-}
-
-
-/*** ASF/WMA ****/
-
-void tag_remove_asf(TagLib::ASF::Tag *tag) {
-  TagLib::String desc;
-  TagLib::ASF::AttributeListMap &items = tag->attributeListMap();
-
-  for(TagLib::ASF::AttributeListMap::Iterator item = items.begin();
-      item != items.end(); ++item)
-  {
-    desc = item->first.upper();
-    if ((desc == RG_STRING_UPPER[RG_TRACK_GAIN]) ||
-        (desc == RG_STRING_UPPER[RG_TRACK_PEAK]) ||
-        (desc == RG_STRING_UPPER[RG_TRACK_RANGE]) ||
-        (desc == RG_STRING_UPPER[RG_ALBUM_GAIN]) ||
-        (desc == RG_STRING_UPPER[RG_ALBUM_PEAK]) ||
-        (desc == RG_STRING_UPPER[RG_ALBUM_RANGE]) ||
-        (desc == RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]))
-      tag->removeItem(item->first);
-  }
-}
-
-bool tag_write_asf(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  if (config.lowercase) {
-    RG_STRING = RG_STRING_LOWER;
-  }
-
-  TagLib::ASF::File f(track.path.c_str());
-  TagLib::ASF::Tag *tag = f.tag();
-
-  // remove old tags before writing new ones
-  tag_remove_asf(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->setAttribute(RG_STRING[RG_TRACK_GAIN], TagLib::String(value));
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->setAttribute(RG_STRING[RG_TRACK_PEAK], TagLib::String(value));
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->setAttribute(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value));
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->setAttribute(RG_STRING[RG_ALBUM_PEAK], TagLib::String(value));
-  }
-
-  return f.save();
-}
-
-bool tag_clear_asf(Track &track) {
-  TagLib::ASF::File f(track.path.c_str());
-  TagLib::ASF::Tag *tag = f.tag();
-
-  tag_remove_asf(tag);
-
-  return f.save();
-}
-
-
-/*** WAV ****/
-
-void tag_remove_wav(TagLib::ID3v2::Tag *tag) {
-  TagLib::ID3v2::FrameList::Iterator it;
-  TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
-
-  for (it = frames.begin(); it != frames.end(); ++it) {
-    TagLib::ID3v2::UserTextIdentificationFrame *frame =
-     dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
-
-     // this removes all variants of upper-/lower-/mixed-case tags
-    if (frame && frame->fieldList().size() >= 2) {
-      TagLib::String desc = frame->description().upper();
-
-      // also remove (old) reference loudness, it might be wrong after recalc
-      if ((desc == RG_STRING_UPPER[RG_TRACK_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]))
-        tag->removeFrame(frame);
-    }
-  }
-}
-
-// Experimental WAV file tagging within an "ID3 " chunk
-bool tag_write_wav(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  if (config.lowercase) {
-    RG_STRING = RG_STRING_LOWER;
-  }
-
-  TagLib::RIFF::WAV::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.ID3v2Tag();
-
-  // remove old tags before writing new ones
-  tag_remove_wav(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_PEAK]), value);
-  }
-
-  // no stripping
-#if TAGLIB_VERSION >= 11200
-  return f.save(TagLib::RIFF::WAV::File::AllTags,
-    TagLib::RIFF::WAV::File::StripNone,
-    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config.id3v2version);
-#endif
-}
-
-bool tag_clear_wav(Track &track, Config &config) {
-  TagLib::RIFF::WAV::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.ID3v2Tag();
-
-  tag_remove_wav(tag);
-
-  // no stripping
-#if TAGLIB_VERSION >= 11200
-  return f.save(TagLib::RIFF::WAV::File::AllTags,
-    TagLib::RIFF::WAV::File::StripNone,
-    config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save(TagLib::RIFF::WAV::File::AllTags, false, config.id3v2version);
-#endif
-}
-
-
-/*** AIFF ****/
-
-// id3v2version and strip currently unimplemented since no TagLib support
-
-void tag_remove_aiff(TagLib::ID3v2::Tag *tag) {
-  TagLib::ID3v2::FrameList::Iterator it;
-  TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
-
-  for (it = frames.begin(); it != frames.end(); ++it) {
-    TagLib::ID3v2::UserTextIdentificationFrame *frame =
-     dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
-
-     // this removes all variants of upper-/lower-/mixed-case tags
-    if (frame && frame->fieldList().size() >= 2) {
-      TagLib::String desc = frame->description().upper();
-
-      // also remove (old) reference loudness, it might be wrong after recalc
-      if ((desc == RG_STRING_UPPER[RG_TRACK_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_TRACK_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_GAIN]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_PEAK]) ||
-          (desc == RG_STRING_UPPER[RG_ALBUM_RANGE]) ||
-          (desc == RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]))
-        tag->removeFrame(frame);
-    }
-  }
-}
-
-// Experimental AIFF file tagging within an "ID3 " chunk
-bool tag_write_aiff(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  if (config.lowercase) {
-    RG_STRING = RG_STRING_LOWER;
-  }
-
-  TagLib::RIFF::AIFF::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.tag();
-
-  // remove old tags before writing new ones
-  tag_remove_aiff(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_GAIN]), value);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_TRACK_PEAK]), value);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_GAIN]), value);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag_add_txxx(tag, const_cast<char *>(RG_STRING[RG_ALBUM_PEAK]), value);
-  }
-
-  // no stripping
-#if TAGLIB_VERSION >= 11200
-  return f.save(config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save();
-#endif
-}
-
-bool tag_clear_aiff(Track &track, Config &config) {
-  TagLib::RIFF::AIFF::File f(track.path.c_str());
-  TagLib::ID3v2::Tag *tag = f.tag();
-
-  tag_remove_aiff(tag);
-
-  // no stripping
-#if TAGLIB_VERSION >= 11200
-  return f.save(config.id3v2version == 3 ? TagLib::ID3v2::v3 : TagLib::ID3v2::v4);
-#else
-  return f.save();
-#endif
-}
-
-
-/*** WavPack ***/
-
-// We COULD also use ID3 tags, but we stick with APEv2 tags,
-// since that is the native format.
-// APEv2 tags can be mixed case, but they should be read case-insensitively,
-// so we currently ignore -L (--lowercase) and only write uppercase tags.
-// TagLib handles APE case-insensitively and uses only UPPERCASE keys.
-// Existing ID3v2 tags can be removed by using -S (--striptags).
-
-void tag_remove_wavpack(TagLib::APE::Tag *tag) {
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_GAIN]);
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_PEAK]);
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_RANGE]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_GAIN]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_PEAK]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_RANGE]);
-  tag->removeItem(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
-}
-
-bool tag_write_wavpack(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  // ignore lowercase for now: CAN be written but keys should be read case-insensitively
-  // if (lowercase) {
-  //   RG_STRING = RG_STRING_LOWER;
-  // }
-
-  TagLib::WavPack::File f(track.path.c_str());
-  TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
-
-  // remove old tags before writing new ones
-  tag_remove_wavpack(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->addValue(RG_STRING[RG_TRACK_GAIN], TagLib::String(value), true);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->addValue(RG_STRING[RG_TRACK_PEAK], TagLib::String(value), true);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->addValue(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value), true);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->addValue(RG_STRING[RG_ALBUM_PEAK], TagLib::String(value), true);
-  }
-
-  if (config.strip)
-    f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
-
-  return f.save();
-}
-
-bool tag_clear_wavpack(Track &track, Config &config) {
-
-  TagLib::WavPack::File f(track.path.c_str());
-  TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
-
-  tag_remove_wavpack(tag);
-
-  if (config.strip)
-    f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
-
-  return f.save();
-}
-
-
-/*** APE (Monkey’s Audio) ***/
-
-// We COULD also use ID3 tags, but we stick with APEv2 tags,
-// since that is the native format.
-// APEv2 tags can be mixed case, but they should be read case-insensitively,
-// so we currently ignore -L (--lowercase) and only write uppercase tags.
-// TagLib handles APE case-insensitively and uses only UPPERCASE keys.
-// Existing ID3 tags can be removed by using -S (--striptags).
-
-void tag_remove_ape(TagLib::APE::Tag *tag) {
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_GAIN]);
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_PEAK]);
-  tag->removeItem(RG_STRING_UPPER[RG_TRACK_RANGE]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_GAIN]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_PEAK]);
-  tag->removeItem(RG_STRING_UPPER[RG_ALBUM_RANGE]);
-  tag->removeItem(RG_STRING_UPPER[RG_REFERENCE_LOUDNESS]);
-}
-
-bool tag_write_ape(Track &track, Config &config) {
-  std::string value;
-  const char **RG_STRING = RG_STRING_UPPER;
-
-  // ignore lowercase for now: CAN be written but keys should be read case-insensitively
-  // if (lowercase) {
-  //   RG_STRING = RG_STRING_LOWER;
-  // }
-
-  TagLib::APE::File f(track.path.c_str());
-  TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
-
-  // remove old tags before writing new ones
-  tag_remove_ape(tag);
-
-  value = fmt::format("{:.2f} dB", track.result.track_gain);
-  tag->addValue(RG_STRING[RG_TRACK_GAIN], TagLib::String(value), true);
-
-  value = fmt::format("{:.6f}", track.result.track_peak);
-  tag->addValue(RG_STRING[RG_TRACK_PEAK], TagLib::String(value), true);
-
-  // Only write album tags if in album mode (would be zero otherwise)
-  if (config.do_album) {
-    value = fmt::format("{:.2f} dB", track.result.album_gain);
-    tag->addValue(RG_STRING[RG_ALBUM_GAIN], TagLib::String(value), true);
-
-    value = fmt::format("{:.6f}", track.result.album_peak);
-    tag->addValue(RG_STRING[RG_ALBUM_PEAK], TagLib::String(value), true);
-  }
-
-  if (config.strip)
-    f.strip(TagLib::APE::File::TagTypes::ID3v1);
-
-  return f.save();
-}
-
-bool tag_clear_ape(Track &track, Config &config) {
-
-  TagLib::WavPack::File f(track.path.c_str());
-  TagLib::APE::Tag *tag = f.APETag(true); // create if none exists
-
-  tag_remove_ape(tag);
-
-  if (config.strip)
-    f.strip(TagLib::WavPack::File::TagTypes::ID3v1);
-
-  return f.save();
 }

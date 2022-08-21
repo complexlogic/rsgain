@@ -268,8 +268,7 @@ bool Track::scan(Config &config, std::mutex *m)
     if (!codec_ctx->channel_layout)
         codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
 
-    // show some information about the file
-    // only show bits/sample where it makes sense
+    // Display some information about the file
     infotext[0] = '\0';
     if (codec_ctx->bits_per_raw_sample > 0 || codec_ctx->bits_per_coded_sample > 0) {
         infotext = fmt::format("{} bit, ", codec_ctx->bits_per_raw_sample > 0 ? codec_ctx->bits_per_raw_sample : codec_ctx->bits_per_coded_sample);
@@ -370,7 +369,7 @@ bool Track::scan(Config &config, std::mutex *m)
                 if (rc >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
-                    // Convert frame with swresample if necessary
+                    // Convert audio format with swresample if necessary
                     if (swr != NULL) {
                         size_t out_size;
                         int  out_linesize;
@@ -382,7 +381,6 @@ bool Track::scan(Config &config, std::mutex *m)
                                    );
 
                         swr_out_data = (uint8_t*) av_malloc(out_size);
-
                         if (swr_convert(swr, (uint8_t**) &swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                             output_error("Could not convert frame");
                             error = true;
@@ -398,7 +396,6 @@ bool Track::scan(Config &config, std::mutex *m)
                     else {
                         ebur128_add_frames_short(ebur128, (short *) frame->data[0], frame->nb_samples);
                     }
-
                     if (pos >= 0 && output_progress)
                         progress_bar.update(pos);
                 }
@@ -408,7 +405,7 @@ bool Track::scan(Config &config, std::mutex *m)
     av_packet_unref(packet);
     }
 
-    // Make sure progress bar finishes at 100%
+    // Make sure the progress bar finishes at 100%
     if (output_progress)
         progress_bar.complete();
 
@@ -498,146 +495,11 @@ void ScanJob::tag_tracks(Config &config)
 
     // Tag the files
     for (Track &track : tracks) {
-        switch (config.tag_mode) {
-
-            // Delete tags
-            case 'd':
-                switch (track.type) {
-                    case MP3:
-                        if (!tag_clear_mp3(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case FLAC:
-                        if (!tag_clear_flac(track))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case OGG:
-                        // must separate because TagLib uses different File classes
-                        switch (track.codec_id) {
-                            // Opus needs special handling (different RG tags, -23 LUFS ref.)
-                            case AV_CODEC_ID_OPUS:
-                                if (!tag_clear_ogg_opus(track))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_VORBIS:
-                                if (!tag_clear_ogg_vorbis(track))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_FLAC:
-                                if (!tag_clear_ogg_flac(track))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_SPEEX:
-                                if (!tag_clear_ogg_speex(track))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-                        }
-                        break;
-
-                    case M4A:
-                        if (!tag_clear_mp4(track))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case WAV:
-                        if (!tag_clear_wav(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case AIFF:
-                        if (!tag_clear_aiff(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case WAVPACK:
-                        if (!tag_clear_wavpack(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case APE:
-                        if (!tag_clear_ape(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-                }
-                break;
-
-            // Write tags
-            case 'i':
-                switch (track.type) {
-                    case MP3:
-                        if (!tag_write_mp3(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case FLAC:
-                        if (!tag_write_flac(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case OGG:
-                        // must separate because TagLib uses fifferent File classes
-                        switch (track.codec_id) {
-                            case AV_CODEC_ID_OPUS:
-                                if (!tag_write_ogg_opus(track, config))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_VORBIS:
-                                if (!tag_write_ogg_vorbis(track, config))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_FLAC:
-                                if (!tag_write_ogg_flac(track, config))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-
-                            case AV_CODEC_ID_SPEEX:
-                                if (!tag_write_ogg_speex(track, config))
-                                    output_error("Couldn't write to: {}", track.path);
-                                break;
-                        }
-                        break;
-
-                    case M4A:
-                        if (!tag_write_mp4(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case WAV:
-                        if (!tag_write_wav(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case AIFF:
-                        if (!tag_write_aiff(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case WAVPACK:
-                        if (!tag_write_wavpack(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-
-                    case APE:
-                        if (!tag_write_ape(track, config))
-                            output_error("Couldn't write to: {}", track.path);
-                        break;
-                }
-                break;
-
-            // Don't tag, only display values
-            case 's':
-                break;
-        }
+        if (config.tag_mode != 's')
+            tag_track(track, config);
 
         if ((!quiet || config.tag_mode) && !multithread && config.tag_mode != 'd') {
-            if (config.tab_output && stream != NULL) {
+            if (config.tab_output != TYPE_NONE && stream != NULL) {
                 // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
                 fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());
                 fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
@@ -664,11 +526,11 @@ void ScanJob::tag_tracks(Config &config)
                 fmt::print("\nTrack: {}\n", track.path);
                 fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
                 fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
-                if (track.codec_id == AV_CODEC_ID_OPUS) {
+                if (config.opus_r128 && track.codec_id == AV_CODEC_ID_OPUS) {
                     // also show the Q7.8 number that goes into R128_TRACK_GAIN
                     fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                         track.result.track_gain,
-                        gain_to_q78num(track.result.track_gain),
+                        GAIN_TO_Q78(track.result.track_gain),
                         track.tclip ? " (adjusted to prevent clipping)" : ""
                     );
                 } else {
@@ -682,11 +544,11 @@ void ScanJob::tag_tracks(Config &config)
                     fmt::print("\nAlbum:\n");
                     fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
                     fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
-                    if (track.codec_id == AV_CODEC_ID_OPUS) {
+                    if (config.opus_r128 && track.codec_id == AV_CODEC_ID_OPUS) {
                         // also show the Q7.8 number that goes into R128_ALBUM_GAIN
                         fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                             track.result.album_gain,
-                            gain_to_q78num(track.result.album_gain),
+                            GAIN_TO_Q78(track.result.album_gain),
                             track.aclip ? " (adjusted to prevent clipping)" : ""
                         );
                     } else {
