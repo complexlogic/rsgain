@@ -83,7 +83,7 @@ inline static FileType determine_filetype(const std::string &extension)
                   std::cend(extensions), 
                   [&](auto &e) {return extension == e.extension;}
               );
-    return it == std::cend(extensions) ? INVALID : (FileType) (it - std::cbegin(extensions));
+    return it == std::cend(extensions) ? INVALID : it->file_type;
 }
 
 // A function to determine if a given file is a given type
@@ -481,9 +481,7 @@ void ScanJob::tag_tracks(Config &config)
     std::FILE *stream = NULL;
     if (config.tab_output != TYPE_NONE) {
         if (config.tab_output == TYPE_FILE) {
-            std::filesystem::path dir_basename = std::filesystem::canonical(path).filename();
-            std::filesystem::path output_file = std::filesystem::path(path) / dir_basename; 
-            output_file += ".csv";
+            std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.csv";
             stream = fopen(output_file.string().c_str(), "wb");
         }
         else {
@@ -494,11 +492,12 @@ void ScanJob::tag_tracks(Config &config)
     }
 
     // Tag the files
+    bool output = (!multithread || config.tab_output == TYPE_FILE) && (!quiet || config.tab_output == TYPE_STDOUT) && config.tag_mode != 'd';
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
             tag_track(track, config);
 
-        if ((!quiet || config.tag_mode) && !multithread && config.tag_mode != 'd') {
+        if (output) {
             if (config.tab_output != TYPE_NONE && stream != NULL) {
                 // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
                 fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());

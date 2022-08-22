@@ -77,5 +77,4 @@ class ScanJob {
 		bool scan(Config &config, std::mutex *ffmpeg_mutex = NULL);
 };
 
-
 #endif

@@ -215,8 +215,8 @@ void easy_mode(int argc, char *argv[])
             case 'l':
                 double target_loudness;
                 if (parse_target_loudness(optarg, target_loudness)) {
-                    for (auto it = std::begin(configs); it != std::end(configs); ++it)
-                        it->target_loudness = target_loudness;
+                    for (Config &config : configs)
+                        config.target_loudness = target_loudness;
                 }
                 break;
             
@@ -246,8 +246,8 @@ void easy_mode(int argc, char *argv[])
                 overrides_file = optarg;
                 break;
             case 'O':
-                for (auto it = std::begin(configs); it != std::end(configs); ++it)
-                    it->tab_output = TYPE_FILE;
+                for (Config &config : configs)
+                    config.tab_output = TYPE_FILE;
                 break;
         }
     }
