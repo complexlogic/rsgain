@@ -265,18 +265,12 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case '?':
-                if (optopt == 0) {
-                    // actual option '-?'
-                    help_custom();
-                    quit(EXIT_SUCCESS);
-                } else {
-                    // getopt error, message already printed
-                    quit(EXIT_FAILURE);	// error
-                }
+                help_custom();
+                quit(EXIT_FAILURE);
+                
             case 'h':
                 help_custom();
                 quit(EXIT_SUCCESS);
-                break;
         }
     }
 
@@ -292,6 +286,8 @@ static void custom_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
     job.scan(config);
+    if (job.error)
+        quit(EXIT_FAILURE);
 }
 
 // Parse main arguments

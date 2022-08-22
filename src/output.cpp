@@ -59,9 +59,7 @@ extern HANDLE console;
 #endif
 
 int quiet = 0;
-int disable_progress_bar = 0;
 extern bool multithread;
-
 
 void ProgressBar::begin(int start, int len)
 {

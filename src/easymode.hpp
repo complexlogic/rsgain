@@ -52,7 +52,6 @@ class WorkerThread {
 
 };
 
-
 struct overrides_section {
     const char *name;
     FileType file_type;
