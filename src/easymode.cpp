@@ -23,8 +23,7 @@
 #include "scan.hpp"
 
 static inline void help_easy(void);
-
-extern int multithread;
+bool multithread = false;
 
 // Default configs
 static Config configs[] = {
@@ -190,6 +189,7 @@ void easy_mode(int argc, char *argv[])
     int rc, i;
     char *overrides_file = NULL;
     const char *short_opts = "+hql:m:o:O";
+    int threads = 1;
     static struct option long_opts[] = {
         { "help",         no_argument,       NULL, 'h' },
         { "quiet",        no_argument,       NULL, 'q' },
@@ -221,9 +221,25 @@ void easy_mode(int argc, char *argv[])
                 break;
             
             case 'm':
-                multithread = atoi(optarg);
-                if (multithread < 2)
-                    multithread = 0;
+                {
+                    int max_threads = std::thread::hardware_concurrency();
+                    if (!max_threads)
+                        max_threads = 1;
+                    if (MATCH(optarg, "MAX") || MATCH(optarg, "max")) {
+                        threads = max_threads;
+                    }
+                    else {
+                        threads = atoi(optarg);
+                        if (threads < 1) {
+                            threads = 1;
+                        }
+                        else if (threads > max_threads) {
+                            output_warn("{} threads were requested, but only {} are available", threads, max_threads);
+                            threads = max_threads;
+                        }
+                    }
+                    multithread = (threads > 1);
+                }
                 break;
             
             case 'o':
@@ -241,7 +257,7 @@ void easy_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
 
-    scan_easy(argv[optind], overrides_file);
+    scan_easy(argv[optind], overrides_file, threads);
 }
 
 static void convert_bool(const char *value, bool &setting)
@@ -401,7 +417,7 @@ bool WorkerThread::wait()
     return true;
 }
 
-void scan_easy(const char *directory, const char *overrides_file)
+void scan_easy(const char *directory, const char *overrides_file, int threads)
 {
     std::filesystem::path path(directory);
     ScanData scan_data;
@@ -419,17 +435,6 @@ void scan_easy(const char *directory, const char *overrides_file)
     // Load overrides
     if (overrides_file != NULL) {
         load_overrides(overrides_file);
-    }
-
-    // Make sure the requested threads is 1 per CPU core or fewer
-    if (multithread) {
-        int cores = std::thread::hardware_concurrency();
-        if (multithread > cores) {
-            multithread = cores;
-            if (multithread <= 1) {
-                multithread = 0;
-            }
-        }
     }
 
     // Record start time
@@ -453,7 +458,7 @@ void scan_easy(const char *directory, const char *overrides_file)
         std::condition_variable main_cv;
 
         // Create threads
-        for (int i = 0; i < multithread; i++)
+        for (int i = 0; i < threads; i++)
             worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
 
         ScanJob *job;

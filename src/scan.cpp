@@ -52,7 +52,7 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
-extern int multithread;
+extern bool multithread;
 extern ProgressBar progress_bar;
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);

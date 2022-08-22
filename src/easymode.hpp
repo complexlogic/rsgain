@@ -18,7 +18,7 @@
 #endif
 
 #define MAX_THREAD_SLEEP 30
-
+#define MAX_THREADS -1
 
 typedef struct ScanData {
     unsigned long files;
@@ -59,4 +59,4 @@ struct overrides_section {
 };
 
 void easy_mode(int argc, char *argv[]);
-void scan_easy(const char *directory, const char *overrides_file);
+void scan_easy(const char *directory, const char *overrides_file, int threads);

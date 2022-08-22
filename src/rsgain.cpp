@@ -66,7 +66,6 @@ static void version(void);
 static inline void help_custom(void);
 
 // Global variables
-int multithread = 0;
 ProgressBar progress_bar;
 
 #ifdef _WIN32
