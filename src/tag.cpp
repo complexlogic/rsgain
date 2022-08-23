@@ -88,7 +88,8 @@ typedef enum {
     RG_ALBUM_GAIN,
     RG_ALBUM_PEAK,
     RG_ALBUM_RANGE,
-    RG_REFERENCE_LOUDNESS
+    RG_REFERENCE_LOUDNESS,
+    RGTAG_MAX_VAL
 } RGTag;
 
 static const char *RG_STRING_UPPER[] = {
@@ -112,17 +113,20 @@ static const char *RG_STRING_LOWER[] = {
 };
 template<std::size_t N, class T>
 constexpr std::size_t array_size(T(&)[N]) {return N;}
+static_assert(RGTAG_MAX_VAL == array_size(RG_STRING_UPPER));
 static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
 
-enum R128_ENUM {
+typedef enum {
     R128_TRACK_GAIN,
     R128_ALBUM_GAIN,
-};
+    R128TAG_MAX_VAL
+} R128Tag;
 
 static const char *R128_STRING[] = {
     "R128_TRACK_GAIN",
     "R128_ALBUM_GAIN"
 };
+static_assert(R128TAG_MAX_VAL == array_size(R128_STRING));
 
 void tag_track(Track &track, Config &config)
 {

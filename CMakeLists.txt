@@ -85,19 +85,17 @@ endif()
 # Build source files
 add_subdirectory(src)
 
-message("Build type is $<CONFIG>")
-
 # Installation - Windows
 if (WIN32)
   #set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
   #install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ".")
   install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")
   configure_file(${PROJECT_SOURCE_DIR}/CHANGELOG ${PROJECT_BINARY_DIR}/CHANGELOG.txt)
-  install(FILES ${PROJECT_BINARY_DIR}/CHANGELOG.txt DESTINATION "./")
+  install(FILES ${PROJECT_BINARY_DIR}/CHANGELOG.txt DESTINATION ".")
   configure_file(${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_BINARY_DIR}/LICENSE.txt)
-  install(FILES ${PROJECT_BINARY_DIR}/LICENSE.txt DESTINATION "./")
+  install(FILES ${PROJECT_BINARY_DIR}/LICENSE.txt DESTINATION ".")
   configure_file(${PROJECT_SOURCE_DIR}/config/overrides.ini ${PROJECT_BINARY_DIR}/overrides.ini)
-  install(FILES ${PROJECT_BINARY_DIR}/overrides.ini DESTINATION "./")
+  install(FILES ${PROJECT_BINARY_DIR}/overrides.ini DESTINATION ".")
   
   # Copy the VC Runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
@@ -107,7 +105,7 @@ if (WIN32)
     foreach(system_lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
       string(FIND ${system_lib} ${required_lib} vcruntime)
       if (NOT vcruntime EQUAL -1)
-        install(FILES ${system_lib} DESTINATION "./")
+        install(FILES ${system_lib} DESTINATION ".")
       endif ()
     endforeach ()
   endforeach ()
