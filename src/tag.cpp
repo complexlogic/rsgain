@@ -32,7 +32,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <string>
-
+#include <array>
 #include <taglib.h>
 
 #define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 \
@@ -64,10 +64,10 @@
 #include "tag.hpp"
 #include "output.hpp"
 
-#define tag_error(t) output_error("Couldn't write to: {}", t.path)
-
 template<typename T>
 static void write_rg_tags(const ScanResult &result, Config &config, T&& write_tag);
+template<typename T, typename I>
+static void tag_clear_map(I&& tags, T&& clear);
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag);
 static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &config);
 template<typename T>
@@ -110,6 +110,9 @@ static const char *RG_STRING_LOWER[] = {
     "replaygain_album_range",
     "replaygain_reference_loudness"
 };
+template<std::size_t N, class T>
+constexpr std::size_t array_size(T(&)[N]) {return N;}
+static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
 
 enum R128_ENUM {
     R128_TRACK_GAIN,
@@ -120,9 +123,6 @@ static const char *R128_STRING[] = {
     "R128_TRACK_GAIN",
     "R128_ALBUM_GAIN"
 };
-
-template<std::size_t N, class T>
-constexpr std::size_t array_size(T(&)[N]) {return N;}
 
 void tag_track(Track &track, Config &config)
 {
@@ -161,6 +161,10 @@ void tag_track(Track &track, Config &config)
                     break;
                 }
                 break;
+        case OPUS:
+            if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
+                tag_error(track);
+            break;
 
         case M4A:
             if (!tag_mp4(track, config))
@@ -294,6 +298,23 @@ static bool tag_riff(Track &track, Config &config)
     }
 }
 
+template<typename T, typename I>
+static void tag_clear_map(I&& tags, T&& clear)
+{
+    if ((tags) & RG_TAGS_UPPERCASE) {
+        for (const char *RG_STRING : RG_STRING_UPPER)
+            clear(RG_STRING);
+    }
+    if ((tags) & RG_TAGS_LOWERCASE) {
+        for (const char *RG_STRING : RG_STRING_LOWER)
+            clear(RG_STRING);
+    }
+    if ((tags) & R128_TAGS) {
+        for (const char *R128_STRING : R128_STRING)
+            clear(R128_STRING);
+    }
+}
+
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
 {
     TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
@@ -330,14 +351,20 @@ static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &c
 
 template<typename T>
 static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
-{
-    const char **RG_STRING = RG_STRING_UPPER;
-    for(int i = 0; i < array_size(RG_STRING_UPPER); i++)
-        tag->removeFields(RG_STRING[i]);
-    
+{    
     if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
-        for (int i = 0; i < array_size(R128_STRING); i++)
-            tag->removeFields(R128_STRING[i]);
+        tag_clear_map(RG_TAGS_UPPERCASE | R128_TAGS,
+            [&](const char *t) {
+                tag->removeFields(t);
+            }
+        );
+    }
+    else {
+        tag_clear_map(RG_TAGS_UPPERCASE,
+            [&](const char *t) {
+                tag->removeFields(t);
+            }
+        );
     }
 }
 
@@ -372,19 +399,14 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, ScanResult &result, Co
 
 static void tag_clear_mp4(TagLib::MP4::Tag *tag)
 {
-    TagLib::String desc;
-    TagLib::MP4::ItemMap items = tag->itemMap();
-    for(auto it = items.begin(); it != items.end(); ++it) {
-        desc = it->first.upper();
-        auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
-                          std::cend(RG_STRING_UPPER),
-                          [&](const auto &tag_type) {return desc == tag_type;}
-                      );
-        if (rg_tag != std::cend(RG_STRING_UPPER))
-            tag->removeItem(it->first);
-    }
+    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+        [&](const char *t) {
+            TagLib::String tag_name;
+            FORMAT_MP4_TAG(tag_name, t);
+            tag->removeItem(tag_name);
+        }
+    );
 }
-
 
 static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &config) 
 {
@@ -392,8 +414,8 @@ static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &con
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const std::string &value) {
-            TagLib::String tag_name("----:com.apple.iTunes:");
-            tag_name.append(RG_STRING[rg_tag]);
+            TagLib::String tag_name;
+            FORMAT_MP4_TAG(tag_name, RG_STRING[rg_tag]);
             tag->setItem(tag_name, TagLib::StringList(value));
         }
     );
@@ -401,12 +423,11 @@ static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &con
 
 static void tag_clear_apev2(TagLib::APE::Tag *tag)
 {
-    const char **RG_STRINGS[] = {RG_STRING_UPPER, RG_STRING_LOWER};
-    static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
-    for (auto RG_STRING : RG_STRINGS) {
-        for (int i = 0; i < array_size(RG_STRING_UPPER); i++)
-            tag->removeItem(RG_STRING[i]);
-    }
+    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+        [&](const char *t) {
+            tag->removeItem(t);
+        }
+    );
 }
 
 static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &config)
@@ -422,18 +443,11 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &c
 
 static void tag_clear_asf(TagLib::ASF::Tag *tag) 
 {
-    TagLib::String desc;
-    TagLib::ASF::AttributeListMap &items = tag->attributeListMap();
-
-    for(auto it = items.begin(); it != items.end(); ++it) {
-        desc = it->first.upper();
-        auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
-                          std::cend(RG_STRING_UPPER),
-                          [&](const auto &tag_type) {return desc == tag_type;}
-                      );
-        if (rg_tag != std::cend(RG_STRING_UPPER))
-            tag->removeItem(it->first);
-    }
+    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+        [&](const char *t) {
+            tag->removeItem(t);
+        }
+    );
 }
 
 static void tag_write_asf(TagLib::ASF::Tag *tag, ScanResult &result, Config &config)

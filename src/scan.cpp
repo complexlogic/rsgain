@@ -525,7 +525,7 @@ void ScanJob::tag_tracks(Config &config)
                 fmt::print("\nTrack: {}\n", track.path);
                 fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
                 fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
-                if (config.opus_r128 && track.codec_id == AV_CODEC_ID_OPUS) {
+                if (config.opus_r128 && track.type == OPUS) {
                     // also show the Q7.8 number that goes into R128_TRACK_GAIN
                     fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                         track.result.track_gain,
@@ -543,7 +543,7 @@ void ScanJob::tag_tracks(Config &config)
                     fmt::print("\nAlbum:\n");
                     fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
                     fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
-                    if (config.opus_r128 && track.codec_id == AV_CODEC_ID_OPUS) {
+                    if (config.opus_r128 && track.type == OPUS) {
                         // also show the Q7.8 number that goes into R128_ALBUM_GAIN
                         fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                             track.result.album_gain,

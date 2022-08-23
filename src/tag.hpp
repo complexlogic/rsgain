@@ -34,6 +34,14 @@
 #define FORMAT_PEAK(peak) fmt::format("{:.6f}", peak)
 #define GAIN_TO_Q78(gain) (int) std::round(gain * 256.f)
 
+#define RG_TAGS_UPPERCASE 0x1
+#define RG_TAGS_LOWERCASE 0x10
+#define R128_TAGS         0x100
+
+#define MP4_ATOM_STRING "----:com.apple.iTunes:"
+#define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
+#define tag_error(t) output_error("Couldn't write to: {}", t.path)
+
 void tag_track(Track &track, Config &config);
 void taglib_get_version(std::string &buffer);
 
