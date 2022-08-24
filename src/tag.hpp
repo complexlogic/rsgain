@@ -42,18 +42,16 @@
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
 #define tag_error(t) output_error("Couldn't write to: {}", t.path)
 
-#define TAGS_XIPH RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE
-
-void tag_track(Track &track, Config &config);
+void tag_track(Track &track, const Config &config);
 void taglib_get_version(std::string &buffer);
 
-static bool tag_mp3(Track &track, Config &config);
-static bool tag_flac(Track &track, Config &config);
+static bool tag_mp3(Track &track, const Config &config);
+static bool tag_flac(Track &track, const Config &config);
 template<typename T>
-static bool tag_ogg(Track &track, Config &config);
-static bool tag_mp4(Track &track, Config &config);
+static bool tag_ogg(Track &track, const Config &config);
+static bool tag_mp4(Track &track, const Config &config);
 template <typename T>
-static bool tag_apev2(Track &track, Config &config);
-static bool tag_wma(Track &track, Config &config);
+static bool tag_apev2(Track &track, const Config &config);
+static bool tag_wma(Track &track, const Config &config);
 template<typename T>
-static bool tag_riff(Track &track, Config &config);
+static bool tag_riff(Track &track, const Config &config);

@@ -357,7 +357,7 @@ void ScanData::update(ScanJob *job)
         return;
     }
     files += job->nb_files;
-    clippings_prevented += job->clippings_prevented;
+    clipping_adjustments += job->clipping_adjustments;
 }
 
 WorkerThread::WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data) :
@@ -544,18 +544,16 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
     std::stringstream file_ss;
     file_ss.imbue(std::locale(""));
     file_ss << std::fixed << scan_data.files;
-
     std::stringstream clip_ss;
     
-    fmt::print(COLOR_YELLOW "Files Scanned:" COLOR_OFF " {}\n", file_ss.str());
-
 #if CALC_TIME
     fmt::print(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  {}\n", time_string);
 #endif
-    if (scan_data.clippings_prevented) {
+    fmt::print(COLOR_YELLOW "Files Scanned:" COLOR_OFF " {}\n", file_ss.str());
+    if (scan_data.clipping_adjustments) {
         clip_ss.imbue(std::locale(""));
-        clip_ss << std::fixed << scan_data.clippings_prevented;
-        fmt::print(COLOR_YELLOW "Clippings Prevented: " COLOR_OFF "{} ({:.1f}% of files)\n", clip_ss.str(), 100.f * (float) scan_data.clippings_prevented / (float) scan_data.files);
+        clip_ss << std::fixed << scan_data.clipping_adjustments;
+        fmt::print(COLOR_YELLOW "Clipping Adjustments: " COLOR_OFF "{} ({:.1f}% of files)\n", clip_ss.str(), 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
     }
     fmt::print("\n");
 

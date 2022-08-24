@@ -22,10 +22,10 @@
 
 typedef struct ScanData {
     unsigned long files;
-    unsigned long clippings_prevented;
+    unsigned long clipping_adjustments;
     std::vector<std::string> error_directories;
 
-    ScanData(void) : files(0), clippings_prevented(0){};
+    ScanData(void) : files(0), clipping_adjustments(0){};
     void update(ScanJob *job);
 } ScanData;
 

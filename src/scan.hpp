@@ -51,29 +51,29 @@ typedef struct Track{
 
 	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL), tclip(false), aclip(false) {};
 	~Track();
-	bool scan(Config &config, std::mutex *ffmpeg_mutex);
-	int calculate_loudness(Config &config);
+	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
+	int calculate_loudness(const Config &config);
 } Track;
 
 class ScanJob {
 	private:
 		std::vector<Track> tracks;
 
-		void calculate_loudness(Config &config);
-		void calculate_album_loudness(Config &config);
-		void tag_tracks(Config &config);
+		void calculate_loudness(const Config &config);
+		void calculate_album_loudness(const Config &config);
+		void tag_tracks(const Config &config);
 
 	public:
 		FileType type;
 		int nb_files;
 		std::string path;
 		bool error;
-		int clippings_prevented;
+		int clipping_adjustments;
 
-		ScanJob() : nb_files(0), error(false), clippings_prevented(0) {};
+		ScanJob() : nb_files(0), error(false), clipping_adjustments(0) {};
 		int add_files(char **files, int nb_files);
 		FileType add_directory(std::filesystem::path &path);
-		bool scan(Config &config, std::mutex *ffmpeg_mutex = NULL);
+		bool scan(const Config &config, std::mutex *ffmpeg_mutex = NULL);
 };
 
 #endif

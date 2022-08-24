@@ -65,21 +65,21 @@
 #include "output.hpp"
 
 template<typename T>
-static void write_rg_tags(const ScanResult &result, Config &config, T&& write_tag);
+static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag);
 template<typename T, typename I>
 static void tag_clear_map(I&& tags, T&& clear);
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag);
-static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &config);
+static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, const Config &config);
 template<typename T>
 static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag);
 template<typename T>
-static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, ScanResult &result, Config &config);
+static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &result, const Config &config);
 static void tag_clear_mp4(TagLib::MP4::Tag *tag);
-static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &config);
+static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const Config &config);
 static void tag_clear_apev2(TagLib::APE::Tag *tag);
-static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &config);
+static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config);
 static void tag_clear_asf(TagLib::ASF::Tag *tag);
-static void tag_write_asf(TagLib::ASF::Tag *tag, ScanResult &result, Config &config);
+static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config);
 
 typedef enum {
     RG_TRACK_GAIN,
@@ -128,7 +128,7 @@ static const char *R128_STRING[] = {
 };
 static_assert(R128TAG_MAX_VAL == array_size(R128_STRING));
 
-void tag_track(Track &track, Config &config)
+void tag_track(Track &track, const Config &config)
 {
     switch (track.type) {
         case MP2:
@@ -144,8 +144,6 @@ void tag_track(Track &track, Config &config)
 
         case OGG:
             switch (track.codec_id) {
-                
-
                 case AV_CODEC_ID_OPUS:
                     if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
                         tag_error(track);
@@ -167,6 +165,7 @@ void tag_track(Track &track, Config &config)
                     break;
                 }
                 break;
+                
         case OPUS:
             if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
                 tag_error(track);
@@ -205,7 +204,7 @@ void tag_track(Track &track, Config &config)
 }
 
 template<typename T>
-static void write_rg_tags(const ScanResult &result, Config &config, T&& write_tag)
+static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag)
 {
     write_tag(RG_TRACK_GAIN, FORMAT_GAIN(result.track_gain));
     write_tag(RG_TRACK_PEAK, FORMAT_PEAK(result.track_peak));
@@ -215,7 +214,7 @@ static void write_rg_tags(const ScanResult &result, Config &config, T&& write_ta
     }
 }
 
-static bool tag_mp3(Track &track, Config &config)
+static bool tag_mp3(Track &track, const Config &config)
 {
     TagLib::MPEG::File file(track.path.c_str());
     TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
@@ -227,7 +226,7 @@ static bool tag_mp3(Track &track, Config &config)
     return file.save(TagLib::MPEG::File::ID3v2, false, config.id3v2version);
 }
 
-static bool tag_flac(Track &track, Config &config) 
+static bool tag_flac(Track &track, const Config &config) 
 {
     TagLib::FLAC::File file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = file.xiphComment(true);
@@ -239,7 +238,7 @@ static bool tag_flac(Track &track, Config &config)
 }
 
 template<typename T>
-static bool tag_ogg(Track &track, Config &config) {
+static bool tag_ogg(Track &track, const Config &config) {
     T file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = file.tag();
     tag_clear_xiph<T>(tag);
@@ -248,7 +247,7 @@ static bool tag_ogg(Track &track, Config &config) {
     return file.save();
 }
 
-static bool tag_mp4(Track &track, Config &config)
+static bool tag_mp4(Track &track, const Config &config)
 {
     TagLib::MP4::File file(track.path.c_str());
     TagLib::MP4::Tag *tag = file.tag();
@@ -260,7 +259,7 @@ static bool tag_mp4(Track &track, Config &config)
 }
 
 template <typename T>
-static bool tag_apev2(Track &track, Config &config)
+static bool tag_apev2(Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::APE::Tag *tag = file.APETag(true);
@@ -270,7 +269,7 @@ static bool tag_apev2(Track &track, Config &config)
     return file.save();
 }
 
-static bool tag_wma(Track &track, Config &config)
+static bool tag_wma(Track &track, const Config &config)
 {
     TagLib::ASF::File file(track.path.c_str());
     TagLib::ASF::Tag *tag = file.tag();
@@ -282,7 +281,7 @@ static bool tag_wma(Track &track, Config &config)
 }
 
 template<typename T>
-static bool tag_riff(Track &track, Config &config)
+static bool tag_riff(Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::ID3v2::Tag *tag;
@@ -341,7 +340,7 @@ static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
     }
 }
 
-static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &config)
+static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, const Config &config)
 {
     const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,
@@ -375,7 +374,7 @@ static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
 }
 
 template<typename T>
-static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, ScanResult &result, Config &config)
+static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &result, const Config &config)
 {
     const char **RG_STRING = RG_STRING_UPPER;
 
@@ -414,7 +413,7 @@ static void tag_clear_mp4(TagLib::MP4::Tag *tag)
     );
 }
 
-static void tag_write_mp4(TagLib::MP4::Tag *tag, ScanResult &result, Config &config) 
+static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const Config &config) 
 {
     const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,
@@ -436,7 +435,7 @@ static void tag_clear_apev2(TagLib::APE::Tag *tag)
     );
 }
 
-static void tag_write_apev2(TagLib::APE::Tag *tag, ScanResult &result, Config &config)
+static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config)
 {
     const char **RG_STRING = RG_STRING_UPPER;
     write_rg_tags(result,
@@ -456,7 +455,7 @@ static void tag_clear_asf(TagLib::ASF::Tag *tag)
     );
 }
 
-static void tag_write_asf(TagLib::ASF::Tag *tag, ScanResult &result, Config &config)
+static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config)
 {
     const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,

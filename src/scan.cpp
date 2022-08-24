@@ -152,7 +152,7 @@ int ScanJob::add_files(char **files, int nb_files)
     return this->nb_files ? 0 : 1;
 }
 
-bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
+bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
     for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
         error = track->scan(config, ffmpeg_mutex);
@@ -168,7 +168,7 @@ bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
     if (config.clip_mode != 'n') {
         for (Track &track : tracks) {
             if (track.aclip || track.tclip)
-                clippings_prevented++;
+                clipping_adjustments++;
         }
     }
 
@@ -182,7 +182,7 @@ Track::~Track()
         ebur128_destroy(&ebur128);
 }
 
-bool Track::scan(Config &config, std::mutex *m)
+bool Track::scan(const Config &config, std::mutex *m)
 {
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
@@ -435,7 +435,7 @@ end:
     return error;
 }
 
-void ScanJob::calculate_loudness(Config &config)
+void ScanJob::calculate_loudness(const Config &config)
 {
     // Track loudness calculations
     for (Track &track : tracks)
@@ -483,7 +483,7 @@ void ScanJob::calculate_loudness(Config &config)
     }
 }
 
-void ScanJob::tag_tracks(Config &config)
+void ScanJob::tag_tracks(const Config &config)
 {
     std::FILE *stream = NULL;
     if (config.tab_output != TYPE_NONE) {
@@ -572,7 +572,7 @@ void ScanJob::tag_tracks(Config &config)
         fclose(stream);
 }
 
-int Track::calculate_loudness(Config &config) {
+int Track::calculate_loudness(const Config &config) {
     unsigned channel = 0;
     double track_loudness, track_peak;
 
@@ -591,7 +591,7 @@ int Track::calculate_loudness(Config &config) {
     return 0;
 }
 
-void ScanJob::calculate_album_loudness(Config &config) {
+void ScanJob::calculate_album_loudness(const Config &config) {
     double album_loudness, album_peak;
     int nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
