@@ -42,6 +42,8 @@
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
 #define tag_error(t) output_error("Couldn't write to: {}", t.path)
 
+#define TAGS_XIPH RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE
+
 void tag_track(Track &track, Config &config);
 void taglib_get_version(std::string &buffer);
 

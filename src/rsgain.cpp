@@ -390,7 +390,7 @@ static inline void help_custom(void) {
     CMD_HELP("--tagmode=i", "-s i",  "Scan and write ReplayGain 2.0 tags to files");
     fmt::print("\n");
 
-    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
+    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
     fmt::print("\n");
 
     CMD_HELP("--clip-mode n", "-c n", "No clipping protection (default)");

@@ -355,7 +355,7 @@ static void tag_write_id3(TagLib::ID3v2::Tag *tag, ScanResult &result, Config &c
 
 template<typename T>
 static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
-{    
+{   
     if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
         tag_clear_map(RG_TAGS_UPPERCASE | R128_TAGS,
             [&](const char *t) {

@@ -4,6 +4,8 @@
 #define PRINT_LIB(lib, version) fmt::print("  " COLOR_YELLOW " {:<13}" COLOR_OFF " {}\n", lib, version);
 
 #define MATCH(x,y) !strcmp(x,y)
+#define STR_CAT(a) #a
+#define STR(a) STR_CAT(a)
 
 #define MAX_TARGET_LOUDNESS -5
 #define MIN_TARGET_LOUDNESS -30

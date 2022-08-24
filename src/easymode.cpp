@@ -37,7 +37,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -51,7 +51,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -107,7 +107,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -121,7 +121,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -135,7 +135,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -149,7 +149,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = TYPE_NONE,
-        .lowercase = true,
+        .lowercase = false,
         .id3v2version = 3,
         .opus_r128 = false
     },
@@ -245,6 +245,7 @@ void easy_mode(int argc, char *argv[])
             case 'o':
                 overrides_file = optarg;
                 break;
+
             case 'O':
                 for (Config &config : configs)
                     config.tab_output = TYPE_FILE;
@@ -264,8 +265,9 @@ static void convert_bool(const char *value, bool &setting)
 {
     if(MATCH(value, "True") || MATCH(value, "true")) {
         setting = true;
+        return;
     }
-    else if (MATCH(value, "False") || MATCH(value, "false")) {
+    if (MATCH(value, "False") || MATCH(value, "false")) {
         setting = false;
     }
 }
@@ -580,7 +582,7 @@ static inline void help_easy(void) {
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
     fmt::print("\n");
 
-    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (-30 ≤ n ≤ -5)");
+    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--override=p", "-o p", "Load override settings from path p");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");

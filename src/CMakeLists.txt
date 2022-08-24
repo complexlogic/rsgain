@@ -5,7 +5,7 @@ if (WIN32)
     ${FFMPEG_INCLUDE_DIRS} 
     ${TAGLIB_INCLUDE_DIR} 
     ${LIBEBUR128_INCLUDE_DIR}
-	${FMT_INCLUDE_DIR}
+	  ${FMT_INCLUDE_DIR}
     ${GETOPT_INCLUDE_DIR}
     ${INIH_INCLUDE_DIR} 
   )
@@ -13,7 +13,7 @@ if (WIN32)
     ${FFMPEG_LIBRARIES} 
     ${TAGLIB} 
     ${LIBEBUR128} 
-	${FMT}
+	  ${FMT}
     ${GETOPT}
     ${INIH}
   )
