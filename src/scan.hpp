@@ -8,7 +8,6 @@
 #include "scan.hpp"
 
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
-//#define LUFS_TO_RG(L) (-18 - L)
 
 typedef enum {
     INVALID = -1,

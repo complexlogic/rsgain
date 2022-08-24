@@ -154,14 +154,15 @@ int ScanJob::add_files(char **files, int nb_files)
 
 bool ScanJob::scan(Config &config, std::mutex *ffmpeg_mutex)
 {
-    if (config.tag_mode != 'd') {
-        for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
-            error = track->scan(config, ffmpeg_mutex);
-        }
-        if (error)
-            return true;
-        this->calculate_loudness(config);
+    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
+        error = track->scan(config, ffmpeg_mutex);
     }
+    if (error)
+        return true;
+
+    if (config.tag_mode != 'd')
+        this->calculate_loudness(config);
+
 
     // Collect clipping stats
     if (config.clip_mode != 'n') {
@@ -190,11 +191,11 @@ bool Track::scan(Config &config, std::mutex *m)
     std::string infotext;
     char infobuf[512];
     bool error = false;
-    bool output_progress = !quiet && !multithread;
+    bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
-    if (!multithread)
+    if (!multithread && config.tag_mode != 'd')
         output_ok("Scanning '{}'", path);
 
     // FFmpeg 5.0 workaround
@@ -223,7 +224,7 @@ bool Track::scan(Config &config, std::mutex *m)
     }
 
     container = format_ctx->iformat->name;
-    if (!multithread)
+    if (!multithread && config.tag_mode != 'd')
         output_ok("Container: {} [{}]", format_ctx->iformat->long_name, format_ctx->iformat->name);
 
     rc = avformat_find_stream_info(format_ctx, NULL);
@@ -263,6 +264,12 @@ bool Track::scan(Config &config, std::mutex *m)
         error = true;
         goto end;
     }
+    codec_id = codec->id;
+
+    // For delete tags mode, we don't need to actually scan the file, we ony
+    // needed the codec ID to know how to properly handle the file tagging
+    if (config.tag_mode == 'd')
+        goto end;
 
     // Try to get default channel layout
     if (!codec_ctx->channel_layout)
@@ -284,7 +291,7 @@ bool Track::scan(Config &config, std::mutex *m)
             codec_ctx->channels, 
             infobuf
         );
-    codec_id = codec->id;
+
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
