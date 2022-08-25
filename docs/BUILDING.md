@@ -10,32 +10,32 @@ rsgain builds natively on Unix and Windows, and features a cross-platform CMake 
 - fmt
 - inih
 
-rsgain uses the C++20 standard, and as such requires a relatively modern compiler to build:
+The source code is written in C++20, and as such requires a relatively modern compiler to build:
 - On Windows, use Visual Studio 2022
 - On Linux, use GCC 11 or later if possible. rsgain will also build with GCC 10, but the time elapsed statistical output will be disabled (no effect on core functionality). GCC versions 9 and earlier are not supported.
 - On macOS, the latest available Xcode for your machine should work.
 
 ## Unix
-Before starting, make sure you have the devlopment tools Git, CMake and pkg-config installed.
+Before starting, make sure you have the development tools Git, CMake and pkg-config installed.
 
 Install the required dependencies:
 
 ### APT-based Linux (Debian, Ubuntu, Mint etc.)
 ```
-sudo apt install libebur128-dev libtag1-dev libavformat-dev libavcodec-dev libswresample-dev libavutil-dev libinih-dev
+sudo apt install libebur128-dev libtag1-dev libavformat-dev libavcodec-dev libswresample-dev libavutil-dev libfmt-dev libinih-dev
 ```
 ### Pacman-based Linux (Arch, Manjaro, etc.)
 ```
-sudo pacman -S libebur128 taglib ffmpeg libinih
+sudo pacman -S libebur128 taglib ffmpeg fmt libinih
 ```
 ### DNF-based Linux (Fedora)
 FFmpeg is in the official repos in Fedora 36 and later only. If you're on an earlier version you will need to find an alternative source.
 ```
-sudo dnf install libebur128-devel taglib-devel libavformat-free-devel libavcodec-free-devel libswresample-free-devel libavutil-free-devel inih-devel
+sudo dnf install libebur128-devel taglib-devel libavformat-free-devel libavcodec-free-devel libswresample-free-devel libavutil-free-devel fmt-devel inih-devel
 ```
 ### macOS (Homebrew)
 ```
-brew install libebur128 taglib ffmpeg inih
+brew install libebur128 taglib ffmpeg fmt inih
 ```
 
 ### Building
@@ -60,8 +60,15 @@ sudo make install
 ```
 By default, this will install rsgain with a prefix of `/usr/local`. If you want a different prefix, re-run the CMake generation step with `-DCMAKE_INSTALL_PREFIX=prefix`.
 
+#### Deb Packages
+The build system includes support for .deb packages via CPack. Pass `-DPACKAGE=DEB` and `-DCMAKE_INSTALL_PREFIX=/usr` to cmake. Then, build the package with:
+```
+make package
+```
+By default, this will build a package for the amd64 architechture. To build the package for a different architecture, pass `-DCPACK_DEBIAN_PACKAGE_ARCHITECTURE=architecture` to cmake.
+
 ## Windows
-The Windows toolchain consists of Visual Studio and vcpkg in addition to Git and CMake. Before starting, make sure that Visual Studio is installed with C++ core desktop features and C++ CMake tools.
+The Windows toolchain consists of Visual Studio and vcpkg in addition to Git and CMake. Before starting, make sure that Visual Studio is installed with C++ core desktop features and C++ CMake tools. The free Community Edition is sufficient.
 
 Clone the master repo and create a build directory:
 ```
@@ -70,14 +77,9 @@ cd rsgain
 mkdir build
 cd build
 ```
-Build the dependencies with vcpkg:
+Build the dependencies and generate the Visual Studio project files:
 ```
 git clone https://github.com/microsoft/vcpkg
-.\vcpkg\bootstrap-vcpkg.bat -disableMetrics
-.\vcpkg\vcpkg install taglib libebur128 getopt inih ffmpeg[avcodec,avformat,swresample] --triplet=x64-windows
-```
-Generate the Visual Studio project files:
-```
 cmake .. -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake" -DVCPKG_TARGET_TRIPLET="x64-windows"
 ```
 Build and test the program:

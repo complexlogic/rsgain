@@ -1,3 +1,34 @@
+Unreleased
+- Massive internal rewrite:
+    - Source code is now purely C++ instead of mixed C/C++
+    - Output and text formating now utilize the fmt library, which is safer and typically faster than C stdio implementations
+- Easy mode multithreaded now generates scan jobs per-directory instead of per-file, which provides an approximately 15% performance boost due to reduced thread idling time
+- Fixed a critical bug inherited from loudgain where the program segfaults when trying to delete tags from M4A or WMA files
+- Added -t option which allows users to choose between sample peak and true peak for peak calculations
+- Added -O option in Easy Mode which outputs a .csv spreadsheet scan log in every scanned directory 
+- Write uppercase tags by default for all tag types in Easy Mode
+- Optimized scan progress bar, resulting in signifcant speed boost for Windows single threaded scanning
+- Removed options that enabled non-standard behavior:
+  - -s e option which wrote non-standard REPLAYGAIN_REFERENCE_LOUDNESS and REPLAYGAIN_*_RANGE tags
+  - -s l option which wrote non-standard LU units to *_GAIN tags instead of dB
+- Changed how target loudness is specified:
+  - Removed -d option which specified a "pre-gain" from -18 LUFS
+  - Replaced with -l option which allows the user to specify the target loudness directly in LUFS
+- Write ID3v2.3 tags by default in Custom Mode
+- Added -m MAX option to use the maximum concurrent threads value provided by the OS
+- Changed clipping protection:
+  - Now specified with 3 choice character option instead of a boolean
+  - Old -k functionality is now -k a
+  - New -k p functionality only provides clipping protection for positive gain values, which is now the default in Easy Mode
+- Added global target loudness option -l in Easy Mode
+- Windows: Added resource file containing VERSIONINFO
+- Removed strip tags option (-S)
+- Changed default behavior for Opus files:
+  - Write standard ReplayGain tags by default instead of RFC 7845 R128_*_GAIN tags
+  - Keep default loudness at -18 LUFS
+  - Introduce -o option which writes the RFC 7845 for users that need it
+
+
 v2.0.1 (2022-5-18)
 - Set max thread sleep period to prevent hanging in multithreaded mode
 

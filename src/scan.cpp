@@ -266,8 +266,8 @@ bool Track::scan(const Config &config, std::mutex *m)
     }
     codec_id = codec->id;
 
-    // For delete tags mode, we don't need to actually scan the file, we ony
-    // needed the codec ID to know how to properly handle the file tagging
+    // For delete tags mode, we don't need to actually scan the file, we only
+    // need the codec id to know how to properly handle the file tagging
     if (config.tag_mode == 'd')
         goto end;
 
@@ -539,7 +539,8 @@ void ScanJob::tag_tracks(const Config &config)
                         GAIN_TO_Q78(track.result.track_gain),
                         track.tclip ? " (adjusted to prevent clipping)" : ""
                     );
-                } else {
+                } 
+                else {
                     fmt::print(" Gain:     {:8.2f} dB{}\n", 
                         track.result.track_gain, 
                         track.tclip ? " (adjusted to prevent clipping)" : ""
