@@ -163,7 +163,6 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
     if (config.tag_mode != 'd')
         this->calculate_loudness(config);
 
-
     // Collect clipping stats
     if (config.clip_mode != 'n') {
         for (Track &track : tracks) {
@@ -176,7 +175,7 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
     return false;
 }
 
-Track::~Track()
+void Track::free_ebur128()
 {
     if (ebur128 != NULL)
         ebur128_destroy(&ebur128);
@@ -438,8 +437,16 @@ end:
 void ScanJob::calculate_loudness(const Config &config)
 {
     // Track loudness calculations
-    for (Track &track : tracks)
-        track.calculate_loudness(config);
+    for (auto track = tracks.begin(); track != tracks.end();) {
+        if (track->calculate_loudness(config)) {
+            track->free_ebur128();
+            tracks.erase(track);
+            nb_files--;
+        }
+        else {
+            ++track;
+        }
+    }
 
     // Album loudness calculations
     if (config.do_album)
@@ -481,6 +488,10 @@ void ScanJob::calculate_loudness(const Config &config)
             }
         }
     }
+
+    // Delete ebur128 states
+    for (Track &track : tracks)
+        track.free_ebur128();
 }
 
 void ScanJob::tag_tracks(const Config &config)
@@ -582,6 +593,10 @@ void ScanJob::update_data(ScanData &data)
     data.files += nb_files;
     data.clipping_adjustments += clipping_adjustments;
     for (const Track &track : tracks) {
+        if (isnan(track.result.track_gain)) {
+            fmt::print("Track {} failed!\n", track.path);
+            quit(EXIT_FAILURE);
+        }
         data.total_gain += track.result.track_gain;
         data.total_peak += track.result.track_peak;
         track.result.track_gain < 0.f ? data.total_negative++ : data.total_positive++;
@@ -594,6 +609,9 @@ int Track::calculate_loudness(const Config &config) {
 
     if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
         track_loudness = config.target_loudness;
+
+    if (track_loudness == -HUGE_VAL) // Don't bother tagging silent tracks
+        return 1;
 
     std::vector<double> peaks(ebur128->channels);
     int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;

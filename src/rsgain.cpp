@@ -349,8 +349,8 @@ static void help_main(void) {
 
     fmt::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
     fmt::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), OPUS (.opus), MP2 (.mp2),\n");
-    fmt::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape).\n");
-    fmt::print("  Experimental: WAV (.wav), AIFF (.aiff, .aif, .snd).\n");
+    fmt::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
+    fmt::print("  WAV (.wav), and AIFF (.aiff, .aif, .snd).\n");
 
     fmt::print("\n");
     fmt::print(COLOR_RED "Options:\n" COLOR_OFF);
@@ -469,17 +469,18 @@ static void version(void) {
     fmt::print("Built with:\n");
     PRINT_LIB("taglib", taglib_version);
     fmt::print("\n");
+
 #ifdef __GNUC__
-    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   GCC {}.{}\n", __GNUC__, __GNUC_MINOR__);
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " GCC {}.{}\n", "Compiler:", __GNUC__, __GNUC_MINOR__);
 #endif
 
 #ifdef __clang__
-    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   Clang {}.{}.{}\n", __clang_major__, __clang_minor__, __clang_patchlevel__);
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Clang {}.{}.{}\n", "Compiler:", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #endif
 
 #ifdef _MSC_VER
-    fmt::print(COLOR_YELLOW "Compiler:" COLOR_OFF "   Microsoft C/C++ {:.2f}\n", (float) _MSC_VER / 100.0f);
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Microsoft C/C++ {:.2f}\n", "Compiler:", (float) _MSC_VER / 100.0f);
 #endif
 
-    fmt::print(COLOR_YELLOW "Build date:" COLOR_OFF " " __DATE__ "\n");
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " " __DATE__ "\n", "Build Date:");
 }

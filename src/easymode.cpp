@@ -441,6 +441,8 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
         if (entry.is_directory())
             directories.push_back(entry.path());
     }
+    int num_directories = directories.size();
+    output_ok("Found {} directories...", num_directories);
 
     // Multithread scannning
     if (multithread) {
@@ -455,6 +457,9 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
             worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
 
         ScanJob *job;
+
+        //fmt::print("\n" COLOR_YELLOW "Scanning with {} threads\n", threads);
+        output_ok("Scanning with {} threads...", threads);
         while (directories.size()) {
             job = new ScanJob();
             std::filesystem::path &dir = directories.front();
@@ -467,7 +472,8 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
                         job_placed = (*wt)->add_job(job);
                     }
                     if (job_placed) {
-                        output_ok("Scanning directory '{}'", dir.string());
+                        //output_ok("Scanning directory '{}'", dir.string());
+                        easymode_progress(dir.string(), num_directories - directories.size(), num_directories);
                     }
 
                     // Wait until one of the worker threads informs that us that it is ready for a new job
@@ -490,6 +496,7 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
             if (worker_threads.size())
                 main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
         }
+        fmt::print("\33[2K\n");
     }
     
     // Single threaded scanning
@@ -552,8 +559,8 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
 
     HELP_STATS("Files Scanned", "{}", file_str);
     HELP_STATS("Clip Adjustments", "{} ({:.1f}% of files)", clip_str, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
-    HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / scan_data.files);
-    double average_peak = scan_data.total_peak / scan_data.files;
+    HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / (double) scan_data.files);
+    double average_peak = scan_data.total_peak / (double) scan_data.files;
     HELP_STATS("Average Peak", "{:.6f} ({:.2f} dB)", average_peak, 20.0 * log10(average_peak));
     HELP_STATS("Negative Gains", "{} ({:.1f}% of files)", negative_gain_str, 100.f * (float) scan_data.total_negative / (float) scan_data.files);
     HELP_STATS("Positive Gains", "{} ({:.1f}% of files)", positive_gain_str, 100.f * (float) scan_data.total_positive / (float) scan_data.files);

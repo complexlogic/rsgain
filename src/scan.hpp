@@ -62,7 +62,7 @@ typedef struct Track{
 	bool aclip;
 
 	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL), tclip(false), aclip(false) {};
-	~Track();
+	void free_ebur128();
 	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 	int calculate_loudness(const Config &config);
 } Track;
@@ -77,8 +77,8 @@ class ScanJob {
 
 	public:
 		FileType type;
-		int nb_files;
 		std::string path;
+		int nb_files;
 		bool error;
 		int clipping_adjustments;
 

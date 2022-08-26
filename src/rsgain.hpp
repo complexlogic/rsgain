@@ -1,7 +1,7 @@
 #define CMD_HELP(CMDL, CMDS, MSG) fmt::print("  {}{:<5} {:<18}{}  {}.\n", COLOR_YELLOW, CMDS ",", CMDL, COLOR_OFF, MSG);
 #define CMD_CMD(CMD, MSG) fmt::print("  {}{:<22}{}  {}.\n", COLOR_YELLOW, CMD, COLOR_OFF, MSG);
 #define CMD_CONT(MSG) fmt::print("  {}{:<5} {:<18}{}  {}.\n", COLOR_YELLOW, "", "", COLOR_OFF, MSG);
-#define PRINT_LIB(lib, version) fmt::print("  " COLOR_YELLOW " {:<13}" COLOR_OFF " {}\n", lib, version);
+#define PRINT_LIB(lib, version) fmt::print("  " COLOR_YELLOW " {:<14}" COLOR_OFF " {}\n", lib, version);
 
 #define MATCH(x,y) !strcmp(x,y)
 #define STR_CAT(a) #a
