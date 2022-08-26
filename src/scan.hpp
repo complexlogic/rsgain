@@ -39,6 +39,18 @@ typedef struct ScanResult {
 	double album_loudness;
 } ScanResult;
 
+typedef struct ScanData {
+    unsigned int files;
+    unsigned int clipping_adjustments;
+    double total_gain;
+    double total_peak;
+    unsigned int total_negative;
+    unsigned int total_positive;
+    std::vector<std::string> error_directories;
+
+    ScanData(void) : files(0), clipping_adjustments(0), total_gain(0.f), total_peak(0.f), total_positive(0), total_negative(0){};
+} ScanData;
+
 typedef struct Track{
 	std::string path;
 	FileType type;
@@ -74,6 +86,7 @@ class ScanJob {
 		int add_files(char **files, int nb_files);
 		FileType add_directory(std::filesystem::path &path);
 		bool scan(const Config &config, std::mutex *ffmpeg_mutex = NULL);
+		void update_data(ScanData &data);
 };
 
 #endif

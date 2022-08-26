@@ -11,6 +11,7 @@
 #include <chrono>
 #include <iomanip>
 #include <locale>
+#include <math.h>
 #include <string.h>
 #include <stdio.h>
 #include <ini.h>
@@ -350,16 +351,6 @@ static void load_overrides(const char *overrides_file)
     }
 }
 
-void ScanData::update(ScanJob *job)
-{
-    if (job->error) {
-        error_directories.push_back(job->path);
-        return;
-    }
-    files += job->nb_files;
-    clipping_adjustments += job->clipping_adjustments;
-}
-
 WorkerThread::WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data) :
 ffmpeg_mutex(ffmpeg_mutex), main_mutex(main_mutex), main_cv(main_cv), scan_data(scan_data), quit(false), finished(false), job(NULL)
 {
@@ -393,7 +384,7 @@ void WorkerThread::work()
 
             // Inform the main thread that the scanning is finished
             main_lock.lock();
-            scan_data.update(job);
+            job->update_data(scan_data);
             delete job;
             job = NULL;
             main_lock.unlock();
@@ -509,7 +500,7 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
             if ((file_type = job.add_directory(directories.front())) != INVALID) {
                 output_ok("Scanning directory: '{}'", job.path);
                 job.scan(configs[file_type]);
-                scan_data.update(&job);
+                job.update_data(scan_data);
             }
             directories.pop_front();
         }
@@ -540,21 +531,33 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
     }
 #endif
 
-    // Format file and clip strings
-    std::stringstream file_ss;
-    file_ss.imbue(std::locale(""));
-    file_ss << std::fixed << scan_data.files;
-    std::stringstream clip_ss;
+    auto format_number = [](std::string &string, unsigned int value) {
+        std::stringstream ss;
+        ss.imbue(std::locale(""));
+        ss << std::fixed << value;
+        string = ss.str();
+    };
+    std::string file_str;
+    std::string clip_str;
+    std::string negative_gain_str;
+    std::string positive_gain_str;
+    format_number(file_str, scan_data.files);
+    format_number(negative_gain_str, scan_data.total_negative);
+    format_number(positive_gain_str, scan_data.total_positive);
+    format_number(clip_str, scan_data.clipping_adjustments);
     
 #if CALC_TIME
-    fmt::print(COLOR_YELLOW "Time Elapsed:" COLOR_OFF "  {}\n", time_string);
+    HELP_STATS("Time Elapsed", "{}", time_string);
 #endif
-    fmt::print(COLOR_YELLOW "Files Scanned:" COLOR_OFF " {}\n", file_ss.str());
-    if (scan_data.clipping_adjustments) {
-        clip_ss.imbue(std::locale(""));
-        clip_ss << std::fixed << scan_data.clipping_adjustments;
-        fmt::print(COLOR_YELLOW "Clipping Adjustments: " COLOR_OFF "{} ({:.1f}% of files)\n", clip_ss.str(), 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
-    }
+
+    HELP_STATS("Files Scanned", "{}", file_str);
+    HELP_STATS("Clip Adjustments", "{} ({:.1f}% of files)", clip_str, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
+    HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / scan_data.files);
+    double average_peak = scan_data.total_peak / scan_data.files;
+    HELP_STATS("Average Peak", "{:.6f} ({:.2f} dB)", average_peak, 20.0 * log10(average_peak));
+    HELP_STATS("Negative Gains", "{} ({:.1f}% of files)", negative_gain_str, 100.f * (float) scan_data.total_negative / (float) scan_data.files);
+    HELP_STATS("Positive Gains", "{} ({:.1f}% of files)", positive_gain_str, 100.f * (float) scan_data.total_positive / (float) scan_data.files);
+
     fmt::print("\n");
 
     // Inform user of errors

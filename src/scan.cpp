@@ -573,6 +573,21 @@ void ScanJob::tag_tracks(const Config &config)
         fclose(stream);
 }
 
+void ScanJob::update_data(ScanData &data)
+{
+    if (error) {
+        data.error_directories.push_back(path);
+        return;
+    }
+    data.files += nb_files;
+    data.clipping_adjustments += clipping_adjustments;
+    for (const Track &track : tracks) {
+        data.total_gain += track.result.track_gain;
+        data.total_peak += track.result.track_peak;
+        track.result.track_gain < 0.f ? data.total_negative++ : data.total_positive++;
+    }
+}
+
 int Track::calculate_loudness(const Config &config) {
     unsigned channel = 0;
     double track_loudness, track_peak;

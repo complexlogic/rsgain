@@ -4,6 +4,7 @@
 #include <mutex>
 #include <filesystem>
 #include <condition_variable>
+#include <fmt/core.h>
 #include "scan.hpp"
 
 #ifdef __GNUC__
@@ -20,14 +21,7 @@
 #define MAX_THREAD_SLEEP 30
 #define MAX_THREADS -1
 
-typedef struct ScanData {
-    unsigned long files;
-    unsigned long clipping_adjustments;
-    std::vector<std::string> error_directories;
-
-    ScanData(void) : files(0), clipping_adjustments(0){};
-    void update(ScanJob *job);
-} ScanData;
+#define HELP_STATS(title, format, ...) fmt::print(COLOR_YELLOW "{:<20} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
 
 class WorkerThread {
 
