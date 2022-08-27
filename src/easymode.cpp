@@ -189,8 +189,8 @@ static Config configs[] = {
 void easy_mode(int argc, char *argv[])
 {
     int rc, i;
-    char *overrides_file = NULL;
-    const char *short_opts = "+hql:m:o:O";
+    char *preset_file = NULL;
+    const char *short_opts = "+hql:m:p:O";
     int threads = 1;
     static struct option long_opts[] = {
         { "help",         no_argument,       NULL, 'h' },
@@ -199,7 +199,7 @@ void easy_mode(int argc, char *argv[])
         { "loudness",     required_argument, NULL, 'l' },
 
         { "multithread",  required_argument, NULL, 'm' },
-        { "override",     required_argument, NULL, 'o' },
+        { "preset",       required_argument, NULL, 'p' },
         { "output",       required_argument, NULL, 'O' },
         { 0, 0, 0, 0 }
     };
@@ -244,8 +244,8 @@ void easy_mode(int argc, char *argv[])
                 }
                 break;
             
-            case 'o':
-                overrides_file = optarg;
+            case 'p':
+                preset_file = optarg;
                 break;
 
             case 'O':
@@ -260,7 +260,7 @@ void easy_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
 
-    scan_easy(argv[optind], overrides_file, threads);
+    scan_easy(argv[optind], preset_file, threads);
 }
 
 static void convert_bool(const char *value, bool &setting)
@@ -276,7 +276,7 @@ static void convert_bool(const char *value, bool &setting)
 
 static inline FileType determine_section_type(const std::string &section)
 {
-    static const struct overrides_section sections[] {
+    static const struct preset_section sections[] {
         {"MP2",     MP2},
         {"MP3",     MP3},
         {"FLAC",    FLAC},
@@ -332,23 +332,22 @@ int handler(void *user, const char *section, const char *name, const char *value
     return 0;
 }
 
-// Override the default easy mode settings
-static void load_overrides(const char *overrides_file)
+static void load_preset(const char *preset_file)
 {
-    std::filesystem::path path((char8_t*) overrides_file);
+    std::filesystem::path path((char8_t*) preset_file);
     if (!std::filesystem::exists(path)) {
-        output_error("Overrides file '{}' does not exist\n", overrides_file);
+        output_error("Preset file '{}' does not exist\n", preset_file);
         return;
     }
     if (!std::filesystem::is_regular_file(path)) {
-        output_error("Overrides file '{}' is not valid\n", overrides_file);
+        output_error("Preset file '{}' is not valid\n", preset_file);
         return;
     }
 
     // Parse file
-    output_ok("Applying overrides");
-    if (ini_parse(overrides_file, handler, NULL) < 0) {
-        output_error("Failed to load overrides file '{}'\n", overrides_file);
+    output_ok("Applying preset");
+    if (ini_parse(preset_file, handler, NULL) < 0) {
+        output_error("Failed to load preset file '{}'\n", preset_file);
     }
 }
 
@@ -411,7 +410,7 @@ bool WorkerThread::wait()
     return true;
 }
 
-void scan_easy(const char *directory, const char *overrides_file, int threads)
+void scan_easy(const char *directory, const char *preset_file, int threads)
 {
     std::filesystem::path path(directory);
     ScanData scan_data;
@@ -426,9 +425,9 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
         quit(EXIT_FAILURE);
     }
 
-    // Load overrides
-    if (overrides_file != NULL) {
-        load_overrides(overrides_file);
+    // Load preset
+    if (preset_file != NULL) {
+        load_preset(preset_file);
     }
 
     // Record start time
@@ -443,7 +442,8 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
             directories.push_back(entry.path());
     }
     int num_directories = directories.size();
-    output_ok("Found {} directories...", num_directories);
+    std::locale::global(std::locale(""));
+    output_ok("Found {:L} directories...", num_directories);
 
     // Multithread scannning
     if (multithread) {
@@ -489,7 +489,13 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
         // Wait for worker threads to finish scanning
         while (worker_threads.size()) {
             for (auto wt = worker_threads.begin(); wt != worker_threads.end();)
-                (*wt)->wait() ? worker_threads.erase(wt) : ++wt;
+                if((*wt)->wait()) {
+                    delete *wt;
+                    worker_threads.erase(wt);
+                }
+                else {
+                    ++wt;
+                }
 
             if (worker_threads.size())
                 main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
@@ -518,51 +524,31 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
     }
     fmt::print(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
 
-    // Calculate time (not available in GCC 10 and earlier)
-#if CALC_TIME
+    // Format time string
+    int s = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
+    int h = s / 3600;
+    s -= h * 3600;
+    int m = s / 60;
+    s -= m * 60;
     std::string time_string;
-    std::chrono::hh_mm_ss elapsed(end_time - start_time);
-    int h = elapsed.hours().count();
-    int m = elapsed.minutes().count();
-    int s = elapsed.seconds().count();
     if (h) {
-        time_string = std::to_string(h) + "h " + std::to_string(m) + "m";
+        time_string = fmt::format("{}h {}m", h, m);
     }
     else if (m) {
-        time_string = std::to_string(m) + "m " + std::to_string(s) + "s";
+        time_string = fmt::format("{}m {}s", m, s);
     }
     else {
-        time_string = std::to_string(s) + "s";
+        time_string = fmt::format("{}s", s);
     }
-#endif
 
-    auto format_number = [](std::string &string, unsigned int value) {
-        std::stringstream ss;
-        ss.imbue(std::locale(""));
-        ss << std::fixed << value;
-        string = ss.str();
-    };
-    std::string file_str;
-    std::string clip_str;
-    std::string negative_gain_str;
-    std::string positive_gain_str;
-    format_number(file_str, scan_data.files);
-    format_number(negative_gain_str, scan_data.total_negative);
-    format_number(positive_gain_str, scan_data.total_positive);
-    format_number(clip_str, scan_data.clipping_adjustments);
-    
-#if CALC_TIME
     HELP_STATS("Time Elapsed", "{}", time_string);
-#endif
-
-    HELP_STATS("Files Scanned", "{}", file_str);
-    HELP_STATS("Clip Adjustments", "{} ({:.1f}% of files)", clip_str, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
+    HELP_STATS("Files Scanned", "{:L}", scan_data.files);
+    HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", scan_data.clipping_adjustments, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
     HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / (double) scan_data.files);
     double average_peak = scan_data.total_peak / (double) scan_data.files;
     HELP_STATS("Average Peak", "{:.6f} ({:.2f} dB)", average_peak, 20.0 * log10(average_peak));
-    HELP_STATS("Negative Gains", "{} ({:.1f}% of files)", negative_gain_str, 100.f * (float) scan_data.total_negative / (float) scan_data.files);
-    HELP_STATS("Positive Gains", "{} ({:.1f}% of files)", positive_gain_str, 100.f * (float) scan_data.total_positive / (float) scan_data.files);
-
+    HELP_STATS("Negative Gains", "{:L} ({:.1f}% of files)", scan_data.total_negative, 100.f * (float) scan_data.total_negative / (float) scan_data.files);
+    HELP_STATS("Positive Gains", "{:L} ({:.1f}% of files)", scan_data.total_positive, 100.f * (float) scan_data.total_positive / (float) scan_data.files);
     fmt::print("\n");
 
     // Inform user of errors
@@ -590,7 +576,7 @@ static inline void help_easy(void) {
 
     CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
-    CMD_HELP("--override=p", "-o p", "Load override settings from path p");
+    CMD_HELP("--preset=p", "-p p", "Load scan preset from path p");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
 
     fmt::print("\n");

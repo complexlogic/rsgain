@@ -87,15 +87,13 @@ add_subdirectory(src)
 
 # Installation - Windows
 if (WIN32)
-  #set(X_VCPKG_APPLOCAL_DEPS_INSTALL ON)
-  #install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ".")
   install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")
   configure_file(${PROJECT_SOURCE_DIR}/CHANGELOG ${PROJECT_BINARY_DIR}/CHANGELOG.txt)
   install(FILES ${PROJECT_BINARY_DIR}/CHANGELOG.txt DESTINATION ".")
   configure_file(${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_BINARY_DIR}/LICENSE.txt)
   install(FILES ${PROJECT_BINARY_DIR}/LICENSE.txt DESTINATION ".")
-  configure_file(${PROJECT_SOURCE_DIR}/config/overrides.ini ${PROJECT_BINARY_DIR}/overrides.ini)
-  install(FILES ${PROJECT_BINARY_DIR}/overrides.ini DESTINATION ".")
+  configure_file(${PROJECT_SOURCE_DIR}/config/default.ini ${PROJECT_BINARY_DIR}default.ini)
+  install(FILES ${PROJECT_BINARY_DIR}/default.ini DESTINATION ".")
   
   # Copy the VC Runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
@@ -118,7 +116,7 @@ if (WIN32)
 # Installation - Linux/Mac
 elseif (UNIX)
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-  install(FILES ${PROJECT_SOURCE_DIR}/config/overrides.ini DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE})
+  install(FILES ${PROJECT_SOURCE_DIR}/config/default.ini DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE})
   
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")

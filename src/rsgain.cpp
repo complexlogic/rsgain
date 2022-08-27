@@ -343,7 +343,6 @@ int main(int argc, char *argv[]) {
     quit(EXIT_SUCCESS);
 }
 
-
 static void help_main(void) {
     fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
