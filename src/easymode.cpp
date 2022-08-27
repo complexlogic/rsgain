@@ -25,6 +25,7 @@
 
 static inline void help_easy(void);
 bool multithread = false;
+extern ProgressBar progress_bar;
 
 // Default configs
 static Config configs[] = {
@@ -457,8 +458,6 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
             worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
 
         ScanJob *job;
-
-        //fmt::print("\n" COLOR_YELLOW "Scanning with {} threads\n", threads);
         output_ok("Scanning with {} threads...", threads);
         while (directories.size()) {
             job = new ScanJob();
@@ -472,8 +471,7 @@ void scan_easy(const char *directory, const char *overrides_file, int threads)
                         job_placed = (*wt)->add_job(job);
                     }
                     if (job_placed) {
-                        //output_ok("Scanning directory '{}'", dir.string());
-                        easymode_progress(dir.string(), num_directories - directories.size(), num_directories);
+                        multithread_progress(dir.string(), num_directories - directories.size(), num_directories);
                     }
 
                     // Wait until one of the worker threads informs that us that it is ready for a new job

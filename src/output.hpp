@@ -70,8 +70,8 @@ extern int quiet;
 
 #define output_ok(format, ...)    if (!quiet) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 #define output_warn(format, ...)  if (!quiet) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_error(format, ...) if (!quiet) fmt::print(ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_fail(format, ...)  if (!quiet) fmt::print(FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) fmt::print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...)  fmt::print(stderr, FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
 class ProgressBar {
     private:

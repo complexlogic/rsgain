@@ -21,8 +21,8 @@
 #define MAX_THREAD_SLEEP 30
 #define MAX_THREADS -1
 
-#define HELP_STATS(title, format, ...) fmt::print(COLOR_YELLOW "{:<20} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
-#define easymode_progress(name, cur, total) if (!quiet) fmt::print("\33[2K " COLOR_GREEN "{:5.1f}%" COLOR_OFF " Scanning directory '{}'...\r", 100.f * ((float) (cur) / (float) (total)), name); fflush(stdout)
+#define HELP_STATS(title, format, ...) fmt::print(COLOR_YELLOW "{:<18} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
+#define multithread_progress(name, cur, total) if (!quiet) fmt::print("\33[2K " COLOR_GREEN "{:5.1f}%" COLOR_OFF " Scanning directory '{}'...\r", 100.f * ((float) (cur) / (float) (total)), name); fflush(stdout)
 class WorkerThread {
 
     public:
