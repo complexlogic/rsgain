@@ -14,6 +14,7 @@ project(rsgain
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "rsgain")
 include_directories(${PROJECT_BINARY_DIR})
+add_compile_definitions("$<$<CONFIG:DEBUG>:DEBUG>")
 
 # GCC 9 and earlier are not supported due to C++20 features
 if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 10)
@@ -24,8 +25,6 @@ endif ()
 if (WIN32)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${EXECUTABLE_TITLE})
 endif ()
-
-configure_file("${PROJECT_SOURCE_DIR}/config/config.h.in" "${PROJECT_BINARY_DIR}/config.h")
 
 # Find dependencies - Windows
 if (WIN32)
@@ -116,7 +115,9 @@ if (WIN32)
 # Installation - Linux/Mac
 elseif (UNIX)
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION ${CMAKE_INSTALL_PREFIX}/bin)
-  install(FILES ${PROJECT_SOURCE_DIR}/config/default.ini DESTINATION ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE})
+
+  set(PRESETS_DIR ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE}/presets)
+  install(FILES ${PROJECT_SOURCE_DIR}/config/default.ini DESTINATION ${PRESETS_DIR})
   
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")
@@ -148,6 +149,8 @@ elseif (UNIX)
           COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
   endif()
 endif()
+
+configure_file("${PROJECT_SOURCE_DIR}/config/config.h.in" "${PROJECT_BINARY_DIR}/config.h")
 
 
 

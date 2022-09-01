@@ -152,16 +152,27 @@ int ScanJob::add_files(char **files, int nb_files)
     return this->nb_files ? 0 : 1;
 }
 
+inline void ScanJob::free_ebur128()
+{
+    for (Track &track : tracks)
+        track.free_ebur128();
+}
+
 bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
     for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
         error = track->scan(config, ffmpeg_mutex);
     }
-    if (error)
-        return true;
 
+    if (error) {
+        this->free_ebur128();
+        return true;
+    }
+
+    
     if (config.tag_mode != 'd')
         this->calculate_loudness(config);
+    this->free_ebur128();
 
     // Collect clipping stats
     if (config.clip_mode != 'n') {
@@ -185,7 +196,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 {
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
-    uint8_t *swr_out_data = NULL;
+    uint8_t *swr_out_data[1];
     int ebur128_flags;
     std::string infotext;
     char infobuf[512];
@@ -360,18 +371,8 @@ bool Track::scan(const Config &config, std::mutex *m)
     while (av_read_frame(format_ctx, packet) >= 0) {
         if (packet->stream_index == stream_id) {
             rc = avcodec_send_packet(codec_ctx, packet);
-            if (rc < 0) {
-                continue;
-            }
-
             while (rc >= 0) {
                 rc = avcodec_receive_frame(codec_ctx, frame);
-                if (rc == AVERROR(EAGAIN) || rc == AVERROR_EOF)
-                    break;
-
-                else if (rc < 0)
-                    break;
-
                 if (rc >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
@@ -379,36 +380,40 @@ bool Track::scan(const Config &config, std::mutex *m)
                     if (swr != NULL) {
                         size_t out_size;
                         int  out_linesize;
+                        
                         out_size = av_samples_get_buffer_size(&out_linesize, 
                                         frame->channels, 
                                         frame->nb_samples, 
-                                        AV_SAMPLE_FMT_S16, 
+                                        OUTPUT_FORMAT, 
                                         0
                                    );
+                        swr_out_data[0] = (uint8_t*) av_malloc(out_size);
 
-                        swr_out_data = (uint8_t*) av_malloc(out_size);
-                        if (swr_convert(swr, (uint8_t**) &swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
+                        if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                             output_error("Could not convert frame");
                             error = true;
-                            av_free(swr_out_data);
+                            av_free(swr_out_data[0]);
                             goto end;
                         }
+                        
                         rc = ebur128_add_frames_short(ebur128, 
-                                 (short *) swr_out_data, 
+                                 (short*) swr_out_data[0], 
                                  frame->nb_samples
                              );
-                        av_free(swr_out_data);
+                             
+                        av_free(swr_out_data[0]);                        
                     }
                     else {
-                        ebur128_add_frames_short(ebur128, (short *) frame->data[0], frame->nb_samples);
+                        ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
                     }
+                    
                     if (pos >= 0 && output_progress)
                         progress_bar.update(pos);
                 }
+                av_frame_unref(frame);
             }
-            av_frame_unref(frame);
         }
-    av_packet_unref(packet);
+        av_packet_unref(packet);
     }
 
     // Make sure the progress bar finishes at 100%
@@ -427,8 +432,11 @@ end:
         swr_free(&swr);
     }
 
-    avcodec_close(codec_ctx);
-    avformat_close_input(&format_ctx);
+    if (codec_ctx != NULL)
+        avcodec_free_context(&codec_ctx);
+
+    if (format_ctx != NULL)
+        avformat_close_input(&format_ctx);
     
     delete lk;
     return error;
@@ -488,10 +496,6 @@ void ScanJob::calculate_loudness(const Config &config)
             }
         }
     }
-
-    // Delete ebur128 states
-    for (Track &track : tracks)
-        track.free_ebur128();
 }
 
 void ScanJob::tag_tracks(const Config &config)
@@ -624,6 +628,7 @@ int Track::calculate_loudness(const Config &config) {
     result.track_loudness       = track_loudness;
     return 0;
 }
+
 
 void ScanJob::calculate_album_loudness(const Config &config) {
     double album_loudness, album_peak;

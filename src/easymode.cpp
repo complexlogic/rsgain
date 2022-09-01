@@ -11,21 +11,35 @@
 #include <chrono>
 #include <iomanip>
 #include <locale>
+#include <initializer_list>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdlib.h>
+#ifdef _WIN32
+#include <windows.h>
+#endif
 #include <ini.h>
 #include <getopt.h>
 #include <fmt/core.h>
-#include "config.h"
+#include <config.h>
 #include "rsgain.hpp"
 #include "easymode.hpp"
 #include "output.hpp"
 #include "scan.hpp"
 
+extern "C" {
+    int format_handler(void *user, const char *section, const char *name, const char *value);
+    int global_handler(void *user, const char *section, const char *name, const char *value);
+}
+
 static inline void help_easy(void);
 bool multithread = false;
 extern ProgressBar progress_bar;
+
+#ifdef DEBUG
+    int infinite_loop = 0;
+#endif
 
 // Default configs
 static Config configs[] = {
@@ -189,18 +203,22 @@ static Config configs[] = {
 void easy_mode(int argc, char *argv[])
 {
     int rc, i;
-    char *preset_file = NULL;
+    char *preset = NULL;
     const char *short_opts = "+hql:m:p:O";
     int threads = 1;
+
     static struct option long_opts[] = {
-        { "help",         no_argument,       NULL, 'h' },
-        { "quiet",        no_argument,       NULL, 'q' },
+        { "help",          no_argument,       NULL, 'h' },
+        { "quiet",         no_argument,       NULL, 'q' },
 
-        { "loudness",     required_argument, NULL, 'l' },
+        { "loudness",      required_argument, NULL, 'l' },
 
-        { "multithread",  required_argument, NULL, 'm' },
-        { "preset",       required_argument, NULL, 'p' },
-        { "output",       required_argument, NULL, 'O' },
+        { "multithread",   required_argument, NULL, 'm' },
+        { "preset",        required_argument, NULL, 'p' },
+        { "output",        required_argument, NULL, 'O' },
+#ifdef DEBUG
+        { "infinite-loop", no_argument,       &infinite_loop, 1 },
+#endif
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
@@ -245,7 +263,8 @@ void easy_mode(int argc, char *argv[])
                 break;
             
             case 'p':
-                preset_file = optarg;
+                if (preset == NULL)
+                    preset = optarg;
                 break;
 
             case 'O':
@@ -256,22 +275,24 @@ void easy_mode(int argc, char *argv[])
     }
 
     if (argc == optind) {
-        output_fail("You must specific the directory to scan");
+        output_fail("No directory specified");
         quit(EXIT_FAILURE);
     }
 
-    scan_easy(argv[optind], preset_file, threads);
+    scan_easy(argv[optind], preset, threads);
 }
 
-static void convert_bool(const char *value, bool &setting)
+static bool convert_bool(const char *value, bool &setting)
 {
     if(MATCH(value, "True") || MATCH(value, "true")) {
         setting = true;
-        return;
+        return true;
     }
     if (MATCH(value, "False") || MATCH(value, "false")) {
         setting = false;
+        return true;
     }
+    return false;
 }
 
 static inline FileType determine_section_type(const std::string &section)
@@ -280,13 +301,13 @@ static inline FileType determine_section_type(const std::string &section)
         {"MP2",     MP2},
         {"MP3",     MP3},
         {"FLAC",    FLAC},
-        {"OGG",     OGG},
-        {"OPUS",    OPUS},
+        {"Ogg",     OGG},
+        {"Opus",    OPUS},
         {"M4A",     M4A},
         {"WMA",     WMA},
         {"WAV",     WAV},
         {"AIFF",    AIFF},
-        {"WAVPACK", WAVPACK},
+        {"Wavpack", WAVPACK},
         {"APE",     APE}
     };
 
@@ -295,7 +316,58 @@ static inline FileType determine_section_type(const std::string &section)
 }
 
 // Callback for INI parser
-int handler(void *user, const char *section, const char *name, const char *value)
+int global_handler(void *user, const char *section, const char *name, const char *value)
+{
+    if (strcmp(section, "Global"))
+        return 0;
+
+    // Parse setting keys
+    if (MATCH(name, "Album")) {
+        bool do_album;
+        if(convert_bool(value, do_album)) {
+            for (Config &config : configs)
+                config.do_album = do_album;
+        }
+    }
+    else if (MATCH(name, "TagMode")) {
+        char tag_mode;
+        if (parse_tag_mode(value, tag_mode)) {
+            for (Config &config : configs)
+                config.tag_mode = tag_mode;
+        }
+    }
+    else if (MATCH(name, "ClipMode")) {
+        char clip_mode;
+        if (parse_clip_mode(value, clip_mode)) {
+            for (Config &config : configs)
+                config.clip_mode = clip_mode;
+        }
+    }
+    else if (MATCH(name, "TargetLoudness")) {
+        double target_loudness;
+        if (parse_target_loudness(value, target_loudness)) {
+            for (Config &config : configs)
+                config.target_loudness = target_loudness;
+        }
+    }
+    else if (MATCH(name, "MaxPeakLevel")) {
+        double max_peak_level;
+        if (parse_max_peak_level(value, max_peak_level)) {
+            for (Config &config : configs)
+                config.max_peak_level = max_peak_level;
+        }
+    }
+    else if (MATCH(name, "TruePeak")) {
+        bool true_peak;
+        if (convert_bool(value, true_peak)) {
+            for (Config &config : configs)
+                config.true_peak = true_peak;
+        }
+    }
+    return 0;
+}
+
+int format_handler(void *user, const char *section, const char *name, const char *value)
 {
     FileType file_type = determine_section_type(section);
     if (file_type == INVALID)
@@ -332,23 +404,72 @@ int handler(void *user, const char *section, const char *name, const char *value
     return 0;
 }
 
-static void load_preset(const char *preset_file)
+inline void join_paths(std::filesystem::path &p, std::initializer_list<const char*> list)
 {
-    std::filesystem::path path((char8_t*) preset_file);
-    if (!std::filesystem::exists(path)) {
-        output_error("Preset file '{}' does not exist\n", preset_file);
-        return;
+    for (const char *item : list) { // Appending null string will cause segfault
+        if (item == NULL)
+            return;
     }
-    if (!std::filesystem::is_regular_file(path)) {
-        output_error("Preset file '{}' is not valid\n", preset_file);
+    
+    auto it = list.begin();
+    p = *it;
+    it++;
+    for (it; it != list.end(); ++it)
+        p /= *it;
+}
+
+static void load_preset(const char *preset)
+{
+    std::filesystem::path path(preset);
+
+    // Find preset file from name
+    if (!path.has_extension()) {
+
+        // Mac/Linux check user directory before system directory
+#ifdef __unix__
+#ifdef __APPLE__
+        join_paths(path, {(const char*) getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset});
+#endif
+#ifdef __linux
+        join_paths(path, {(const char*) getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset});
+#endif
+        path += ".ini";
+
+        // Check system directory
+        if (!std::filesystem::exists(path)) {
+            join_paths(path, {PRESETS_DIR, preset});
+            path += ".ini";
+        }
+#endif
+
+        // Only one preset folder on Windows
+#ifdef _WIN32
+        char buffer[MAX_PATH];
+        if (GetModuleFileNameA(NULL, buffer, sizeof(buffer))) {
+            std::filesystem::path exe = buffer;
+            join_paths(path, {exe.parent_path().string().c_str(), "presets", preset});
+            path += ".ini";
+        }
+#endif
+    }
+
+    if (!std::filesystem::exists(path)) {
+        output_error("Could not locate preset '{}'", preset);
         return;
     }
 
     // Parse file
-    output_ok("Applying preset");
-    if (ini_parse(preset_file, handler, NULL) < 0) {
-        output_error("Failed to load preset file '{}'\n", preset_file);
+    std::FILE *file = fopen(path.string().c_str(), "r");
+    if (file == NULL) {
+        output_error("Failed to open preset from '{}'", path.string());
+        return;
     }
+
+    output_ok("Applying preset...");
+    ini_parse_file(file, global_handler, NULL);
+    rewind(file);
+    ini_parse_file(file, format_handler, NULL);
+    fclose(file);
 }
 
 WorkerThread::WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data) :
@@ -381,7 +502,7 @@ void WorkerThread::work()
     while (!quit) {
         if (job != NULL) {
             job->scan(configs[job->type], ffmpeg_mutex);
-
+            
             // Inform the main thread that the scanning is finished
             main_lock.lock();
             job->update_data(scan_data);
@@ -397,10 +518,11 @@ void WorkerThread::work()
     return;
 }
 
+
 bool WorkerThread::wait()
 {
     std::unique_lock lk(thread_mutex, std::try_to_lock);
-    if (!lk.owns_lock() || job != NULL)
+    if (!lk.owns_lock() || job != NULL) 
         return false;
 
     quit = true;
@@ -410,7 +532,7 @@ bool WorkerThread::wait()
     return true;
 }
 
-void scan_easy(const char *directory, const char *preset_file, int threads)
+void scan_easy(const char *directory, const char *preset, int threads)
 {
     std::filesystem::path path(directory);
     ScanData scan_data;
@@ -425,10 +547,9 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
         quit(EXIT_FAILURE);
     }
 
-    // Load preset
-    if (preset_file != NULL) {
-        load_preset(preset_file);
-    }
+    // Load scan preset
+    if (preset != NULL)
+        load_preset(preset);
 
     // Record start time
     const auto start_time = std::chrono::system_clock::now();
@@ -445,6 +566,12 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
     std::locale::global(std::locale(""));
     output_ok("Found {:L} directories...", num_directories);
 
+#ifdef DEBUG
+    std::deque<std::filesystem::path> directories_static;
+    if (infinite_loop)
+        directories_static = directories;
+#endif
+
     // Multithread scannning
     if (multithread) {
         std::vector<WorkerThread*> worker_threads;
@@ -456,6 +583,8 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
         // Create threads
         for (int i = 0; i < threads; i++)
             worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Wait a bit for the threads to initialize;
 
         ScanJob *job;
         output_ok("Scanning with {} threads...", threads);
@@ -477,6 +606,7 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
                     // Wait until one of the worker threads informs that us that it is ready for a new job
                     else {
                         main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
+                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
                     }
                 }
             }
@@ -484,6 +614,11 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
                 delete job;
             }
             directories.pop_front();
+
+#ifdef DEBUG
+            if (infinite_loop && !directories.size())
+                directories = directories_static;
+#endif
         }
 
         // Wait for worker threads to finish scanning
@@ -497,8 +632,10 @@ void scan_easy(const char *directory, const char *preset_file, int threads)
                     ++wt;
                 }
 
-            if (worker_threads.size())
-                main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
+            if (worker_threads.size()) {
+                main_cv.wait_for(main_lock, std::chrono::seconds(1));
+                std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Sometimes we have to wait a bit for the thread to release the mutex
+            }
         }
         fmt::print("\33[2K\n");
     }

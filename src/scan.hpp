@@ -74,6 +74,7 @@ class ScanJob {
 		void calculate_loudness(const Config &config);
 		void calculate_album_loudness(const Config &config);
 		void tag_tracks(const Config &config);
+		void free_ebur128(void);
 
 	public:
 		FileType type;

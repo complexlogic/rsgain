@@ -106,11 +106,11 @@ static void set_cursor_visibility(BOOL setting, BOOL *previous)
 
 void quit(int status)
 {
-    #ifdef _WIN32
+#ifdef _WIN32
     if (initial_cursor_visibility) {
         set_cursor_visibility(TRUE, NULL);
     }
-    #endif
+#endif
     exit(status);
 }
 

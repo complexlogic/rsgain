@@ -12,8 +12,8 @@ rsgain builds natively on Unix and Windows, and features a cross-platform CMake 
 
 The source code is written in C++20, and as such requires a relatively modern compiler to build:
 - On Windows, use Visual Studio 2022
-- On Linux, use GCC 11 or later if possible. rsgain will also build with GCC 10, but the time elapsed statistical output will be disabled (no effect on core functionality). GCC versions 9 and earlier are not supported.
-- On macOS, the latest available Xcode for your machine should work.
+- On Linux, use GCC 10 or later
+- On macOS, the latest available Xcode for your machine should work
 
 ## Unix
 Before starting, make sure you have the development tools Git, CMake and pkg-config installed.
