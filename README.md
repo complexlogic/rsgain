@@ -188,7 +188,7 @@ In the case of a digital audio recording, true peak from the original analog sig
 
 The ReplayGain specification does not specify whether the peak should be calculated using the sample peak or true peak method, leaving the decision to the implementation. Comparing popular ReplayGain scanners, r128gain always uses sample peak, while loudgain always uses true peak. Conversely, rsgain allows the user to choose between the sample peak and true peak methods. The default in Easy Mode is true peak.
 
-It should be noted that using true peak instead of sample peak comes at a significant performance cost; scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans. The oversampling interpolation process used to calculate the true peak is very computationally intensive.
+It should be noted that using true peak instead of sample peak comes at a significant performance cost. Scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans; the oversampling interpolation process used to calculate the true peak is very computationally intensive.
 
 ### Clipping Protection
 

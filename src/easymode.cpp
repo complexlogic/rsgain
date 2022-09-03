@@ -564,7 +564,7 @@ void scan_easy(const char *directory, const char *preset, int threads)
     }
     int num_directories = directories.size();
     std::locale::global(std::locale(""));
-    output_ok("Found {:L} directories...", num_directories);
+    output_ok("Found {:L} {}...", num_directories, num_directories > 1 ? "directories" : "directory");
 
 #ifdef DEBUG
     std::deque<std::filesystem::path> directories_static;
