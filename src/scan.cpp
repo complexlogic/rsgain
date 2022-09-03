@@ -152,27 +152,23 @@ int ScanJob::add_files(char **files, int nb_files)
     return this->nb_files ? 0 : 1;
 }
 
-inline void ScanJob::free_ebur128()
+void free_ebur128(ebur128_state *ebur128_state)
 {
-    for (Track &track : tracks)
-        track.free_ebur128();
+    if (ebur128_state != NULL)
+        ebur128_destroy(&ebur128_state);
 }
 
 bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
-    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track) {
+    bool error;
+    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track)
         error = track->scan(config, ffmpeg_mutex);
-    }
 
-    if (error) {
-        this->free_ebur128();
+    if (error)
         return true;
-    }
 
-    
     if (config.tag_mode != 'd')
         this->calculate_loudness(config);
-    this->free_ebur128();
 
     // Collect clipping stats
     if (config.clip_mode != 'n') {
@@ -186,12 +182,6 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
     return false;
 }
 
-void Track::free_ebur128()
-{
-    if (ebur128 != NULL)
-        ebur128_destroy(&ebur128);
-}
-
 bool Track::scan(const Config &config, std::mutex *m)
 {
     int rc, stream_id = -1;
@@ -203,6 +193,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     bool error = false;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
+    ebur128_state *ebur128 = NULL;
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (!multithread && config.tag_mode != 'd')
@@ -330,11 +321,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     ebur128_flags = EBUR128_MODE_I;
     config.true_peak ? ebur128_flags |= EBUR128_MODE_TRUE_PEAK : ebur128_flags |= EBUR128_MODE_SAMPLE_PEAK;
-    ebur128 = ebur128_init(
-                   codec_ctx->channels, 
-                   codec_ctx->sample_rate,
-                   ebur128_flags
-                );
+    ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, ebur128_flags);
     if (ebur128 == NULL) {
         output_error("Could not initialize libebur128 scanner");
         error = true;
@@ -378,15 +365,12 @@ bool Track::scan(const Config &config, std::mutex *m)
 
                     // Convert audio format with swresample if necessary
                     if (swr != NULL) {
-                        size_t out_size;
-                        int  out_linesize;
-                        
-                        out_size = av_samples_get_buffer_size(&out_linesize, 
-                                        frame->channels, 
-                                        frame->nb_samples, 
-                                        OUTPUT_FORMAT, 
-                                        0
-                                   );
+                        size_t out_size = av_samples_get_buffer_size(NULL, 
+                                              frame->channels, 
+                                              frame->nb_samples, 
+                                              OUTPUT_FORMAT, 
+                                              0
+                                          );
                         swr_out_data[0] = (uint8_t*) av_malloc(out_size);
 
                         if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
@@ -395,12 +379,8 @@ bool Track::scan(const Config &config, std::mutex *m)
                             av_free(swr_out_data[0]);
                             goto end;
                         }
-                        
-                        rc = ebur128_add_frames_short(ebur128, 
-                                 (short*) swr_out_data[0], 
-                                 frame->nb_samples
-                             );
-                             
+                    
+                        rc = ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);         
                         av_free(swr_out_data[0]);                        
                     }
                     else {
@@ -423,6 +403,12 @@ bool Track::scan(const Config &config, std::mutex *m)
 end:
     if (output_progress)
         progress_bar.finish();
+
+    // Use a smart pointer to manage the remaining lifetime of the ebur128 state
+    if (ebur128 != NULL) {
+        std::unique_ptr<ebur128_state, void (*)(ebur128_state*)> tmp(ebur128, free_ebur128);
+        this->ebur128 = std::move(tmp);
+    }
 
     av_packet_free(&packet);
     av_frame_free(&frame);
@@ -447,7 +433,6 @@ void ScanJob::calculate_loudness(const Config &config)
     // Track loudness calculations
     for (auto track = tracks.begin(); track != tracks.end();) {
         if (track->calculate_loudness(config)) {
-            track->free_ebur128();
             tracks.erase(track);
             nb_files--;
         }
@@ -610,6 +595,7 @@ void ScanJob::update_data(ScanData &data)
 int Track::calculate_loudness(const Config &config) {
     unsigned channel = 0;
     double track_loudness, track_peak;
+    ebur128_state *ebur128 = this->ebur128.get();
 
     if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
         track_loudness = config.target_loudness;
@@ -635,7 +621,7 @@ void ScanJob::calculate_album_loudness(const Config &config) {
     int nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
     for (const Track &track : tracks)
-        states[&track - &tracks[0]] = track.ebur128;
+        states[&track - &tracks[0]] = track.ebur128.get();
 
     if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
         album_loudness = config.target_loudness;

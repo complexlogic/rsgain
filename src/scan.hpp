@@ -8,6 +8,7 @@
 #include "scan.hpp"
 
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
+void free_ebur128(ebur128_state *ebur128);
 
 typedef enum {
     INVALID = -1,
@@ -57,12 +58,11 @@ typedef struct Track{
 	std::string container;
 	ScanResult result;
 	int codec_id;
-	ebur128_state *ebur128;
+	std::unique_ptr<ebur128_state, void (*)(ebur128_state*)> ebur128;
 	bool tclip;
 	bool aclip;
 
-	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL), tclip(false), aclip(false) {};
-	void free_ebur128();
+	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL, free_ebur128), tclip(false), aclip(false) {};
 	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 	int calculate_loudness(const Config &config);
 } Track;
@@ -74,7 +74,6 @@ class ScanJob {
 		void calculate_loudness(const Config &config);
 		void calculate_album_loudness(const Config &config);
 		void tag_tracks(const Config &config);
-		void free_ebur128(void);
 
 	public:
 		FileType type;
