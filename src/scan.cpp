@@ -160,23 +160,14 @@ void free_ebur128(ebur128_state *ebur128_state)
 
 bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
-    bool error;
-    for (auto track = tracks.begin(); track != tracks.end() && !error; ++track)
-        error = track->scan(config, ffmpeg_mutex);
-
-    if (error)
-        return true;
+    for (Track &track : tracks) {
+        error = track.scan(config, ffmpeg_mutex);
+        if (error)
+            return true;
+    }
 
     if (config.tag_mode != 'd')
         this->calculate_loudness(config);
-
-    // Collect clipping stats
-    if (config.clip_mode != 'n') {
-        for (Track &track : tracks) {
-            if (track.aclip || track.tclip)
-                clipping_adjustments++;
-        }
-    }
 
     this->tag_tracks(config);
     return false;
@@ -580,12 +571,14 @@ void ScanJob::update_data(ScanData &data)
         return;
     }
     data.files += nb_files;
-    data.clipping_adjustments += clipping_adjustments;
+
+    // Collect clipping stas
     for (const Track &track : tracks) {
-        if (isnan(track.result.track_gain)) {
-            fmt::print("Track {} failed!\n", track.path);
-            quit(EXIT_FAILURE);
-        }
+        if (track.aclip || track.tclip)
+            data.clipping_adjustments++;
+    }
+
+    for (const Track &track : tracks) {
         data.total_gain += track.result.track_gain;
         data.total_peak += track.result.track_peak;
         track.result.track_gain < 0.f ? data.total_negative++ : data.total_positive++;

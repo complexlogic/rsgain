@@ -170,7 +170,7 @@ static Config configs[] = {
         .opus_r128 = false
     },
 
-    // WAVPACK config
+    // Wavpack config
     {
         .tag_mode = 'i',
         .target_loudness = RG_TARGET_LOUDNESS,
@@ -211,8 +211,6 @@ void easy_mode(int argc, char *argv[])
         { "help",          no_argument,       NULL, 'h' },
         { "quiet",         no_argument,       NULL, 'q' },
 
-        { "loudness",      required_argument, NULL, 'l' },
-
         { "multithread",   required_argument, NULL, 'm' },
         { "preset",        required_argument, NULL, 'p' },
         { "output",        required_argument, NULL, 'O' },
@@ -230,14 +228,6 @@ void easy_mode(int argc, char *argv[])
 
             case 'q':
                 quiet = true;
-                break;
-
-            case 'l':
-                double target_loudness;
-                if (parse_target_loudness(optarg, target_loudness)) {
-                    for (Config &config : configs)
-                        config.target_loudness = target_loudness;
-                }
                 break;
             
             case 'm':
