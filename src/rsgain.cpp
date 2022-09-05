@@ -215,7 +215,7 @@ static void custom_mode(int argc, char *argv[])
     Config config = {
         .tag_mode = 's',
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = EBU_R128_MAX_PEAK,
+        .max_peak_level = 0.f,
         .true_peak = false,
         .clip_mode = 'n',
         .do_album = false,

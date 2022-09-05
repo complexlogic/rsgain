@@ -11,7 +11,6 @@
 #define MIN_TARGET_LOUDNESS -30
 
 #define RG_TARGET_LOUDNESS -18.f
-#define EBU_R128_MAX_PEAK -1.f
 
 typedef enum {
 	TYPE_NONE,
