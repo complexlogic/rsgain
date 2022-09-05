@@ -55,7 +55,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // MP3 config
@@ -69,7 +69,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // FLAC config
@@ -83,7 +83,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // OGG config
@@ -97,7 +97,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // OPUS config
@@ -111,7 +111,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // M4A config
@@ -125,7 +125,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // WMA config
@@ -139,7 +139,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // WAV config
@@ -153,7 +153,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // AIFF config
@@ -167,7 +167,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // Wavpack config
@@ -181,7 +181,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 
     // APE config
@@ -195,7 +195,7 @@ static Config configs[] = {
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     },
 };
 
@@ -388,8 +388,8 @@ int format_handler(void *user, const char *section, const char *name, const char
     else if (MATCH(name, "TruePeak")) {
         convert_bool(value, configs[file_type].true_peak);
     }
-    else if (MATCH(name, "R128Tags")) {
-        convert_bool(value, configs[file_type].opus_r128);
+    else if (MATCH(name, "OpusMode")) {
+        parse_opus_mode(value, configs[file_type].opus_mode);
     }
     return 0;
 }

@@ -185,6 +185,13 @@ bool Track::scan(const Config &config, std::mutex *m)
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
     ebur128_state *ebur128 = NULL;
+
+    // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
+    // gain with no way to disable. To get the actual loudness of the audio signal,
+    // we need to set the header output gain to 0 dB before decoding
+    if (type == OPUS)
+        set_opus_header_gain(path.c_str(), 0);
+    
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (!multithread && config.tag_mode != 'd')
@@ -523,7 +530,7 @@ void ScanJob::tag_tracks(const Config &config)
                 fmt::print("\nTrack: {}\n", track.path);
                 fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
                 fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
-                if (config.opus_r128 && track.type == OPUS) {
+                if (config.opus_mode == 'r' && track.type == OPUS) {
                     // also show the Q7.8 number that goes into R128_TRACK_GAIN
                     fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                         track.result.track_gain,
@@ -542,7 +549,7 @@ void ScanJob::tag_tracks(const Config &config)
                     fmt::print("\nAlbum:\n");
                     fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
                     fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
-                    if (config.opus_r128 && track.type == OPUS) {
+                    if (config.opus_mode == 'r' && track.type == OPUS) {
                         // also show the Q7.8 number that goes into R128_ALBUM_GAIN
                         fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
                             track.result.album_gain,

@@ -33,18 +33,14 @@
 #include <string.h>
 #include <string>
 #include <array>
+#include <memory>
+#include <bit>
+
 #include <taglib.h>
-
-#define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 \
-                                                + TAGLIB_MINOR_VERSION * 100 \
-                                                + TAGLIB_PATCH_VERSION)
-
 #include <textidentificationframe.h>
-
 #include <mpegfile.h>
 #include <id3v2tag.h>
 #include <apetag.h>
-
 #include <flacfile.h>
 #include <vorbisfile.h>
 #include <oggflacfile.h>
@@ -58,6 +54,9 @@
 #include <wavpackfile.h>
 #include <apefile.h>
 #include <libavcodec/avcodec.h>
+
+#define CRCPP_USE_CPP11
+#include "external/CRC.h"
 
 #include "rsgain.hpp"
 #include "scan.hpp"
@@ -242,9 +241,18 @@ static bool tag_ogg(Track &track, const Config &config) {
     T file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = file.tag();
     tag_clear_xiph<T>(tag);
-    if (config.tag_mode == 'i')
+    if (config.tag_mode == 'i' && (!std::is_same_v<T, TagLib::Ogg::Opus::File> || 
+    (config.opus_mode != 't' && config.opus_mode != 'a')))
         tag_write_xiph<T>(tag, track.result, config);
-    return file.save();
+
+    bool ret = file.save();
+    if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.opus_mode == 'd' ||
+    config.opus_mode == 'r' || !ret)
+        return ret;
+
+    int16_t gain = config.opus_mode == 'a' && config.do_album ? 
+    GAIN_TO_Q78(track.result.album_gain) : GAIN_TO_Q78(track.result.track_gain);
+    return set_opus_header_gain(track.path.c_str(), gain);
 }
 
 static bool tag_mp4(Track &track, const Config &config)
@@ -376,10 +384,10 @@ static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
 template<typename T>
 static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &result, const Config &config)
 {
-    const char **RG_STRING = RG_STRING_UPPER;
+    static const char **RG_STRING = RG_STRING_UPPER;
 
     // Opus RFC 7845 tag
-    if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_r128) {
+    if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_mode == 'r') {
         tag->addField(R128_STRING[R128_TRACK_GAIN], 
             fmt::format("{}", GAIN_TO_Q78(result.track_gain))
         );
@@ -437,7 +445,7 @@ static void tag_clear_apev2(TagLib::APE::Tag *tag)
 
 static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config)
 {
-    const char **RG_STRING = RG_STRING_UPPER;
+    static const char **RG_STRING = RG_STRING_UPPER;
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const std::string &value) {
@@ -464,6 +472,38 @@ static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const
             tag->setAttribute(RG_STRING[rg_tag], TagLib::String(value));
         }
     );
+}
+
+static_assert(std::endian::native == std::endian::little);
+static_assert(-1 == ~0); // 2's complement for signed integers
+bool set_opus_header_gain(const char *path, int16_t gain)
+{   
+    char buffer[OPUS_HEADER_SIZE]; // 47 bytes
+    uint32_t crc;
+    
+    // Read header into memory
+    std::unique_ptr<FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
+    size_t read = fread(buffer, 1, sizeof(buffer), file.get());
+    
+    // Make sure we have a valid Ogg/Opus header
+    if (read != sizeof(buffer) || strncmp(buffer, "OggS", 4)  ||
+    strncmp(buffer + OPUS_HEAD_OFFSET, "OpusHead", 8))  
+        return false;
+
+    // Clear CRC, set gain
+    memset(buffer + OGG_CRC_OFFSET, 0, sizeof(crc));
+    memcpy(buffer + OPUS_GAIN_OFFSET, &gain, sizeof(gain));
+    
+    // Calculate new CRC
+    static const CRC::Table<uint32_t, 32> table({0x04C11DB7, 0, 0, false, false});
+    crc = CRC::Calculate(buffer, sizeof(buffer), table);
+    
+    // Write new CRC and gain to file
+    fseek(file.get(), OGG_CRC_OFFSET, SEEK_SET);
+    fwrite(&crc, sizeof(crc), 1, file.get());
+    fseek(file.get(), OPUS_GAIN_OFFSET, SEEK_SET);
+    fwrite(&gain, sizeof(gain), 1, file.get());
+    return true;
 }
 
 void taglib_get_version(std::string &buffer)

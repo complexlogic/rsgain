@@ -33,10 +33,15 @@
 #define FORMAT_GAIN(gain) fmt::format("{:.2f} dB", gain)
 #define FORMAT_PEAK(peak) fmt::format("{:.6f}", peak)
 #define GAIN_TO_Q78(gain) (int) std::round(gain * 256.f)
+#define OPUS_HEADER_SIZE 47
+#define OGG_ROW_SIZE 4
+#define OPUS_HEAD_OFFSET 7 * OGG_ROW_SIZE
+#define OGG_CRC_OFFSET 5 * OGG_ROW_SIZE + 2
+#define OPUS_GAIN_OFFSET 11 * OGG_ROW_SIZE
 
-#define RG_TAGS_UPPERCASE 0x1
-#define RG_TAGS_LOWERCASE 0x10
-#define R128_TAGS         0x100
+#define RG_TAGS_UPPERCASE 1
+#define RG_TAGS_LOWERCASE 2
+#define R128_TAGS         4
 
 #define MP4_ATOM_STRING "----:com.apple.iTunes:"
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
@@ -44,6 +49,7 @@
 
 void tag_track(Track &track, const Config &config);
 void taglib_get_version(std::string &buffer);
+bool set_opus_header_gain(const char *path, int16_t gain);
 
 static bool tag_mp3(Track &track, const Config &config);
 static bool tag_flac(Track &track, const Config &config);

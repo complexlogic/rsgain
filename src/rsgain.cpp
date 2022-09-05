@@ -149,6 +149,18 @@ bool parse_clip_mode(const char *value, char &mode)
     return false;
 }
 
+bool parse_opus_mode(const char *value, char &mode)
+{
+    static const std::string_view valid_modes = "drta";
+    size_t pos = valid_modes.find_first_of(*value);
+    if (pos != std::string::npos) {
+        mode = valid_modes[pos];
+        return true;
+    }
+    output_error("Invalid Opus mode: '{}'", value);
+    return false;
+}
+
 bool parse_id3v2_version(const char *value, int &version)
 {
     int id3v2version = atoi(value);
@@ -179,7 +191,7 @@ static void custom_mode(int argc, char *argv[])
     int rc, i;
     unsigned nb_files   = 0;
 
-    const char *short_opts = "+ac:K:tl:Oqs:LSI:oh?";
+    const char *short_opts = "+ac:K:tl:Oqs:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
 
@@ -195,7 +207,7 @@ static void custom_mode(int argc, char *argv[])
         { "tagmode",       required_argument, NULL, 's' },
         { "lowercase",     no_argument,       NULL, 'L' },
         { "id3v2-version", required_argument, NULL, 'I' },
-        { "opus-r128",     no_argument,       NULL, 'o' },
+        { "opus-mode",     no_argument,       NULL, 'o' },
         { "help",          no_argument,       NULL, 'h' },
         { 0, 0, 0, 0 }
     };
@@ -210,7 +222,7 @@ static void custom_mode(int argc, char *argv[])
         .tab_output = TYPE_NONE,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_r128 = false
+        .opus_mode = 'd'
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
@@ -261,7 +273,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'o':
-                config.opus_r128 = true;
+                parse_opus_mode(optarg, config.opus_mode);
                 break;
 
             case '?':
@@ -392,20 +404,25 @@ static inline void help_custom(void) {
     CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
     fmt::print("\n");
 
-    CMD_HELP("--clip-mode n", "-c n", "No clipping protection (default)");
-    CMD_HELP("--clip-mode p", "-c p", "Clipping protection enabled for positive gain values only");
-    CMD_HELP("--clip-mode a", "-c a", "Clipping protection always enabled");
+    CMD_HELP("--clip-mode=n", "-c n", "No clipping protection (default)");
+    CMD_HELP("--clip-mode=p", "-c p", "Clipping protection enabled for positive gain values only");
+    CMD_HELP("--clip-mode=a", "-c a", "Clipping protection always enabled");
     CMD_HELP("--max-peak=n", "-K n", "Use max peak level n dB for clipping protection");
     CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
 
     fmt::print("\n");
 
-    CMD_HELP("--lowercase", "-L", "Force lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
+    CMD_HELP("--lowercase", "-L", "Write lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
     CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF (default)");
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
-    CMD_HELP("--opus-r128", "-o", "Write RFC 7845 compliant tags to Opus files (R128_*_GAIN)");
-    CMD_CONT("This does NOT set the target loudness to -23 LUFS");
+
+    fmt::print("\n");
+
+    CMD_HELP("--opus-mode=d", "-o d", "Write standard ReplayGain tags, clear header output gain (default)");
+    CMD_HELP("--opus-mode=r", "-o r", "Write R128_*_GAIN tags, clear header output gain");
+    CMD_HELP("--opus-mode=t", "-o t", "Write track gain to header output gain");
+    CMD_HELP("--opus-mode=a", "-o a", "Write album gain to header output gain");
 
     fmt::print("\n");
 

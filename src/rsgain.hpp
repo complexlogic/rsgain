@@ -29,8 +29,7 @@ typedef struct {
 	OutputType tab_output;
 	bool lowercase;
 	int id3v2version;
-	bool opus_r128;
-	bool strip; // DEPRECATED
+	char opus_mode;
 } Config;
 
 
@@ -38,5 +37,6 @@ void quit(int status);
 bool parse_target_loudness(const char *value, double &target_loudness);
 bool parse_tag_mode(const char *value, char &mode);
 bool parse_clip_mode(const char *value, char &mode);
+bool parse_opus_mode(const char *value, char &mode);
 bool parse_id3v2_version(const char *value, int &version);
 bool parse_max_peak_level(const char *value, double &peak);
