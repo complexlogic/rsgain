@@ -189,7 +189,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
     // gain with no way to disable. To get the actual loudness of the audio signal,
     // we need to set the header output gain to 0 dB before decoding
-    if (type == OPUS)
+    if (type == OPUS && config.tag_mode != 's')
         set_opus_header_gain(path.c_str(), 0);
     
     if (m != NULL)

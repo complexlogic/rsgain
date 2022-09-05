@@ -246,8 +246,8 @@ static bool tag_ogg(Track &track, const Config &config) {
         tag_write_xiph<T>(tag, track.result, config);
 
     bool ret = file.save();
-    if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.opus_mode == 'd' ||
-    config.opus_mode == 'r' || !ret)
+    if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.tag_mode == 's' || 
+    config.opus_mode == 'd' || config.opus_mode == 'r' || !ret)
         return ret;
 
     int16_t gain = config.opus_mode == 'a' && config.do_album ? 
