@@ -32,12 +32,11 @@
 
 #include <stdio.h>
 #include <stdlib.h>
-#include <stdbool.h>
 #include <string.h>
-#include <stdbool.h>
 #include <math.h>
 #include <getopt.h>
 #include <string>
+#include <locale>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -65,16 +64,13 @@ static void help_main(void);
 static void version(void);
 static inline void help_custom(void);
 
-// Global variables
-ProgressBar progress_bar;
+int quiet = 0;
 
 #ifdef _WIN32
 HANDLE console;
 BOOL initial_cursor_visibility;
-#endif
 
-#ifdef _WIN32
- static void init_console()
+static void init_console()
 {
     SetConsoleCP(CP_UTF8);
     console = CreateFileA(
@@ -313,7 +309,7 @@ int main(int argc, char *argv[]) {
         { "version",      no_argument,       NULL, 'v' },
         { 0, 0, 0, 0 }
     };
-  
+    std::locale::global(std::locale(""));
 #ifdef _WIN32
     init_console();
 #endif 

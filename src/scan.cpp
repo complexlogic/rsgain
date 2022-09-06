@@ -53,7 +53,6 @@ extern "C" {
 #include "tag.hpp"
 
 extern bool multithread;
-extern ProgressBar progress_bar;
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
 
@@ -175,12 +174,11 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 
 bool Track::scan(const Config &config, std::mutex *m)
 {
+    ProgressBar progress_bar;
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
     int ebur128_flags;
-    std::string infotext;
-    char infobuf[512];
     bool error = false;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
@@ -194,7 +192,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     
     if (m != NULL)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
-    if (!multithread && config.tag_mode != 'd')
+    if (output_progress)
         output_ok("Scanning '{}'", path);
 
     // FFmpeg 5.0 workaround
@@ -203,7 +201,6 @@ bool Track::scan(const Config &config, std::mutex *m)
 #else
     AVCodec *codec = NULL;
 #endif
-
     AVPacket *packet = NULL;
     AVCodecContext *codec_ctx = NULL;
     AVFrame *frame = NULL;
@@ -223,7 +220,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     }
 
     container = format_ctx->iformat->name;
-    if (!multithread && config.tag_mode != 'd')
+    if (output_progress)
         output_ok("Container: {} [{}]", format_ctx->iformat->long_name, format_ctx->iformat->name);
 
     rc = avformat_find_stream_info(format_ctx, NULL);
@@ -275,22 +272,14 @@ bool Track::scan(const Config &config, std::mutex *m)
         codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
 
     // Display some information about the file
-    infotext[0] = '\0';
-    if (codec_ctx->bits_per_raw_sample > 0 || codec_ctx->bits_per_coded_sample > 0) {
-        infotext = fmt::format("{} bit, ", codec_ctx->bits_per_raw_sample > 0 ? codec_ctx->bits_per_raw_sample : codec_ctx->bits_per_coded_sample);
-    }
-
-    av_get_channel_layout_string(infobuf, sizeof(infobuf), -1, codec_ctx->channel_layout);
-    if (!multithread)
-        output_ok("Stream #{}: {}, {}{} Hz, {} ch, {}",
+    if (output_progress)
+        output_ok("Stream #{}: {}, {}{:L} Hz, {} ch",
             stream_id, 
             codec->long_name, 
-            infotext, 
+            codec_ctx->bits_per_raw_sample > 0 ? fmt::format("{} bit, ", codec_ctx->bits_per_raw_sample) : "", 
             codec_ctx->sample_rate, 
-            codec_ctx->channels, 
-            infobuf
+            codec_ctx->channels
         );
-
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
@@ -359,7 +348,7 @@ bool Track::scan(const Config &config, std::mutex *m)
                 if (avcodec_receive_frame(codec_ctx, frame) == 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
-                    // Convert audio format with swresample if necessary
+                    // Convert audio format with libswresample if necessary
                     if (swr != NULL) {
                         size_t out_size = av_samples_get_buffer_size(NULL, 
                                               frame->channels, 
@@ -370,7 +359,7 @@ bool Track::scan(const Config &config, std::mutex *m)
                         swr_out_data[0] = (uint8_t*) av_malloc(out_size);
 
                         if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
-                            output_error("Could not convert frame");
+                            output_error("Could not convert audio frame");
                             error = true;
                             av_free(swr_out_data[0]);
                             goto end;
@@ -379,6 +368,8 @@ bool Track::scan(const Config &config, std::mutex *m)
                         rc = ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);         
                         av_free(swr_out_data[0]);                        
                     }
+
+                    // Audio is already in correct format
                     else {
                         ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
                     }
@@ -397,28 +388,22 @@ bool Track::scan(const Config &config, std::mutex *m)
         progress_bar.complete();
 
 end:
-    if (output_progress)
-        progress_bar.finish();
+    av_packet_free(&packet);
+    av_frame_free(&frame);
+    if (codec_ctx != NULL)
+        avcodec_free_context(&codec_ctx);
+    if (format_ctx != NULL)
+        avformat_close_input(&format_ctx);
+    if (swr != NULL) {
+        swr_close(swr);
+        swr_free(&swr);
+    }
 
     // Use a smart pointer to manage the remaining lifetime of the ebur128 state
     if (ebur128 != NULL) {
         std::unique_ptr<ebur128_state, void (*)(ebur128_state*)> tmp(ebur128, free_ebur128);
         this->ebur128 = std::move(tmp);
     }
-
-    av_packet_free(&packet);
-    av_frame_free(&frame);
-    
-    if (swr != NULL) {
-        swr_close(swr);
-        swr_free(&swr);
-    }
-
-    if (codec_ctx != NULL)
-        avcodec_free_context(&codec_ctx);
-
-    if (format_ctx != NULL)
-        avformat_close_input(&format_ctx);
     
     delete lk;
     return error;

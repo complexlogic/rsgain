@@ -67,7 +67,6 @@
 #define FAIL_PREFIX "[" COLOR_RED FAIL_CHAR COLOR_OFF "] "
 
 extern int quiet;
-
 #define output_ok(format, ...)    if (!quiet) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 #define output_warn(format, ...)  if (!quiet) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 #define output_error(format, ...) fmt::print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
@@ -95,5 +94,4 @@ class ProgressBar {
         void begin(int start, int len);
         void update(int pos);
         void complete(void);
-        void finish(void);
 };

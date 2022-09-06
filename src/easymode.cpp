@@ -10,7 +10,6 @@
 #include <condition_variable>
 #include <chrono>
 #include <iomanip>
-#include <locale>
 #include <initializer_list>
 #include <math.h>
 #include <string.h>
@@ -35,7 +34,6 @@ extern "C" {
 
 static inline void help_easy(void);
 bool multithread = false;
-extern ProgressBar progress_bar;
 
 #ifdef DEBUG
     int infinite_loop = 0;
@@ -553,7 +551,6 @@ void scan_easy(const char *directory, const char *preset, int threads)
             directories.push_back(entry.path());
     }
     int num_directories = directories.size();
-    std::locale::global(std::locale(""));
     output_ok("Found {:L} {}...", num_directories, num_directories > 1 ? "directories" : "directory");
 
 #ifdef DEBUG

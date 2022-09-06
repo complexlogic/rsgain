@@ -53,13 +53,9 @@ extern HANDLE console;
 
 #ifdef _WIN32
 #define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
-//#define print_buffer(buffer, length, stream) fmt::print("{}", buffer);
 #else
 #define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
 #endif
-
-int quiet = 0;
-extern bool multithread;
 
 void ProgressBar::begin(int start, int len)
 {
@@ -112,10 +108,7 @@ void ProgressBar::complete()
 {
 	if (c_prev != w_prev)
 		this->update(len);
-}
 
-void ProgressBar::finish()
-{
 	delete buffer;
 	buffer = NULL;
 	fmt::print("\n");
