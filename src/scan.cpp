@@ -353,12 +353,10 @@ bool Track::scan(const Config &config, std::mutex *m)
     if (lk != NULL)
         lk->unlock();
     
-    while (av_read_frame(format_ctx, packet) >= 0) {
+    while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
-            rc = avcodec_send_packet(codec_ctx, packet);
-            while (rc >= 0) {
-                rc = avcodec_receive_frame(codec_ctx, frame);
-                if (rc >= 0) {
+            if (avcodec_send_packet(codec_ctx, packet) == 0) {
+                if (avcodec_receive_frame(codec_ctx, frame) == 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
 
                     // Convert audio format with swresample if necessary
@@ -497,74 +495,73 @@ void ScanJob::tag_tracks(const Config &config)
     }
 
     // Tag the files
-    bool output = (!multithread || config.tab_output == TYPE_FILE) && (!quiet || config.tab_output == TYPE_STDOUT) && config.tag_mode != 'd';
+    bool tab_output = config.tab_output != TYPE_NONE && stream != NULL;
+    bool human_output = !multithread && !quiet && config.tag_mode != 'd';
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
             tag_track(track, config);
 
-        if (output) {
-            if (config.tab_output != TYPE_NONE && stream != NULL) {
-                // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
-                fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());
-                fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
-                fmt::print(stream, "{:.2f}\t", track.result.track_gain);
-                fmt::print(stream, "{:.6f}\t", track.result.track_peak);
-                fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
+        if (tab_output) {
+            // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
+            fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());
+            fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
+            fmt::print(stream, "{:.2f}\t", track.result.track_gain);
+            fmt::print(stream, "{:.6f}\t", track.result.track_peak);
+            fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
+            fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
+            fmt::print(stream, "{}\t", track.tclip ? "Y" : "N");
+            fmt::print(stream, "\n");
+            if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+                fmt::print(stream, "{}\t", "Album");
+                fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
+                fmt::print(stream, "{:.2f}\t", track.result.album_gain);
+                fmt::print(stream, "{:.6f}\t", track.result.album_peak);
+                fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
                 fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
-                fmt::print(stream, "{}\t", track.tclip ? "Y" : "N");
+                fmt::print(stream, "{}\n", track.aclip ? "Y" : "N");
                 fmt::print(stream, "\n");
-                if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
-                    fmt::print(stream, "{}\t", "Album");
-                    fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
-                    fmt::print(stream, "{:.2f}\t", track.result.album_gain);
-                    fmt::print(stream, "{:.6f}\t", track.result.album_peak);
-                    fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
-                    fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
-                    fmt::print(stream, "{}\n", track.aclip ? "Y" : "N");
-                    fmt::print(stream, "\n");
-                }
-            } 
-            
-            // Human-readable output
-            else {
-                fmt::print("\nTrack: {}\n", track.path);
-                fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
-                fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
-                if (config.opus_mode == 'r' && track.type == OPUS) {
-                    // also show the Q7.8 number that goes into R128_TRACK_GAIN
-                    fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
-                        track.result.track_gain,
-                        GAIN_TO_Q78(track.result.track_gain),
-                        track.tclip ? " (adjusted to prevent clipping)" : ""
-                    );
-                } 
-                else {
-                    fmt::print(" Gain:     {:8.2f} dB{}\n", 
-                        track.result.track_gain, 
-                        track.tclip ? " (adjusted to prevent clipping)" : ""
-                    );
-                }
-
-                if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
-                    fmt::print("\nAlbum:\n");
-                    fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
-                    fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
-                    if (config.opus_mode == 'r' && track.type == OPUS) {
-                        // also show the Q7.8 number that goes into R128_ALBUM_GAIN
-                        fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
-                            track.result.album_gain,
-                            GAIN_TO_Q78(track.result.album_gain),
-                            track.aclip ? " (adjusted to prevent clipping)" : ""
-                        );
-                    } else {
-                        fmt::print(" Gain:     {:8.2f} dB{}\n", 
-                            track.result.album_gain,
-                            track.aclip ? " (adjusted to prevent clipping)" : ""
-                        );
-                    }
-                }
-                fmt::print("\n");
             }
+        } 
+        
+        // Human-readable output
+        if (human_output) {
+            fmt::print("\nTrack: {}\n", track.path);
+            fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
+            fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
+            if (config.opus_mode == 'r' && track.type == OPUS) {
+                // also show the Q7.8 number that goes into R128_TRACK_GAIN
+                fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
+                    track.result.track_gain,
+                    GAIN_TO_Q78(track.result.track_gain),
+                    track.tclip ? " (adjusted to prevent clipping)" : ""
+                );
+            } 
+            else {
+                fmt::print(" Gain:     {:8.2f} dB{}\n", 
+                    track.result.track_gain, 
+                    track.tclip ? " (adjusted to prevent clipping)" : ""
+                );
+            }
+
+            if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+                fmt::print("\nAlbum:\n");
+                fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
+                fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
+                if (config.opus_mode == 'r' && track.type == OPUS) {
+                    // also show the Q7.8 number that goes into R128_ALBUM_GAIN
+                    fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
+                        track.result.album_gain,
+                        GAIN_TO_Q78(track.result.album_gain),
+                        track.aclip ? " (adjusted to prevent clipping)" : ""
+                    );
+                } else {
+                    fmt::print(" Gain:     {:8.2f} dB{}\n", 
+                        track.result.album_gain,
+                        track.aclip ? " (adjusted to prevent clipping)" : ""
+                    );
+                }
+            }
+            fmt::print("\n");
         }
     }
     if (config.tab_output == TYPE_FILE && stream != NULL)

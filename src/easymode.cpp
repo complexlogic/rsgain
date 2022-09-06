@@ -701,9 +701,8 @@ static inline void help_easy(void) {
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
     fmt::print("\n");
 
-    CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
-    CMD_HELP("--preset=p", "-p p", "Load scan preset from path p");
+    CMD_HELP("--preset=s", "-p s", "Load scan preset s");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
 
     fmt::print("\n");
