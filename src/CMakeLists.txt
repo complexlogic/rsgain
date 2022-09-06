@@ -1,11 +1,12 @@
+set(SOURCE_FILES "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp")
 if (WIN32)
-  add_executable(${EXECUTABLE_TITLE} "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp" "${PROJECT_BINARY_DIR}/rsgain.manifest" "${PROJECT_BINARY_DIR}/versioninfo.rc")
+  add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES} "${PROJECT_BINARY_DIR}/rsgain.manifest" "${PROJECT_BINARY_DIR}/versioninfo.rc")
   target_compile_options(${EXECUTABLE_TITLE} PUBLIC "/Zc:preprocessor")
   target_include_directories(${EXECUTABLE_TITLE} PUBLIC
     ${FFMPEG_INCLUDE_DIRS} 
     ${TAGLIB_INCLUDE_DIR} 
     ${LIBEBUR128_INCLUDE_DIR}
-	  ${FMT_INCLUDE_DIR}
+    ${FMT_INCLUDE_DIR}
     ${GETOPT_INCLUDE_DIR}
     ${INIH_INCLUDE_DIR} 
   )
@@ -13,12 +14,13 @@ if (WIN32)
     ${FFMPEG_LIBRARIES} 
     ${TAGLIB} 
     ${LIBEBUR128} 
-	  ${FMT}
+    ${FMT}
     ${GETOPT}
     ${INIH}
   )
+  
 elseif (UNIX)
-  add_executable(${EXECUTABLE_TITLE} "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp")
+  add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES})
   target_link_libraries(${EXECUTABLE_TITLE}
     PkgConfig::LIBAVFORMAT
     PkgConfig::LIBAVCODEC

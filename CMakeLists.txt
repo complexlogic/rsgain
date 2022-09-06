@@ -44,8 +44,7 @@ if (WIN32)
 # Find dependencies - Linux/Mac
 elseif (UNIX)
   if (APPLE)
-    # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
-    link_directories(/usr/local/lib)
+    link_directories(/usr/local/lib) # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
   endif (APPLE)
   
   find_package(PkgConfig MODULE REQUIRED)
@@ -62,11 +61,7 @@ endif()
 # Generate Windows application manifest and resource file
 if (WIN32)
   set(VERSION_M ${PROJECT_VERSION_MAJOR})
-  if (PROJECT_VERSION_MINOR)
-    set(VERSION_N ${PROJECT_VERSION_MINOR})
-  else ()
-    set(VERSION_N 0)
-  endif()
+  set(VERSION_N ${PROJECT_VERSION_MINOR})
   if (PROJECT_VERSION_PATCH)
     set(VERSION_O ${PROJECT_VERSION_PATCH})
   else ()
@@ -86,22 +81,27 @@ add_subdirectory(src)
 
 # Installation - Windows
 if (WIN32)
-  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")
-  configure_file(${PROJECT_SOURCE_DIR}/CHANGELOG ${PROJECT_BINARY_DIR}/CHANGELOG.txt)
-  install(FILES ${PROJECT_BINARY_DIR}/CHANGELOG.txt DESTINATION ".")
-  configure_file(${PROJECT_SOURCE_DIR}/LICENSE ${PROJECT_BINARY_DIR}/LICENSE.txt)
-  install(FILES ${PROJECT_BINARY_DIR}/LICENSE.txt DESTINATION ".")
-  configure_file(${PROJECT_SOURCE_DIR}/config/default.ini ${PROJECT_BINARY_DIR}default.ini)
-  install(FILES ${PROJECT_BINARY_DIR}/default.ini DESTINATION ".")
+  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")  
+  foreach(item "CHANGELOG" "LICENSE")
+    configure_file("${PROJECT_SOURCE_DIR}/${item}" "${PROJECT_BINARY_DIR}/${item}.txt")
+	install(FILES "${PROJECT_BINARY_DIR}/${item}.txt" DESTINATION ".")
+  endforeach ()
+
+  # Install presets
+  file(GLOB presets ${PROJECT_SOURCE_DIR}/config/presets/*.ini)
+  foreach(preset ${presets})
+	get_filename_component(preset_name ${preset} NAME)
+    configure_file(${preset} ${PROJECT_BINARY_DIR}/presets/${preset_name})
+  endforeach ()
+  install(DIRECTORY "${PROJECT_BINARY_DIR}/presets" DESTINATION ".")
   
-  # Copy the VC Runtime DLLs in case user doesn't have them installed
+  # Copy the Visual C++ runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
   include(InstallRequiredSystemLibraries)
-  set(required_libs "vcruntime140.dll;vcruntime140_1.dll;msvcp140.dll")
-  foreach(required_lib ${required_libs})
+  foreach(required_lib "vcruntime140.dll" "vcruntime140_1.dll" "msvcp140.dll")
     foreach(system_lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
-      string(FIND ${system_lib} ${required_lib} vcruntime)
-      if (NOT vcruntime EQUAL -1)
+      string(FIND ${system_lib} ${required_lib} found_lib)
+      if (NOT found_lib EQUAL -1)
         install(FILES ${system_lib} DESTINATION ".")
       endif ()
     endforeach ()
@@ -115,9 +115,8 @@ if (WIN32)
 # Installation - Linux/Mac
 elseif (UNIX)
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
-
-  set(PRESETS_DIR ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE}/presets)
   install(DIRECTORY "${PROJECT_SOURCE_DIR}/config/presets" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE}")
+  
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")
     set(CPACK_DEBIAN_PACKAGE_NAME ${EXECUTABLE_TITLE})
@@ -150,6 +149,3 @@ elseif (UNIX)
 endif()
 
 configure_file("${PROJECT_SOURCE_DIR}/config/config.h.in" "${PROJECT_BINARY_DIR}/config.h")
-
-
-
