@@ -178,8 +178,8 @@ bool Track::scan(const Config &config, std::mutex *m)
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
-    int ebur128_flags;
     bool error = false;
+    int peak_mode;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
     ebur128_state *ebur128 = NULL;
@@ -212,8 +212,8 @@ bool Track::scan(const Config &config, std::mutex *m)
     av_log_set_callback(scan_av_log);
     rc = avformat_open_input(&format_ctx, path.c_str(), NULL, NULL);
     if (rc < 0) {
-        char errbuf[2048];
-        av_strerror(rc, errbuf, 2048);
+        char errbuf[256];
+        av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not open input: '{}'", errbuf);
         error = true;
         goto end;
@@ -225,8 +225,8 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     rc = avformat_find_stream_info(format_ctx, NULL);
     if (rc < 0) {
-        char errbuf[2048];
-        av_strerror(rc, errbuf, 2048);
+        char errbuf[256];
+        av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not find stream info: {}", errbuf);
         error = true;
         goto end;
@@ -234,7 +234,6 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // Select the best audio stream
     stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
-
     if (stream_id < 0) {
         output_error("Could not find audio stream");
         error = true;
@@ -248,14 +247,13 @@ bool Track::scan(const Config &config, std::mutex *m)
         error = true;
         goto end;
     }
-
     avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
 
     // Initialize the decoder
     rc = avcodec_open2(codec_ctx, codec, NULL);
     if (rc < 0) {
-        char errbuf[2048];
-        av_strerror(rc, errbuf, 2048);
+        char errbuf[256];
+        av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not open codec: '{}'", errbuf);
         error = true;
         goto end;
@@ -286,29 +284,29 @@ bool Track::scan(const Config &config, std::mutex *m)
         swr = swr_alloc();
         av_opt_set_channel_layout(swr, "in_channel_layout", codec_ctx->channel_layout, 0);
         av_opt_set_channel_layout(swr, "out_channel_layout", codec_ctx->channel_layout, 0);
-
         av_opt_set_int(swr, "in_channel_count",  codec_ctx->channels, 0);
         av_opt_set_int(swr, "out_channel_count", codec_ctx->channels, 0);
-
         av_opt_set_int(swr, "in_sample_rate", codec_ctx->sample_rate, 0);
         av_opt_set_int(swr, "out_sample_rate", codec_ctx->sample_rate, 0);
-
         av_opt_set_sample_fmt(swr, "in_sample_fmt", codec_ctx->sample_fmt, 0);
         av_opt_set_sample_fmt(swr, "out_sample_fmt", OUTPUT_FORMAT, 0);
 
         rc = swr_init(swr);
         if (rc < 0) {
-            char errbuf[2048];
-            av_strerror(rc, errbuf, 2048);
+            char errbuf[256];
+            av_strerror(rc, errbuf, sizeof(errbuf));
             output_error("Could not open SWResample: {}", errbuf);
             error = true;
             goto end;
         }
     }
 
-    ebur128_flags = EBUR128_MODE_I;
-    config.true_peak ? ebur128_flags |= EBUR128_MODE_TRUE_PEAK : ebur128_flags |= EBUR128_MODE_SAMPLE_PEAK;
-    ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, ebur128_flags);
+    if (lk != NULL)
+        lk->unlock();
+
+    // Initialize libebur128
+    peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
+    ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
     if (ebur128 == NULL) {
         output_error("Could not initialize libebur128 scanner");
         error = true;
@@ -331,16 +329,17 @@ bool Track::scan(const Config &config, std::mutex *m)
         goto end;
     }
 
-    if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
+    if (output_progress && (format_ctx->streams[stream_id]->start_time == AV_NOPTS_VALUE || 
+    format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE)) {
+        output_progress = false;
+    }
+    else {
         start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
-
-    if (format_ctx->streams[stream_id]->duration != AV_NOPTS_VALUE)
         len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
-
+    }
+    
     if (output_progress)
         progress_bar.begin(start, len);
-    if (lk != NULL)
-        lk->unlock();
     
     while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
@@ -374,7 +373,7 @@ bool Track::scan(const Config &config, std::mutex *m)
                         ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
                     }
                     
-                    if (pos >= 0 && output_progress)
+                    if (output_progress && pos >= 0)
                         progress_bar.update(pos);
                 }
                 av_frame_unref(frame);
@@ -511,40 +510,23 @@ void ScanJob::tag_tracks(const Config &config)
         // Human-readable output
         if (human_output) {
             fmt::print("\nTrack: {}\n", track.path);
-            fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
-            fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
-            if (config.opus_mode == 'r' && track.type == OPUS) {
-                // also show the Q7.8 number that goes into R128_TRACK_GAIN
-                fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
-                    track.result.track_gain,
-                    GAIN_TO_Q78(track.result.track_gain),
-                    track.tclip ? " (adjusted to prevent clipping)" : ""
-                );
-            } 
-            else {
-                fmt::print(" Gain:     {:8.2f} dB{}\n", 
-                    track.result.track_gain, 
-                    track.tclip ? " (adjusted to prevent clipping)" : ""
-                );
-            }
+            fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
+            fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
+            fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
+                track.result.track_gain,
+                track.type == OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
+                track.tclip ? " (adjusted to prevent clipping)" : ""
+            );
 
             if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print("\nAlbum:\n");
-                fmt::print(" Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
-                fmt::print(" Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
-                if (config.opus_mode == 'r' && track.type == OPUS) {
-                    // also show the Q7.8 number that goes into R128_ALBUM_GAIN
-                    fmt::print(" Gain:     {:8.2f} dB ({}){}\n", 
-                        track.result.album_gain,
-                        GAIN_TO_Q78(track.result.album_gain),
-                        track.aclip ? " (adjusted to prevent clipping)" : ""
-                    );
-                } else {
-                    fmt::print(" Gain:     {:8.2f} dB{}\n", 
-                        track.result.album_gain,
-                        track.aclip ? " (adjusted to prevent clipping)" : ""
-                    );
-                }
+                fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
+                fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
+                fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
+                    track.result.album_gain,
+                    track.type == OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
+                    track.tclip ? " (adjusted to prevent clipping)" : ""
+                );
             }
             fmt::print("\n");
         }
@@ -561,7 +543,7 @@ void ScanJob::update_data(ScanData &data)
     }
     data.files += nb_files;
 
-    // Collect clipping stas
+    // Collect clipping stats
     for (const Track &track : tracks) {
         if (track.aclip || track.tclip)
             data.clipping_adjustments++;
