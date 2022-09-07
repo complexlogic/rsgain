@@ -81,13 +81,6 @@ Parallel scan jobs are generated on a *per-directory* basis, not a per-file basi
 
 The speed gains offered by multithreaded scanning are significant. On my library of about 12,000 songs, it takes about 5 hours in the default single threaded mode, but only 1 hour 45 minutes hours with `-m 4`, a reduction of about 65%.
 
-#### Loudness Override
-By default, rsgain respects the -18 LUFS target loudness from the ReplayGain 2.0 specification. If you want to use a different target loudness, you can override it globally using the `-l` option, followed by the loudness level in LUFS. For example, to use the -23 LUFS target loudness recommended by the EBU:
-```
-rsgain easy -l -23 /path/to/music/library
-```
-The target loudness is the only scan setting that is available for overriding at the global level. Any other setting must be overridden using an [overrides file](#overriding-default-settings). Note that if an overrides file is used, and the format-specific target loudness conflicts with the global target loudness, the format-specific value will always take precedence.
-
 #### Logging
 You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application such as Microsoft Excel or LibreOffice Calc.
 

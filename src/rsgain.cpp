@@ -187,12 +187,12 @@ static void custom_mode(int argc, char *argv[])
     int rc, i;
     unsigned nb_files   = 0;
 
-    const char *short_opts = "+ac:K:tl:Oqs:LSI:o:h?";
+    const char *short_opts = "+ac:m:tl:Oqs:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
 
         { "clip-mode",     no_argument,       NULL, 'c' },
-        { "max-peak",      required_argument, NULL, 'K' },
+        { "max-peak",      required_argument, NULL, 'm' },
         { "true-peak",     required_argument, NULL, 't' },
 
         { "loudness",      required_argument, NULL, 'l' },
@@ -231,7 +231,7 @@ static void custom_mode(int argc, char *argv[])
                 parse_clip_mode(optarg, config.clip_mode);
                 break;
 
-            case 'K': {
+            case 'm': {
                 parse_max_peak_level(optarg, config.max_peak_level);
                 break;
             }
@@ -403,7 +403,7 @@ static inline void help_custom(void) {
     CMD_HELP("--clip-mode=n", "-c n", "No clipping protection (default)");
     CMD_HELP("--clip-mode=p", "-c p", "Clipping protection enabled for positive gain values only");
     CMD_HELP("--clip-mode=a", "-c a", "Clipping protection always enabled");
-    CMD_HELP("--max-peak=n", "-K n", "Use max peak level n dB for clipping protection");
+    CMD_HELP("--max-peak=n", "-m n", "Use max peak level n dB for clipping protection");
     CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
 
     fmt::print("\n");
