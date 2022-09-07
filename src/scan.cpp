@@ -524,7 +524,7 @@ void ScanJob::tag_tracks(const Config &config)
                 fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                     track.result.album_gain,
                     track.type == OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
-                    track.tclip ? " (adjusted to prevent clipping)" : ""
+                    track.aclip ? " (adjusted to prevent clipping)" : ""
                 );
             }
             fmt::print("\n");
