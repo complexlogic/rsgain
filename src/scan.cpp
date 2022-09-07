@@ -132,7 +132,7 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
     return nb_files ? file_type : INVALID;
 }
 
-int ScanJob::add_files(char **files, int nb_files)
+bool ScanJob::add_files(char **files, int nb_files)
 {
     FileType file_type;
     std::filesystem::path path;
@@ -147,7 +147,7 @@ int ScanJob::add_files(char **files, int nb_files)
         }
     }
     this->nb_files = tracks.size();
-    return this->nb_files ? 0 : 1;
+    return this->nb_files ? true : false;
 }
 
 void free_ebur128(ebur128_state *ebur128_state)
@@ -159,16 +159,16 @@ void free_ebur128(ebur128_state *ebur128_state)
 bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
     for (Track &track : tracks) {
-        error = track.scan(config, ffmpeg_mutex);
+        error = !track.scan(config, ffmpeg_mutex);
         if (error)
-            return true;
+            return false;
     }
 
     if (config.tag_mode != 'd')
         this->calculate_loudness(config);
 
     this->tag_tracks(config);
-    return false;
+    return true;
 }
 
 bool Track::scan(const Config &config, std::mutex *m)
@@ -177,7 +177,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
-    bool error = false;
+    bool ret = true;
     int peak_mode;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
@@ -214,7 +214,7 @@ bool Track::scan(const Config &config, std::mutex *m)
         char errbuf[256];
         av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not open input: '{}'", errbuf);
-        error = true;
+        ret = false;
         goto end;
     }
 
@@ -227,7 +227,7 @@ bool Track::scan(const Config &config, std::mutex *m)
         char errbuf[256];
         av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not find stream info: {}", errbuf);
-        error = true;
+        ret = false;
         goto end;
     }
 
@@ -235,7 +235,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
     if (stream_id < 0) {
         output_error("Could not find audio stream");
-        error = true;
+        ret = false;
         goto end;
     }
         
@@ -243,7 +243,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     codec_ctx = avcodec_alloc_context3(codec);
     if (!codec_ctx) {
         output_error("Could not allocate audio codec context");
-        error = true;
+        ret = false;
         goto end;
     }
     avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
@@ -254,7 +254,7 @@ bool Track::scan(const Config &config, std::mutex *m)
         char errbuf[256];
         av_strerror(rc, errbuf, sizeof(errbuf));
         output_error("Could not open codec: '{}'", errbuf);
-        error = true;
+        ret = false;
         goto end;
     }
     codec_id = codec->id;
@@ -295,7 +295,7 @@ bool Track::scan(const Config &config, std::mutex *m)
             char errbuf[256];
             av_strerror(rc, errbuf, sizeof(errbuf));
             output_error("Could not open libswresample context: {}", errbuf);
-            error = true;
+            ret = false;
             goto end;
         }
     }
@@ -308,7 +308,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
     if (ebur128 == NULL) {
         output_error("Could not initialize libebur128 scanner");
-        error = true;
+        ret = false;
         goto end;
     }
 
@@ -316,7 +316,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     packet = av_packet_alloc();
     if (packet == NULL) {
         output_error("Could not allocate packet");
-        error = true;
+        ret = false;
         goto end;
     }
 
@@ -324,7 +324,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     frame = av_frame_alloc();
     if (frame == NULL) {
         output_error("Could not allocate frame");
-        error = true;
+        ret = false;
         goto end;
     }
 
@@ -358,7 +358,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 
                         if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                             output_error("Could not convert audio frame");
-                            error = true;
+                            ret = false;
                             av_free(swr_out_data[0]);
                             goto end;
                         }
@@ -404,14 +404,14 @@ end:
     }
     
     delete lk;
-    return error;
+    return ret;
 }
 
 void ScanJob::calculate_loudness(const Config &config)
 {
     // Track loudness calculations
     for (auto track = tracks.begin(); track != tracks.end();) {
-        if (track->calculate_loudness(config)) {
+        if (!track->calculate_loudness(config)) {
             tracks.erase(track);
             nb_files--;
         }
@@ -555,7 +555,7 @@ void ScanJob::update_data(ScanData &data)
     }
 }
 
-int Track::calculate_loudness(const Config &config) {
+bool Track::calculate_loudness(const Config &config) {
     unsigned channel = 0;
     double track_loudness, track_peak;
     ebur128_state *ebur128 = this->ebur128.get();
@@ -564,7 +564,7 @@ int Track::calculate_loudness(const Config &config) {
         track_loudness = config.target_loudness;
 
     if (track_loudness == -HUGE_VAL) // Don't bother tagging silent tracks
-        return 1;
+        return false;
 
     std::vector<double> peaks(ebur128->channels);
     int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
@@ -575,7 +575,7 @@ int Track::calculate_loudness(const Config &config) {
     result.track_gain           = config.target_loudness - track_loudness;
     result.track_peak           = track_peak;
     result.track_loudness       = track_loudness;
-    return 0;
+    return true;
 }
 
 

@@ -289,7 +289,7 @@ static void custom_mode(int argc, char *argv[])
     }
 
     ScanJob job;
-    if (job.add_files(argv + optind, nb_files)) {
+    if (!job.add_files(argv + optind, nb_files)) {
         output_fail("No valid files were specified");
         quit(EXIT_FAILURE);
     }
