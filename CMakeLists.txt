@@ -28,7 +28,11 @@ endif ()
 
 # Find dependencies - Windows
 if (WIN32)
-  find_package(ffmpeg MODULE REQUIRED)
+  find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h" REQUIRED)
+  find_library(LIBAVFORMAT avformat REQUIRED)
+  find_library(LIBAVCODEC avcodec REQUIRED)
+  find_library(LIBAVUTIL avutil REQUIRED)
+  find_library(LIBSWRESAMPLE swresample REQUIRED)
   find_path(TAGLIB_INCLUDE_DIR "taglib/id3v2tag.h" REQUIRED)
   set(TAGLIB_INCLUDE_DIR ${TAGLIB_INCLUDE_DIR}/taglib)
   find_library(TAGLIB tag REQUIRED)
@@ -40,6 +44,10 @@ if (WIN32)
   find_library(GETOPT getopt REQUIRED)
   find_path(INIH_INCLUDE_DIR "ini.h" REQUIRED)
   find_library(INIH inih REQUIRED)
+  if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
+    find_library(ZLIB zlib REQUIRED)
+	set(STATIC_LIBS ${ZLIB} "ws2_32.lib" "secur32.lib" "mfplat.lib" "mfuuid.lib" "strmiids.lib" "bcrypt.lib")
+  endif ()
   
 # Find dependencies - Linux/Mac
 elseif (UNIX)

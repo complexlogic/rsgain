@@ -1,6 +1,4 @@
 {
-  "name": "rsgain",
-  "version": "2.0.1",
   "dependencies": [
     "libebur128",
     "taglib",

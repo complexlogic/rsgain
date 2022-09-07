@@ -74,7 +74,6 @@ static const struct extension_type extensions[] {
     {".ape",  APE}
 };
 
-
 // A function to determine a file type
 inline static FileType determine_filetype(const std::string &extension)
 {
@@ -184,17 +183,6 @@ bool Track::scan(const Config &config, std::mutex *m)
     std::unique_lock<std::mutex> *lk = NULL;
     ebur128_state *ebur128 = NULL;
 
-    // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
-    // gain with no way to disable. To get the actual loudness of the audio signal,
-    // we need to set the header output gain to 0 dB before decoding
-    if (type == OPUS && config.tag_mode != 's')
-        set_opus_header_gain(path.c_str(), 0);
-    
-    if (m != NULL)
-        lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
-    if (output_progress)
-        output_ok("Scanning '{}'", path);
-
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
     const AVCodec *codec = NULL;
@@ -206,6 +194,17 @@ bool Track::scan(const Config &config, std::mutex *m)
     AVFrame *frame = NULL;
     SwrContext *swr = NULL;
     AVFormatContext *format_ctx = NULL;
+
+    // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
+    // gain with no way to disable. To get the actual loudness of the audio signal,
+    // we need to set the header output gain to 0 dB before decoding
+    if (type == OPUS && config.tag_mode != 's')
+        set_opus_header_gain(path.c_str(), 0);
+    
+    if (m != NULL)
+        lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
+    if (output_progress)
+        output_ok("Scanning '{}'", path);
 
     if (lk != NULL)
         lk->lock();
@@ -295,7 +294,7 @@ bool Track::scan(const Config &config, std::mutex *m)
         if (rc < 0) {
             char errbuf[256];
             av_strerror(rc, errbuf, sizeof(errbuf));
-            output_error("Could not open SWResample: {}", errbuf);
+            output_error("Could not open libswresample context: {}", errbuf);
             error = true;
             goto end;
         }
@@ -329,17 +328,17 @@ bool Track::scan(const Config &config, std::mutex *m)
         goto end;
     }
 
-    if (output_progress && (format_ctx->streams[stream_id]->start_time == AV_NOPTS_VALUE || 
-    format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE)) {
-        output_progress = false;
+    if (output_progress) { 
+        if (format_ctx->streams[stream_id]->start_time == AV_NOPTS_VALUE || 
+        format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE) {
+            output_progress = false;
+        }
+        else {
+            start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
+            len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
+            progress_bar.begin(start, len);
+        }
     }
-    else {
-        start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
-        len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
-    }
-    
-    if (output_progress)
-        progress_bar.begin(start, len);
     
     while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
