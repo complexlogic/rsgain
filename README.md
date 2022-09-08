@@ -1,10 +1,7 @@
 # rsgain
 **rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain). The goal of rsgain is to take the excellent platform created by loudgain and simplify it for the average user, while also preserving the advanced features for users that need them. The following improvements have been made from loudgain:
-- Native Windows support
-- Built-in recursive directory scanning without the need for a wrapper script. See [Easy Mode](#easy-mode) for more details.
-- Multithreaded scanning
+rsgain was designed with a "batteries included" mentality. It can be used without It seeks to provide a straightforward, user friendly interface - an area where most other ReplayGain scanners fall short. 
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
@@ -28,17 +25,12 @@ There is an AUR package [rsgain-git](https://aur.archlinux.org/packages/rsgain-g
 ```
 yay -S rsgain-git
 ```
-Alternatively, this repo also hosts a PKGBUILD script based on the latest release source code tarball. To install, run the following commands from a clean working directory:
-```
-wget https://raw.githubusercontent.com/complexlogic/rsgain/master/config/PKGBUILD
-makepkg -si
-```
 
 #### Others
 Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
 
 ## Supported file formats
-rsgain supports all popular file formats (as well as a few not-so-popular ones). See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match the second column in the table in order to be recognized as valid.
+rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table to be recognized as valid.
 |Format | Supported File Extension(s) |
 |-------|-----------------------------|
 |MP3|.mp3|
@@ -68,10 +60,10 @@ rsgain easy /path/to/music/library
 ```
 rsgain easy "C:\path\to\music library"
 ```
-That's it. rsgain will take care of the details. See [Overrides](#overriding-default-settings) for more information about the default settings and how to override them, if desired.
+That's it. rsgain will take care of the details. See the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
 
 #### Multithreaded Scanning
-Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must not be more than the number that your CPU supports. For example, if you have a CPU with 4 threads:
+Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must exceed the number that your CPU supports. For example, if you have a CPU with 4 threads:
 ```
 rsgain easy -m 4 /path/to/music/library
 ``` 
@@ -79,38 +71,34 @@ If you don't know how many threads your CPU has, you can also specify `-m MAX` a
 
 Parallel scan jobs are generated on a *per-directory* basis, not a per-file basis. If you request 4 threads but there is only 1 directory to scan, a single thread will be working and the other 3 will sit idle the entire time. Multithreaded mode is optimized for scanning a very large number of directories. It is recommended to use multithreaded mode for full library scans and the default single threaded mode when incrementally adding 1 or 2 albums to your library.
 
-The speed gains offered by multithreaded scanning are significant. On my library of about 12,000 songs, it takes about 5 hours in the default single threaded mode, but only 1 hour 45 minutes hours with `-m 4`, a reduction of about 65%.
+The speed gains offered by multithreaded scanning are significant. With `-m 4` or higher, you can typically expect to see a 50-80% reduction in total scan time, depending on your hardware, chosen settings, and library composition.
 
 #### Logging
 You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application such as Microsoft Excel or LibreOffice Calc.
 
-#### Overriding Default Settings
+#### Scan Presets
 Easy Mode scans files with the following settings by default:
 - -18 LUFS target loudness
 - Album tags enabled
-- True peak calculations for peak tags
-- Clipping protection enabled for positive gain values only (-1 dB max peak)
+- Sample peak calculations for peak tags
+- Clipping protection enabled for positive gain values only (0 dB max peak)
 - Standard uppercase tags for all formats
 - ID3v2.3 tags for ID3 formats
 - Standard ReplayGain tags for Opus files
 
-These settings are recommended for maximum compatibility with modern players. However, if you need one of the settings changed, you can override them on a per-format basis using the `-o` option, and an overrides file.
+These settings are recommended for maximum compatibility with modern players. However, if you need one or more of the settings changed, you can use a preset file.
 
-The overrides file is an INI-formatted file that contains sections enclosed in square brackets which correspond to the available formats, and each section contains key=value pairs that correspond to settings. The overrides feature is intended for users that can't use the default settings of Easy Mode, but still prefer the functionality of Easy Mode over Custom Mode.
+A preset file is an INI-formatted configuration file that contains sections enclosed in square brackets, and each section contains key=value pairs that correspond to settings. The first section in a presets file is titled "Global" and contains settings that will be applied to every format. The remaining sections pertain to a particular audio format, and the settings within them will only be applied to that format. This allows the user to define settings on a per-format basis. If a setting in the "Global" section is in conflict with one in the format-specific section, the format-specific value will always take precedence.
 
-For example, Easy Mode writes ID3v2.3 tags on MP3 files by default, but suppose you want ID3v2.4 instead. Format your `overrides.ini` file as follows:
-```INI
-[MP3]
-ID3v2Version=4
-```
-Then, pass the path to the overrides file with the `-o` option:
+A preset is specified with the `-p` option, followed by the path to a preset file *or* a preset name. A preset name is the filename of a preset without the directory or .ini file extension; rsgain will search the default preset location(s) for the file based on your platform:
+- On Windows, the folder `presets` in the same folder that contains `rsgain.exe`
+- On Unix platforms, rsgain will search first in the user home directory: `~/Library/rsgain/presets` on Mac and `~/.config/rsgain/presets` on Linux (you need to create these directories if they don't already exist). If the requested preset name is not found in the home directory, rsgain will search `<install prefix>/share/rsgain/presets`
 
-```
-rsgain easy -o /path/to/overrides.ini /path/to/music/library
-```
-A default `overrides.ini` file ships with rsgain in the root package directory for Windows, and in `<install prefix>/share/rsgain` for Unix. The file is pre-populated with all settings that are available to change. Note that this is an *overrides* file, not a configuration file, i.e any formats or settings you're not interested in can simply be deleted and the defaults will be used instead.
+For example, rsgain ships with a preset `ebur128.ini`, which will scan files based on the EBU R 128 recommendations. You can invoke this preset with `-p ebur128`. rsgain also ships with a preset `default.ini`, which is pre-populated with all of the default settings. This preset is not intended to be used directly, but rather to serve as a base for users to create their own presets. As such, it is not recommended to overwrite it. Instead, save a copy when using it as a base.
 
-Each setting key corresponds to a command line option in Custom Mode. Below is a table of all settings available for override.
+The settings in a preset file are applied in an "overrides" fashion. In other words, any settings or formats you're not interested in can simply be deleted from the preset and the defaults will be used instead.
+
+Each setting key in a presets file corresponds to a command line option in Custom Mode. Below is a table of all settings available for use in a preset.
 
 |Setting Key | Value Type | Custom Mode Option|
 |------------|------------|-------------------|
@@ -121,10 +109,10 @@ Each setting key corresponds to a command line option in Custom Mode. Below is a
 |TruePeak|Boolean|-t|
 |Lowercase|Boolean|-L|
 |ID3v2Version|Integer|-I|
-|MaxPeakLevel|Decimal|-K|
-|R128Tags|Boolean|-o|
+|MaxPeakLevel|Decimal|-m|
+|OpusMode|Character|-o|
 
-See the [Custom Mode help](#command-line-help) for more information.
+See [Custom Mode](#custom-mode) for more information.
 
 ### Custom Mode
 Custom Mode provides more complex command line syntax that is similar in nature to mp3gain and loudgain. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
@@ -134,7 +122,6 @@ Custom Mode is invoked with `rsgain custom` followed by options and a list of fi
  rsgain custom -a -s i file1.mp3 file2.mp3 file3.mp3
  ```
 Run `rsgain custom -h` for a full list of available options
-
 
 ## Design Philosophy 
 This section contains a brief overview of modern audio theories, how they influenced the design of rsgain, and how rsgain differs from other popular ReplayGain scanners.
@@ -189,4 +176,5 @@ It should be noted that using true peak instead of sample peak comes at a signif
 
 ### Tag casing
 
-
+## License
+rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain), and therefore is licensed under the original 2 clause BSD license used by loudgain.
