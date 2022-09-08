@@ -30,7 +30,7 @@ struct extension_type {
     FileType file_type;
 };
 
-typedef struct ScanResult {
+struct ScanResult {
 	double track_gain;
 	double track_peak;
 	double track_loudness;
@@ -38,9 +38,9 @@ typedef struct ScanResult {
 	double album_gain;
 	double album_peak;
 	double album_loudness;
-} ScanResult;
+};
 
-typedef struct ScanData {
+struct ScanData {
     unsigned int files;
     unsigned int clipping_adjustments;
     double total_gain;
@@ -50,9 +50,9 @@ typedef struct ScanData {
     std::vector<std::string> error_directories;
 
     ScanData(void) : files(0), clipping_adjustments(0), total_gain(0.f), total_peak(0.f), total_positive(0), total_negative(0){};
-} ScanData;
+};
 
-typedef struct Track{
+struct Track{
 	std::string path;
 	FileType type;
 	std::string container;
@@ -65,7 +65,7 @@ typedef struct Track{
 	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL, free_ebur128), tclip(false), aclip(false) {};
 	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 	bool calculate_loudness(const Config &config);
-} Track;
+};
 
 class ScanJob {
 	private:
