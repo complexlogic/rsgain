@@ -33,9 +33,10 @@ typedef struct {
 
 
 void quit(int status);
+bool parse_mode(const char *name, const char *valid_modes, const char *value, char &mode);
+#define parse_tag_mode(value, mode) parse_mode("tag", "dis", value, mode)
+#define parse_clip_mode(value, mode) parse_mode("clip", "npa", value, mode)
+#define parse_opus_mode(value, mode) parse_mode("Opus", "drta", value, mode)
 bool parse_target_loudness(const char *value, double &target_loudness);
-bool parse_tag_mode(const char *value, char &mode);
-bool parse_clip_mode(const char *value, char &mode);
-bool parse_opus_mode(const char *value, char &mode);
 bool parse_id3v2_version(const char *value, int &version);
 bool parse_max_peak_level(const char *value, double &peak);

@@ -121,39 +121,15 @@ bool parse_target_loudness(const char *value, double &target_loudness)
     return true;  
 }
 
-bool parse_tag_mode(const char *value, char &mode)
+bool parse_mode(const char *name, const char *valid_modes, const char *value, char &mode)
 {
-    std::string_view valid_modes = "dis";
-    size_t pos = valid_modes.find_first_of(*value);
+    const std::string_view vm = valid_modes;
+    size_t pos = vm.find_first_of(*value);
     if (pos != std::string::npos) {
         mode = valid_modes[pos];
         return true;
     }
-    output_error("Invalid tag mode: '{}'", value);
-    return false;        
-}
-
-bool parse_clip_mode(const char *value, char &mode)
-{
-    static const std::string_view valid_modes = "npa";
-    size_t pos = valid_modes.find_first_of(*value);
-    if (pos != std::string::npos) {
-        mode = valid_modes[pos];
-        return true;
-    }
-    output_error("Invalid clip mode: '{}'", value);
-    return false;
-}
-
-bool parse_opus_mode(const char *value, char &mode)
-{
-    static const std::string_view valid_modes = "drta";
-    size_t pos = valid_modes.find_first_of(*value);
-    if (pos != std::string::npos) {
-        mode = valid_modes[pos];
-        return true;
-    }
-    output_error("Invalid Opus mode: '{}'", value);
+    output_error("Invalid {} mode: '{}'", name, value);
     return false;
 }
 
