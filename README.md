@@ -1,7 +1,7 @@
 # rsgain
 **rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-rsgain was designed with a "batteries included" mentality. It can be used without It seeks to provide a straightforward, user friendly interface - an area where most other ReplayGain scanners fall short. 
+rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It seeks to strike the perfect balance between power and simplicity by providing [multiple user interfaces](#usage). See the [Design Philosophy](#design-philosophy) for more information.
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
@@ -46,7 +46,13 @@ rsgain supports all popular file formats. See the below table for compatibility.
 |AIFF|.aiff|
 
 ## Usage
-rsgain has two modes of operation: Easy Mode and Custom Mode. Easy Mode is recommended over Custom Mode for almost all use cases. Custom Mode exists to provides backwards compatibility with the legacy loudgain/mp3gain command line.
+rsgain contains two separate user interfaces: Easy Mode and Custom Mode. The distinction between the two modes is rooted in the history of ReplayGain utilities. 
+
+Legacy ReplayGain tagging utilities such as mp3gain did not support recursive directory-based scanning. The user was required to manually specify a list of files on the command line, preceded by options which were numerous and complex. This interface provided a lot of power and flexibility, but it wasn't particularly user friendly. Performing a full library scan typically required the user to supplement the scanner with a wrapper script that traversed the directory tree and detected the files.
+
+rsgain's Easy Mode *is* that wrapper script; the functionality is built-in to the program. In Easy Mode, the user simply points the program to their library and it will be recusrively scanned with all recommended settings enabled by default. 
+
+The legacy-style interface has been retained as "Custom Mode" for users that require a higher level of control.
 
 ### Easy Mode
 Easy Mode recursively scans your entire music library using the recommended settings for each file type. You can use Easy Mode if the following conditions apply:
@@ -60,10 +66,10 @@ rsgain easy /path/to/music/library
 ```
 rsgain easy "C:\path\to\music library"
 ```
-That's it. rsgain will take care of the details. See the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
+This is all that is required for most users. Advanced users should ee the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
 
 #### Multithreaded Scanning
-Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must exceed the number that your CPU supports. For example, if you have a CPU with 4 threads:
+Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must not exceed the number that your CPU supports. For example, if you have a CPU with 4 threads:
 ```
 rsgain easy -m 4 /path/to/music/library
 ``` 
@@ -115,7 +121,7 @@ Each setting key in a presets file corresponds to a command line option in Custo
 See [Custom Mode](#custom-mode) for more information.
 
 ### Custom Mode
-Custom Mode provides more complex command line syntax that is similar in nature to mp3gain and loudgain. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
+Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and similar legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
 
 Custom Mode is invoked with `rsgain custom` followed by options and a list of files to scan. For example, scan and tag a short list of MP3 files with album tags enabled:
  ```
@@ -124,7 +130,7 @@ Custom Mode is invoked with `rsgain custom` followed by options and a list of fi
 Run `rsgain custom -h` for a full list of available options
 
 ## Design Philosophy 
-This section contains a brief overview of modern audio theories, how they influenced the design of rsgain, and how rsgain differs from other popular ReplayGain scanners.
+This section provides a brief overview of modern audio theories, how they influenced the design of rsgain, and how rsgain differs from other popular ReplayGain scanners.
 
 ### What is Loudness?
 Loudness can be defined as the *subjective* perception of sound pressure. The subjective nature of loudness presents challenges in prescribing normalization techniques.
@@ -162,11 +168,11 @@ The ReplayGain specification requires a scanner to tag files with peak informati
 
 The sample peak is simply the highest value sample in the signal. In ReplayGain, the peak is unitless and normalized to a scale of 0 to 1, with 1 representing full scale. The sample peak has been the default peak measurement used in loudness normalization until recently.
 
-True peak is a relatively new concept. The theory pertains to how audio signals are converted from analog to digital, and then eventually from digital back to analog for listening. In the first stage (analog to digital), the sampling process does not capture the true peak of the continuous analog signal because it occurred in between samples. The sample peak value that is calculated using the digital samples is therefore inaccurate because the true peak was lost in the sampling process. The digital signal is mastered with the deceptively low sample peak set to just below full scale. When it's converted back into analog during playback, the true peak from the original analog signal is reconstructed and exceeds full scale, resulting in clipping.
+True peak is a relatively new concept. The theory pertains to how audio signals are converted from analog to digital, and then eventually from digital back to analog for listening. In the first stage (analog to digital), the sampling process does not capture the true peak of the continuous analog signal because it occurred in between samples. The sample peak value that is calculated using the digital samples is therefore inaccurate. The digital signal is then mastered with the deceptively low sample peak set to just below full scale. When it's converted back into analog during playback, the true peak from the original analog signal is reconstructed and exceeds full scale, resulting in clipping.
 
 In the case of a digital audio recording, true peak from the original analog signal has already been lost forever. The method used to calculate the "true" peak from an existing digital audio signal is called interpolation, which attempts to *approximate* the original analog signal. The digital signal is resampled at a much higher sampling rate, and the interpolation algorithm attempts to estimate what original analog signal was in between the original samples. The higher oversampling rate, the better approximation of the original analog signal. Peaks that occur in the interpolated samples are known as intersample peaks. In practice, the calculated true peak value will always be higher than the sample peak. Unlike sample peaks, the true peak can exceed full scale (1).
 
-The ReplayGain specification does not specify whether the peak should be calculated using the sample peak or true peak method, leaving the decision to the implementation. Comparing popular ReplayGain scanners, r128gain always uses sample peak, while loudgain always uses true peak. Conversely, rsgain allows the user to choose between the sample peak and true peak methods. The default in Easy Mode is true peak.
+The ReplayGain specification does not explicitly specify whether the peak should be calculated using the sample peak or true peak method, leaving the decision to the implementation. Comparing popular ReplayGain scanners, r128gain always uses sample peak, while loudgain always uses true peak. Conversely, rsgain allows the user to choose between the sample peak and true peak methods. The default is sample peak.
 
 It should be noted that using true peak instead of sample peak comes at a significant performance cost. Scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans; the oversampling interpolation process used to calculate the true peak is very computationally intensive.
 
@@ -177,4 +183,4 @@ It should be noted that using true peak instead of sample peak comes at a signif
 ### Tag casing
 
 ## License
-rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain), and therefore is licensed under the original 2 clause BSD license used by loudgain.
+rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain), and accordingly is licensed under the original 2 clause BSD license used by loudgain.
