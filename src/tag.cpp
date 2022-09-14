@@ -80,16 +80,16 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, con
 static void tag_clear_asf(TagLib::ASF::Tag *tag);
 static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config);
 
-typedef enum {
-    RG_TRACK_GAIN,
-    RG_TRACK_PEAK,
-    RG_TRACK_RANGE,
-    RG_ALBUM_GAIN,
-    RG_ALBUM_PEAK,
-    RG_ALBUM_RANGE,
-    RG_REFERENCE_LOUDNESS,
-    RGTAG_MAX_VAL
-} RGTag;
+enum class RGTag {
+    TRACK_GAIN,
+    TRACK_PEAK,
+    TRACK_RANGE,
+    ALBUM_GAIN,
+    ALBUM_PEAK,
+    ALBUM_RANGE,
+    REFERENCE_LOUDNESS,
+    MAX_VAL
+};
 
 static const char *RG_STRING_UPPER[] = {
     "REPLAYGAIN_TRACK_GAIN",
@@ -112,36 +112,36 @@ static const char *RG_STRING_LOWER[] = {
 };
 template<std::size_t N, class T>
 constexpr std::size_t array_size(T(&)[N]) {return N;}
-static_assert(RGTAG_MAX_VAL == array_size(RG_STRING_UPPER));
+static_assert((size_t) RGTag::MAX_VAL == array_size(RG_STRING_UPPER));
 static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
 
-typedef enum {
-    R128_TRACK_GAIN,
-    R128_ALBUM_GAIN,
-    R128TAG_MAX_VAL
-} R128Tag;
+enum class R128Tag {
+    TRACK_GAIN,
+    ALBUM_GAIN,
+    MAX_VAL
+};
 
 static const char *R128_STRING[] = {
     "R128_TRACK_GAIN",
     "R128_ALBUM_GAIN"
 };
-static_assert(R128TAG_MAX_VAL == array_size(R128_STRING));
+static_assert((size_t) R128Tag::MAX_VAL == array_size(R128_STRING));
 
 void tag_track(Track &track, const Config &config)
 {
     switch (track.type) {
-        case MP2:
-        case MP3:
+        case FileType::MP2:
+        case FileType::MP3:
             if (!tag_mp3(track, config))
                 tag_error(track);
             break;
 
-        case FLAC:
+        case FileType::FLAC:
             if (!tag_flac(track, config))
                 tag_error(track);
             break;
 
-        case OGG:
+        case FileType::OGG:
             switch (track.codec_id) {
                 case AV_CODEC_ID_OPUS:
                     if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
@@ -165,37 +165,37 @@ void tag_track(Track &track, const Config &config)
                 }
                 break;
                 
-        case OPUS:
+        case FileType::OPUS:
             if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
                 tag_error(track);
             break;
 
-        case M4A:
+        case FileType::M4A:
             if (!tag_mp4(track, config))
                 tag_error(track);
             break;
 
-        case WMA:
+        case FileType::WMA:
             if (!tag_wma(track, config))
                 tag_error(track);
             break;
 
-        case WAV:
+        case FileType::WAV:
             if (!tag_riff<TagLib::RIFF::WAV::File>(track, config))
                 tag_error(track);
             break;
 
-        case AIFF:
+        case FileType::AIFF:
             if (!tag_riff<TagLib::RIFF::AIFF::File>(track, config))
                 tag_error(track);
             break;
 
-        case WAVPACK:
+        case FileType::WAVPACK:
             if (!tag_apev2<TagLib::WavPack::File>(track, config))
                 tag_error(track);
             break;
 
-        case APE:
+        case FileType::APE:
             if (!tag_apev2<TagLib::APE::File>(track, config))
                 tag_error(track);
             break;
@@ -205,11 +205,11 @@ void tag_track(Track &track, const Config &config)
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag)
 {
-    write_tag(RG_TRACK_GAIN, FORMAT_GAIN(result.track_gain));
-    write_tag(RG_TRACK_PEAK, FORMAT_PEAK(result.track_peak));
+    write_tag(RGTag::TRACK_GAIN, FORMAT_GAIN(result.track_gain));
+    write_tag(RGTag::TRACK_PEAK, FORMAT_PEAK(result.track_peak));
     if (config.do_album) {
-        write_tag(RG_ALBUM_GAIN, FORMAT_GAIN(result.album_gain));
-        write_tag(RG_ALBUM_PEAK, FORMAT_PEAK(result.album_peak));
+        write_tag(RGTag::ALBUM_GAIN, FORMAT_GAIN(result.album_gain));
+        write_tag(RGTag::ALBUM_PEAK, FORMAT_PEAK(result.album_peak));
     }
 }
 
@@ -355,7 +355,7 @@ static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, con
         config,
         [&](RGTag rg_tag, const std::string &value) {
             TagLib::ID3v2::UserTextIdentificationFrame *frame = new TagLib::ID3v2::UserTextIdentificationFrame;
-            frame->setDescription(RG_STRING[rg_tag]);
+            frame->setDescription(RG_STRING[static_cast<int>(rg_tag)]);
             frame->setText(value);
             tag->addFrame(frame);
         }
@@ -388,12 +388,12 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
 
     // Opus RFC 7845 tag
     if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_mode == 'r') {
-        tag->addField(R128_STRING[R128_TRACK_GAIN], 
+        tag->addField(R128_STRING[static_cast<int>(R128Tag::TRACK_GAIN)], 
             fmt::format("{}", GAIN_TO_Q78(result.track_gain))
         );
 
         if (config.do_album) {
-            tag->addField(R128_STRING[R128_ALBUM_GAIN], 
+            tag->addField(R128_STRING[static_cast<int>(R128Tag::ALBUM_GAIN)], 
                 fmt::format("{}", GAIN_TO_Q78(result.album_gain))
             );
         }
@@ -404,7 +404,7 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
         write_rg_tags(result,
             config,
             [&](RGTag rg_tag, const std::string &value) {
-                tag->addField(RG_STRING[rg_tag], value);
+                tag->addField(RG_STRING[static_cast<int>(rg_tag)], value);
             }
         );
     }
@@ -428,7 +428,7 @@ static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const
         config,
         [&](RGTag rg_tag, const std::string &value) {
             TagLib::String tag_name;
-            FORMAT_MP4_TAG(tag_name, RG_STRING[rg_tag]);
+            FORMAT_MP4_TAG(tag_name, RG_STRING[static_cast<int>(rg_tag)]);
             tag->setItem(tag_name, TagLib::StringList(value));
         }
     );
@@ -449,7 +449,7 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, con
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const std::string &value) {
-            tag->addValue(RG_STRING[rg_tag], TagLib::String(value));
+            tag->addValue(RG_STRING[static_cast<int>(rg_tag)], TagLib::String(value));
         }
     );
 }
@@ -469,7 +469,7 @@ static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const std::string &value) {
-            tag->setAttribute(RG_STRING[rg_tag], TagLib::String(value));
+            tag->setAttribute(RG_STRING[static_cast<int>(rg_tag)], TagLib::String(value));
         }
     );
 }

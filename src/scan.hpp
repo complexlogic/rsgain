@@ -10,7 +10,7 @@
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 void free_ebur128(ebur128_state *ebur128);
 
-typedef enum {
+enum class FileType {
     INVALID = -1,
     MP2,
     MP3,
@@ -23,7 +23,7 @@ typedef enum {
     AIFF,
     WAVPACK,
     APE
-} FileType;
+};
 
 struct extension_type {
     const char *extension;

@@ -191,7 +191,7 @@ static void custom_mode(int argc, char *argv[])
         .true_peak = false,
         .clip_mode = 'n',
         .do_album = false,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -223,7 +223,7 @@ static void custom_mode(int argc, char *argv[])
             }
 
             case 'O':
-                config.tab_output = TYPE_STDOUT;
+                config.tab_output = OutputType::STDOUT;
                 quiet = 1;
                 break;
 

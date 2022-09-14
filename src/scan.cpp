@@ -57,21 +57,21 @@ extern bool multithread;
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
 
 static const struct extension_type extensions[] {
-    {".mp2",  MP2},
-    {".mp3",  MP3},
-    {".flac", FLAC},
-    {".ogg",  OGG},
-    {".oga",  OGG},
-    {".spx",  OGG},
-    {".opus", OPUS},
-    {".m4a",  M4A},
-    {".wma",  WMA},
-    {".wav",  WAV},
-    {".aiff", AIFF},
-    {".aif",  AIFF},
-    {".snd",  AIFF},
-    {".wv",   WAVPACK},
-    {".ape",  APE}
+    {".mp2",  FileType::MP2},
+    {".mp3",  FileType::MP3},
+    {".flac", FileType::FLAC},
+    {".ogg",  FileType::OGG},
+    {".oga",  FileType::OGG},
+    {".spx",  FileType::OGG},
+    {".opus", FileType::OPUS},
+    {".m4a",  FileType::M4A},
+    {".wma",  FileType::WMA},
+    {".wav",  FileType::WAV},
+    {".aiff", FileType::AIFF},
+    {".aif",  FileType::AIFF},
+    {".snd",  FileType::AIFF},
+    {".wv",   FileType::WAVPACK},
+    {".ape",  FileType::APE}
 };
 
 // A function to determine a file type
@@ -81,7 +81,7 @@ inline static FileType determine_filetype(const std::string &extension)
                   std::cend(extensions), 
                   [&](auto &e) {return extension == e.extension;}
               );
-    return it == std::cend(extensions) ? INVALID : it->file_type;
+    return it == std::cend(extensions) ? FileType::INVALID : it->file_type;
 }
 
 // A function to determine if a given file is a given type
@@ -107,13 +107,13 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
             continue;
         }
         file_type = determine_filetype(entry.path().extension().string());
-        if (file_type != INVALID) {
+        if (file_type != FileType::INVALID) {
             extensions.insert(file_type);
         }
     }
     num_extensions = extensions.size();
     if (num_extensions != 1) {
-        return INVALID;
+        return FileType::INVALID;
     }
     file_type = *extensions.begin();
 
@@ -129,7 +129,7 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
     type = file_type;
     nb_files = tracks.size();
     this->path = path.string();
-    return nb_files ? file_type : INVALID;
+    return nb_files ? file_type : FileType::INVALID;
 }
 
 bool ScanJob::add_files(char **files, int nb_files)
@@ -139,7 +139,7 @@ bool ScanJob::add_files(char **files, int nb_files)
     for (int i = 0; i < nb_files; i++) {
         path = files[i];
         file_type = determine_filetype(path.extension().string());
-        if (file_type == INVALID) {
+        if (file_type == FileType::INVALID) {
             output_error("File '{}' is not of a supported type", files[i]);
         }
         else {
@@ -185,10 +185,9 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
-    const AVCodec *codec = NULL;
-#else
-    AVCodec *codec = NULL;
+    const 
 #endif
+    AVCodec *codec = NULL;
     AVPacket *packet = NULL;
     AVCodecContext *codec_ctx = NULL;
     AVFrame *frame = NULL;
@@ -198,7 +197,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
     // gain with no way to disable. To get the actual loudness of the audio signal,
     // we need to set the header output gain to 0 dB before decoding
-    if (type == OPUS && config.tag_mode != 's')
+    if (type == FileType::OPUS && config.tag_mode != 's')
         set_opus_header_gain(path.c_str(), 0);
     
     if (m != NULL)
@@ -463,8 +462,8 @@ void ScanJob::calculate_loudness(const Config &config)
 void ScanJob::tag_tracks(const Config &config)
 {
     std::FILE *stream = NULL;
-    if (config.tab_output != TYPE_NONE) {
-        if (config.tab_output == TYPE_FILE) {
+    if (config.tab_output != OutputType::NONE) {
+        if (config.tab_output == OutputType::FILE) {
             std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.csv";
             stream = fopen(output_file.string().c_str(), "wb");
         }
@@ -476,7 +475,7 @@ void ScanJob::tag_tracks(const Config &config)
     }
 
     // Tag the files
-    bool tab_output = config.tab_output != TYPE_NONE && stream != NULL;
+    bool tab_output = config.tab_output != OutputType::NONE && stream != NULL;
     bool human_output = !multithread && !quiet && config.tag_mode != 'd';
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
@@ -511,7 +510,7 @@ void ScanJob::tag_tracks(const Config &config)
             fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
             fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                 track.result.track_gain,
-                track.type == OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
+                track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
                 track.tclip ? " (adjusted to prevent clipping)" : ""
             );
 
@@ -521,14 +520,14 @@ void ScanJob::tag_tracks(const Config &config)
                 fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
                 fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                     track.result.album_gain,
-                    track.type == OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
+                    track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
                     track.aclip ? " (adjusted to prevent clipping)" : ""
                 );
             }
             fmt::print("\n");
         }
     }
-    if (config.tab_output == TYPE_FILE && stream != NULL)
+    if (config.tab_output == OutputType::FILE && stream != NULL)
         fclose(stream);
 }
 

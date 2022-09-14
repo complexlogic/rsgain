@@ -12,13 +12,13 @@
 
 #define RG_TARGET_LOUDNESS -18.f
 
-typedef enum {
-	TYPE_NONE,
-	TYPE_STDOUT,
-	TYPE_FILE,
-} OutputType;
+enum class OutputType{
+	NONE,
+	STDOUT,
+	FILE,
+};
 
-typedef struct {
+struct Config {
 	char tag_mode;
 	double target_loudness;
 	double max_peak_level;
@@ -29,7 +29,7 @@ typedef struct {
 	bool lowercase;
 	int id3v2version;
 	char opus_mode;
-} Config;
+};
 
 
 void quit(int status);

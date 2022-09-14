@@ -50,7 +50,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -64,7 +64,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -78,7 +78,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -92,7 +92,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -106,7 +106,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -120,7 +120,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -134,7 +134,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -148,7 +148,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -162,7 +162,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -176,7 +176,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -190,7 +190,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
-        .tab_output = TYPE_NONE,
+        .tab_output = OutputType::NONE,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -257,7 +257,7 @@ void easy_mode(int argc, char *argv[])
 
             case 'O':
                 for (Config &config : configs)
-                    config.tab_output = TYPE_FILE;
+                    config.tab_output = OutputType::FILE;
                 break;
         }
     }
@@ -286,21 +286,21 @@ static bool convert_bool(const char *value, bool &setting)
 static inline FileType determine_section_type(const std::string &section)
 {
     static const struct preset_section sections[] {
-        {"MP2",     MP2},
-        {"MP3",     MP3},
-        {"FLAC",    FLAC},
-        {"Ogg",     OGG},
-        {"Opus",    OPUS},
-        {"M4A",     M4A},
-        {"WMA",     WMA},
-        {"WAV",     WAV},
-        {"AIFF",    AIFF},
-        {"Wavpack", WAVPACK},
-        {"APE",     APE}
+        {"MP2",     FileType::MP2},
+        {"MP3",     FileType::MP3},
+        {"FLAC",    FileType::FLAC},
+        {"Ogg",     FileType::OGG},
+        {"Opus",    FileType::OPUS},
+        {"M4A",     FileType::M4A},
+        {"WMA",     FileType::WMA},
+        {"WAV",     FileType::WAV},
+        {"AIFF",    FileType::AIFF},
+        {"Wavpack", FileType::WAVPACK},
+        {"APE",     FileType::APE}
     };
 
     auto it = std::find_if(std::cbegin(sections), std::cend(sections), [&](auto s){return s.name == section;});
-    return it == std::cend(sections) ? INVALID : it->file_type;
+    return it == std::cend(sections) ? FileType::INVALID : it->file_type;
 }
 
 // Callback for INI parser
@@ -358,36 +358,36 @@ int global_handler(void *user, const char *section, const char *name, const char
 int format_handler(void *user, const char *section, const char *name, const char *value)
 {
     FileType file_type = determine_section_type(section);
-    if (file_type == INVALID)
+    if (file_type == FileType::INVALID)
         return 0;
 
     // Parse setting keys
     if (MATCH(name, "Album")) {
-        convert_bool(value, configs[file_type].do_album);
+        convert_bool(value, configs[static_cast<int>(file_type)].do_album);
     }
     else if (MATCH(name, "TagMode")) {
-        parse_tag_mode(value, configs[file_type].tag_mode);
+        parse_tag_mode(value, configs[static_cast<int>(file_type)].tag_mode);
     }
     else if (MATCH(name, "ClipMode")) {
-        parse_clip_mode(value, configs[file_type].clip_mode);
+        parse_clip_mode(value, configs[static_cast<int>(file_type)].clip_mode);
     }
     else if (MATCH(name, "Lowercase")) {
-        convert_bool(value, configs[file_type].lowercase);
+        convert_bool(value, configs[static_cast<int>(file_type)].lowercase);
     }
     else if (MATCH(name, "ID3v2Version")) {
-        parse_id3v2_version(value, configs[file_type].id3v2version);
+        parse_id3v2_version(value, configs[static_cast<int>(file_type)].id3v2version);
     }
     else if (MATCH(name, "TargetLoudness")) {
-        parse_target_loudness(value, configs[file_type].target_loudness);
+        parse_target_loudness(value, configs[static_cast<int>(file_type)].target_loudness);
     }
     else if (MATCH(name, "MaxPeakLevel")) {
-        parse_max_peak_level(value, configs[file_type].max_peak_level);
+        parse_max_peak_level(value, configs[static_cast<int>(file_type)].max_peak_level);
     }
     else if (MATCH(name, "TruePeak")) {
-        convert_bool(value, configs[file_type].true_peak);
+        convert_bool(value, configs[static_cast<int>(file_type)].true_peak);
     }
     else if (MATCH(name, "OpusMode")) {
-        parse_opus_mode(value, configs[file_type].opus_mode);
+        parse_opus_mode(value, configs[static_cast<int>(file_type)].opus_mode);
     }
     return 0;
 }
@@ -489,7 +489,7 @@ void WorkerThread::work()
     std::unique_lock thread_lock(thread_mutex);
     while (!quit) {
         if (job != NULL) {
-            job->scan(configs[job->type], ffmpeg_mutex);
+            job->scan(configs[static_cast<int>(job->type)], ffmpeg_mutex);
             
             // Inform the main thread that the scanning is finished
             main_lock.lock();
@@ -578,7 +578,7 @@ void scan_easy(const char *directory, const char *preset, int threads)
         while (directories.size()) {
             job = new ScanJob();
             std::filesystem::path &dir = directories.front();
-            if (job->add_directory(dir) != INVALID) {
+            if (job->add_directory(dir) != FileType::INVALID) {
                 bool job_placed = false;
 
                 // Feed the generated job to the first available worker thread
@@ -632,9 +632,9 @@ void scan_easy(const char *directory, const char *preset, int threads)
         FileType file_type;
         while (directories.size()) {
             ScanJob job;
-            if ((file_type = job.add_directory(directories.front())) != INVALID) {
+            if ((file_type = job.add_directory(directories.front())) != FileType::INVALID) {
                 output_ok("Scanning directory: '{}'", job.path);
-                job.scan(configs[file_type]);
+                job.scan(configs[static_cast<int>(file_type)]);
                 job.update_data(scan_data);
             }
             directories.pop_front();
