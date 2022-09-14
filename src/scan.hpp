@@ -25,11 +25,6 @@ enum class FileType {
     APE
 };
 
-struct extension_type {
-    const char *extension;
-    FileType file_type;
-};
-
 struct ScanResult {
 	double track_gain;
 	double track_peak;

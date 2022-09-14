@@ -8,9 +8,8 @@
 #include <algorithm>
 #include <mutex>
 #include <condition_variable>
-#include <chrono>
-#include <iomanip>
 #include <initializer_list>
+#include <unordered_map>
 #include <math.h>
 #include <string.h>
 #include <stdio.h>
@@ -283,9 +282,9 @@ static bool convert_bool(const char *value, bool &setting)
     return false;
 }
 
-static inline FileType determine_section_type(const std::string &section)
+static FileType determine_section_type(const std::string &section)
 {
-    static const struct preset_section sections[] {
+    static const std::unordered_map<std::string, FileType> map = {
         {"MP2",     FileType::MP2},
         {"MP3",     FileType::MP3},
         {"FLAC",    FileType::FLAC},
@@ -298,9 +297,8 @@ static inline FileType determine_section_type(const std::string &section)
         {"Wavpack", FileType::WAVPACK},
         {"APE",     FileType::APE}
     };
-
-    auto it = std::find_if(std::cbegin(sections), std::cend(sections), [&](auto s){return s.name == section;});
-    return it == std::cend(sections) ? FileType::INVALID : it->file_type;
+    auto it = map.find(section);
+    return it == map.end() ? FileType::INVALID : it->second;
 }
 
 // Callback for INI parser

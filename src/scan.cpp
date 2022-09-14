@@ -35,6 +35,7 @@
 #include <set>
 #include <algorithm>
 #include <filesystem>
+#include <unordered_map>
 #include <stdlib.h>
 
 #include <ebur128.h>
@@ -56,42 +57,28 @@ extern bool multithread;
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
 
-static const struct extension_type extensions[] {
-    {".mp2",  FileType::MP2},
-    {".mp3",  FileType::MP3},
-    {".flac", FileType::FLAC},
-    {".ogg",  FileType::OGG},
-    {".oga",  FileType::OGG},
-    {".spx",  FileType::OGG},
-    {".opus", FileType::OPUS},
-    {".m4a",  FileType::M4A},
-    {".wma",  FileType::WMA},
-    {".wav",  FileType::WAV},
-    {".aiff", FileType::AIFF},
-    {".aif",  FileType::AIFF},
-    {".snd",  FileType::AIFF},
-    {".wv",   FileType::WAVPACK},
-    {".ape",  FileType::APE}
-};
-
 // A function to determine a file type
-inline static FileType determine_filetype(const std::string &extension)
+static FileType determine_filetype(const std::string &extension)
 {
-    auto it = std::find_if(std::cbegin(extensions), 
-                  std::cend(extensions), 
-                  [&](auto &e) {return extension == e.extension;}
-              );
-    return it == std::cend(extensions) ? FileType::INVALID : it->file_type;
-}
-
-// A function to determine if a given file is a given type
-inline static bool is_type(const std::string &extension, const FileType file_type)
-{
-    auto it = std::find_if(std::cbegin(extensions), 
-                  std::cend(extensions), 
-                  [&](auto &e) {return extension == e.extension;}
-              );
-   return it == std::cend(extensions) || it->file_type != file_type ? false : true;
+    static const std::unordered_map<std::string, FileType> map =  {
+        {".mp2",  FileType::MP2},
+        {".mp3",  FileType::MP3},
+        {".flac", FileType::FLAC},
+        {".ogg",  FileType::OGG},
+        {".oga",  FileType::OGG},
+        {".spx",  FileType::OGG},
+        {".opus", FileType::OPUS},
+        {".m4a",  FileType::M4A},
+        {".wma",  FileType::WMA},
+        {".wav",  FileType::WAV},
+        {".aiff", FileType::AIFF},
+        {".aif",  FileType::AIFF},
+        {".snd",  FileType::AIFF},
+        {".wv",   FileType::WAVPACK},
+        {".ape",  FileType::APE}
+    };
+    auto it = map.find(extension);
+    return it == map.end() ? FileType::INVALID : it->second;
 }
 
 FileType ScanJob::add_directory(std::filesystem::path &path)
@@ -107,24 +94,20 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
             continue;
         }
         file_type = determine_filetype(entry.path().extension().string());
-        if (file_type != FileType::INVALID) {
+        if (file_type != FileType::INVALID)
             extensions.insert(file_type);
-        }
     }
     num_extensions = extensions.size();
-    if (num_extensions != 1) {
+    if (num_extensions != 1) 
         return FileType::INVALID;
-    }
     file_type = *extensions.begin();
 
     // Generate vector of files with directory file type
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
-        if (!entry.is_regular_file() || !entry.path().has_extension()) {
+        if (!entry.is_regular_file() || !entry.path().has_extension())
             continue;
-        }
-        if (is_type(entry.path().extension().string(), file_type)) {
+        if (determine_filetype(entry.path().extension().string()) == file_type)
             tracks.push_back(Track(entry.path().string(), file_type));
-        }
     }
     type = file_type;
     nb_files = tracks.size();
@@ -139,12 +122,10 @@ bool ScanJob::add_files(char **files, int nb_files)
     for (int i = 0; i < nb_files; i++) {
         path = files[i];
         file_type = determine_filetype(path.extension().string());
-        if (file_type == FileType::INVALID) {
+        if (file_type == FileType::INVALID)
             output_error("File '{}' is not of a supported type", files[i]);
-        }
-        else {
+        else 
             tracks.push_back(Track(path.string(), file_type));
-        }
     }
     this->nb_files = tracks.size();
     return this->nb_files ? true : false;

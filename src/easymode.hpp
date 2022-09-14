@@ -35,10 +35,5 @@ class WorkerThread {
 
 };
 
-struct preset_section {
-    const char *name;
-    FileType file_type;
-};
-
 void easy_mode(int argc, char *argv[]);
 void scan_easy(const char *directory, const char *preset, int threads);
