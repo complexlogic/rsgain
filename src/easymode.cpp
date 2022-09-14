@@ -391,17 +391,15 @@ int format_handler(void *user, const char *section, const char *name, const char
 }
 
 inline void join_paths(std::filesystem::path &p, std::initializer_list<const char*> list)
-{
-    for (const char *item : list) { // Appending null string will cause segfault
-        if (item == NULL)
-            return;
-    }
-    
+{    
     auto it = list.begin();
     p = *it;
     it++;
-    for (it; it != list.end(); ++it)
+    for (it; it != list.end(); ++it) {
+        if (*it == NULL)
+            return;
         p /= *it;
+    }
 }
 
 static void load_preset(const char *preset)

@@ -86,7 +86,6 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
     std::set<FileType> extensions;
     std::vector<std::string> file_list;
     FileType file_type;
-    size_t num_extensions;
 
     // Determine directory filetype
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
@@ -97,16 +96,14 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
         if (file_type != FileType::INVALID)
             extensions.insert(file_type);
     }
-    num_extensions = extensions.size();
-    if (num_extensions != 1) 
+    if (extensions.size() != 1) 
         return FileType::INVALID;
     file_type = *extensions.begin();
 
     // Generate vector of files with directory file type
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
-        if (!entry.is_regular_file() || !entry.path().has_extension())
-            continue;
-        if (determine_filetype(entry.path().extension().string()) == file_type)
+        if (entry.is_regular_file() && entry.path().has_extension() &&
+        determine_filetype(entry.path().extension().string()) == file_type)
             tracks.push_back(Track(entry.path().string(), file_type));
     }
     type = file_type;

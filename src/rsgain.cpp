@@ -247,10 +247,6 @@ static void custom_mode(int argc, char *argv[])
             case 'o':
                 parse_opus_mode(optarg, config.opus_mode);
                 break;
-
-            case '?':
-                help_custom();
-                quit(EXIT_FAILURE);
                 
             case 'h':
                 help_custom();

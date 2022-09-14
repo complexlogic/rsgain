@@ -32,7 +32,6 @@ class WorkerThread {
         std::mutex thread_mutex;
         std::thread *thread;
         std::condition_variable thread_cv;
-
 };
 
 void easy_mode(int argc, char *argv[]);
