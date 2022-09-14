@@ -474,12 +474,13 @@ static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const
     );
 }
 
-static_assert(std::endian::native == std::endian::little);
 static_assert(-1 == ~0); // 2's complement for signed integers
 bool set_opus_header_gain(const char *path, int16_t gain)
 {   
     char buffer[OPUS_HEADER_SIZE]; // 47 bytes
     uint32_t crc;
+    if constexpr(std::endian::native == std::endian::big)
+        gain = ((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
     
     // Read header into memory
     std::unique_ptr<FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
