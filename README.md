@@ -1,13 +1,13 @@
 # rsgain
 **rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It seeks to strike the perfect balance between power and simplicity by providing [multiple user interfaces](#usage). See the [Design Philosophy](#design-philosophy) for more information.
+rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing [multiple user interfaces](#usage). See the [Design Philosophy](#design-philosophy) for more information.
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
 
 ### Windows
-rsgain is compatible with Windows 10 and later. Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest) and extract its contents to a directory of your choice. 
+Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest) and extract its contents to a directory of your choice. rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
 It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
 
@@ -25,12 +25,13 @@ There is an AUR package [rsgain-git](https://aur.archlinux.org/packages/rsgain-g
 ```
 yay -S rsgain-git
 ```
+There is also a PKGBUILD script based on the latest release source tarball located in the `config` directory of the repo.
 
 #### Others
 Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
 
 ## Supported file formats
-rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table to be recognized as valid.
+rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table in order to be recognized as valid.
 |Format | Supported File Extension(s) |
 |-------|-----------------------------|
 |MP3|.mp3|
@@ -48,7 +49,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 ## Usage
 rsgain contains two separate user interfaces: Easy Mode and Custom Mode. The distinction between the two modes is rooted in the history of ReplayGain utilities. 
 
-Legacy ReplayGain tagging utilities such as mp3gain did not support recursive directory-based scanning. The user was required to manually specify a list of files on the command line, preceded by options which were numerous and complex. This interface provided a lot of power and flexibility, but it wasn't particularly user friendly. Performing a full library scan typically required the user to supplement the scanner with a wrapper script that traversed the directory tree and detected the files.
+Legacy ReplayGain tagging utilities such as mp3gain did not support recursive directory-based scanning. The user was required to manually specify a list of files on the command line, preceded by options which were numerous and complex. This interface provided a lot of power and flexibility, but it wasn't particularly user friendly. Performing a full library scan typically required the user to supplement the program with a wrapper script that traversed the directory tree and detected the files.
 
 rsgain's Easy Mode *is* that wrapper script; the functionality is built-in to the program. In Easy Mode, the user simply points the program to their library and it will be recusrively scanned with all recommended settings enabled by default. 
 
@@ -66,7 +67,7 @@ rsgain easy /path/to/music/library
 ```
 rsgain easy "C:\path\to\music library"
 ```
-This is all that is required for most users. Advanced users should ee the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
+This is all that is required for most users. Advanced users should see the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
 
 #### Multithreaded Scanning
 Easy Mode includes optional multithreaded operation to speed up the duration of a scan. Use the `-m` option, followed by the number of threads to create. The number of threads must not exceed the number that your CPU supports. For example, if you have a CPU with 4 threads:
@@ -77,7 +78,7 @@ If you don't know how many threads your CPU has, you can also specify `-m MAX` a
 
 Parallel scan jobs are generated on a *per-directory* basis, not a per-file basis. If you request 4 threads but there is only 1 directory to scan, a single thread will be working and the other 3 will sit idle the entire time. Multithreaded mode is optimized for scanning a very large number of directories. It is recommended to use multithreaded mode for full library scans and the default single threaded mode when incrementally adding 1 or 2 albums to your library.
 
-The speed gains offered by multithreaded scanning are significant. With `-m 4` or higher, you can typically expect to see a 50-80% reduction in total scan time, depending on your hardware, chosen settings, and library composition.
+The speed gains offered by multithreaded scanning are significant. With `-m 4` or higher, you can typically expect to see a 50-80% reduction in total scan time, depending on your hardware, settings, and library composition.
 
 #### Logging
 You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application such as Microsoft Excel or LibreOffice Calc.
@@ -121,7 +122,7 @@ Each setting key in a presets file corresponds to a command line option in Custo
 See [Custom Mode](#custom-mode) for more information.
 
 ### Custom Mode
-Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and similar legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
+Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and other legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
 
 Custom Mode is invoked with `rsgain custom` followed by options and a list of files to scan. For example, scan and tag a short list of MP3 files with album tags enabled:
  ```
@@ -138,7 +139,7 @@ Loudness can be defined as the *subjective* perception of sound pressure. The su
 #### Units
 Sound is often measured in **decibels**, or dB for short. This is because there is an approximately logarithmic relationship between the sound pressure level and perceived loudness by the human ear.
 
-Another unit used commonly in loudness normalization is the **loudness unit**, or LU for short. An LU is equivalent to a dB. The reason that LU was introduced was provide context distinction; decibels can be used to measure many things, but with LU we are always referring to loudness.
+Another unit used commonly in loudness normalization is the **loudness unit**, or LU for short. An LU is equivalent in magnitude to a dB. The reason that LU was introduced was provide context distinction; decibels can be used to measure many things, but with LU we are always referring to loudness.
 
 The third common unit is **loudness units relative to full scale**, or LUFS for short. Full scale means the maximum sample value of a particular digital audio signal format. For example, a value of 32,767 is full scale in 16 bit signed integer audio. On a logarithmic scale, 0 dB/LU represents full scale, so loudness measurements that are referenced to it (LUFS) will always be negative. LUFS is the most common unit for measuring audio loudness today.
 
@@ -149,10 +150,10 @@ Later attempts measured signal loudness using an averaging technique known as ro
 
 Another advancement was made in the weighting of frequencies. The human ear is not equally sensitive to all frequencies. A mid frequency is perceived to be louder than a low or high frequency of equivalent sound pressure level. The relationship between frequency and perceived loudness is often referred to as the **Fletcher-Munson curve** or the **equal-loudness contour**.
 
-The original ReplayGain specification from 2001 combined the RMS averaging with a frequency weighting filter that compensated for the Fletcher-Munson curve. Since that time, a new industry standard [ITU-R BS.1770](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-4-201510-I!!PDF-E.pdf) has been published. It details a new loudness measurement algorithm that implements RMS averaging and frequency weighting, similar in nature to ReplayGain 1.0, but far less computationally intensive and proven in listening tests to be more accurate. This new algorithm provides the basis for the ReplayGain 2.0 specification upon which rsgain is based.
+The original ReplayGain specification from 2001 combined the RMS averaging with a frequency weighting filter that compensated for the Fletcher-Munson curve. Since that time, a new industry standard [ITU-R BS.1770](https://www.itu.int/dms_pubrec/itu-r/rec/bs/R-REC-BS.1770-4-201510-I!!PDF-E.pdf) has been published. It details a new loudness measurement algorithm that implements RMS averaging and frequency weighting, similar in nature to ReplayGain 1.0, but far less computationally intensive and shown in listening tests to be more accurate. This new algorithm provides the basis for the ReplayGain 2.0 specification upon which rsgain is based.
 
 #### Target Loudness
-The loudness measurement algorithm specified in BS.1770 has gained widespread adoption in loudness normalization since its publishing. However, one aspect that is not well-agreed upon is the target loudness level that audio signals should be normalized to. Many people perceive louder audio signals to be of higher quality, so the systems that target casual listeners generally tend to opt for higher target loudness levels. Higher target loudness levels are more prone to clipping, an unwanted form of distortion, so systems that target a more serious audience generally tend to opt for lower target loudness. By default, rsgain uses the -18 LUFS target loudness value specified by ReplayGain, but users have the ability to change it with the `-l` option.
+The loudness measurement algorithm specified in BS.1770 has gained widespread adoption in loudness normalization since its publishing. However, one aspect that is not well agreed upon is the target loudness level that audio signals should be normalized to. Many people perceive louder audio signals to be of higher quality, so the systems that target casual listeners generally tend to opt for higher target loudness levels. Higher target loudness levels are more prone to clipping, an unwanted form of distortion, so systems that target a more serious audience generally tend to opt for lower target loudness. By default, rsgain uses the -18 LUFS target loudness value specified by ReplayGain, but users have the ability to change it with the `-l` option.
 
 The table below gives a brief summary of the target loudness levels used by various organizations to demonstrate the range of typical values.
 
@@ -161,12 +162,12 @@ The table below gives a brief summary of the target loudness levels used by vari
 |-14 LUFS|Spotify, YouTube Music, Amazon Prime Music|
 |-16 LUFS|Apple Music|
 |-18 LUFS|ReplayGain|
-|-23 LUFS|European Broadcast Union (EBU)|
+|-23 LUFS|European Broadcasting Union (EBU)|
 
 ### Sample Peak vs. True Peak
 The ReplayGain specification requires a scanner to tag files with peak information, which is intended for use in predicting whether an audio signal will clip. There are two common ways to calculate this value: sample peak and true peak.
 
-The sample peak is simply the highest value sample in the signal. In ReplayGain, the peak is unitless and normalized to a scale of 0 to 1, with 1 representing full scale. The sample peak has been the default peak measurement used in loudness normalization until recently.
+The sample peak is simply the highest value sample in the signal. In ReplayGain, the peak is unitless and normalized to a scale of 0 to 1, with 1 representing digital full scale. The sample peak has been the default peak measurement used in loudness normalization until recently.
 
 True peak is a relatively new concept. The theory pertains to how audio signals are converted from analog to digital, and then eventually from digital back to analog for listening. In the first stage (analog to digital), the sampling process does not capture the true peak of the continuous analog signal because it occurred in between samples. The sample peak value that is calculated using the digital samples is therefore inaccurate. The digital signal is then mastered with the deceptively low sample peak set to just below full scale. When it's converted back into analog during playback, the true peak from the original analog signal is reconstructed and exceeds full scale, resulting in clipping.
 
@@ -177,10 +178,54 @@ The ReplayGain specification does not explicitly specify whether the peak should
 It should be noted that using true peak instead of sample peak comes at a significant performance cost. Scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans; the oversampling interpolation process used to calculate the true peak is very computationally intensive.
 
 ### Clipping Protection
+Clipping is a form of distortion that occurs when a signal exceeds its maximum bound, and is generally considered undesirable for audio playback. The ReplayGain standard requires scanners to tag files with the peak information as a means of preventing clipping during playback.
+
+However, not all ReplayGain-compatible players actually implement clipping protection using the peak tags. rsgain has a clipping protection feature that attempts to prevent clipping at *scan-time* instead of during playback. It is specified with the `-c` option, with a required character argument:
+- `n`: No clipping protection (default in Custom Mode)
+- `p`: Clipping protection for positive gain values only (default in Easy Mode)
+- `a`: Always clip protect
+
+The clipping protection works by adjusting the calculated peak by the calculated gain value (as it would be during playback). If this "new" peak value exceeds the maximum peak (full scale by default), then the gain will be adjusted lower by the excess amount, bringing the "new" peak down to the maximum level. 
+
+Adjusting the gain has the side effect of lowering the loudness of the song below the target level. If this occurs in a significant number of files, it results in an uneven distribution of loudness across your music library, which defeats the purpose of applying ReplayGain in the first place. Easy Mode outputs a useful statistic "Clip Adjustments" at the end of every scan which can help you gauge how often the clipping protection is kicking in for your current settings.
+
+Clearly, scan-time clipping protection mechanisms have drawbacks and limitations. In general clipping protection can be implemented much more effectively by the player than by the scanner. If you know your player reads the peak tags and supports clipping protection, consider disabling rsgain's clipping protection entirely. Another option is to lower your target loudness level, which will signficantly reduce the number of files which activate the clipping protection.
 
 ### Opus Files
+Opus files are governed by [RFC 7845](https://datatracker.ietf.org/doc/html/rfc7845), which introduced a competing loudness normalization method that is completely incompatible with ReplayGain:
+- The gain tags are `R128_TRACK_GAIN` and `R128_ALBUM_GAIN` instead of `REPLAYGAIN_TRACK_GAIN` and `REPLAYGAIN_ALBUM_GAIN`
+- Peak tags are not supported
+- The gain values are stored in a Q7.8 fixed point integer string, instead of the standard base-10 decimal string
+- The gains are referenced to -23 LUFS instead of -18 LUFS
+
+Additionally, there is also an "output gain" field in the header, which contains another volume adjustment that needs to be taken into account.
+
+To handle the complexity, rsgain has a Opus Mode setting with a 4 choice character option that determines how Opus files should be tagged:
+- `d`: Write standard ReplayGain tags, set header output gain to 0
+- `r`: Write R128_*_GAIN tags, set header output gain to 0
+- `t`: Write track gain to header output gain
+- `a`: Write album gain to header output gain
+
+Note the the `r` mode does not set the target loudness to -23 LUFS as specified in RFC 7845. You will need to use the separate target loudness setting to do so.
+
+Since rsgain is a *ReplayGain* scanner, the `d` mode is the default, even though the ReplayGain standard conflicts with RFC 7845. In my opinion, the authors of RFC 7845 totally overstepped their authority by specifying a format-specific loudness normalization method. Particularly egregious is the specification of a target loudness level. There is no one-size-fits-all solution for target loudness. The best value depends on the dynamic range of your music, which tends to vary by genre. Moreover, most people do not have a music library comprised entirely of a single audio format, so format-specific loudness normalization methods are inappropriate. Having Opus files play back 5 dB quieter than all other file types is ludicrous and defeats the purpose of applying ReplayGain.
+
+If you do wish to write tags that are fully compliant to RFC 7845 instead of ReplayGain, use a [scan preset](#scan-presets) as follows:
+```INI
+[Opus]
+OpusMode=r
+TargetLoudness=-23
+```
 
 ### Tag casing
+There is much to be said about uppercase versus lowercase tags. In my experience, the vast majority of *modern* players recognize the standard uppercase tags for the vast majority of file formats. rsgain will write the standard uppercase tags by default for all formats.
+
+If you do encounter a player that doesn't recognize the uppercase tags, my advice is this: inform the developers with an issue - or even submit a PR yourself - rather than contribute to the fragmentation of the ReplayGain ecosystem by legitimizing the lowercase tags. Use the `-L` lowercase tags option only when all other options have been exhausted. 
+
+## Windows Notes
+rsgain uses UTF-8 for Unicode, while Windows has historically used a subset of UTF-16. However, Microsoft added full UTF-8 support in [Windows 10 version 1903](https://docs.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page). Therefore, it is strongly recommended to run rsgain on Windows 10 or later to ensure compatibility with all filenames. You can still run rsgain on Windows Vista through 8.1 if you don't need Unicode support, i.e. you don't have any filenames with non-ANSI characters.
+
+Another caveat with Windows is the performance of the scan progress bar. Console output on Windows is notoriously slow compared to Unix platforms. Unfortunately, the progress bar can be a bottleneck, particularly with the default sample peak calculations. I have optimized the progress bar as much as possible, it can't be optimized any further without increasing the update interval, which is undesirable. I have decided to leave it as-is, under the rationale that the performance in the single-threaded mode is less important than in [multithreaded](#multithreaded-scanning), which is unaffected by this issue since the progress bar is disabled. If you do need to tag a large number of files using the single-threaded Easy Mode or Custom Mode, pass the `-q` option to disable the progress bar, which will eliminate the bottleneck.
 
 ## License
-rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain), and accordingly is licensed under the original 2 clause BSD license used by loudgain.
+rsgain is a very heavily modified fork of [loudgain](https://github.com/Moonbase59/loudgain), and is licensed accordingly under the original 2 clause BSD license used by loudgain.
