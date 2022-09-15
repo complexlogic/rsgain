@@ -10,7 +10,7 @@ v3.0 (2022-9-14)
 - Added -O option in Easy Mode which outputs a .csv spreadsheet scan log in every scanned directory
 - Added more statistics to Easy Mode output
 - Write uppercase tags by default for all tag types in Easy Mode
-- Optimized scan progress bar, resulting in signifcant speed boost for Windows single threaded scanning
+- Optimized scan progress bar, resulting in significant speed boost for Windows single threaded scanning
 - "Overrides" feature renamed "Preset"
   - Specified with -p instead of -o
   - Support preset name as argument, which will automatically find the preset in the predetermined location(s) per platform

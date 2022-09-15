@@ -1,7 +1,7 @@
 # rsgain
 **rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
-rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing [multiple user interfaces](#usage). See the [Design Philosophy](#design-philosophy) for more information.
+rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
