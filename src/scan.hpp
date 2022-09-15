@@ -7,7 +7,6 @@
 #include <ebur128.h>
 #include "scan.hpp"
 
-#define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 void free_ebur128(ebur128_state *ebur128);
 
 enum class FileType {

@@ -53,6 +53,8 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
+#define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
+
 extern bool multithread;
 
 static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
@@ -89,9 +91,8 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
 
     // Determine directory filetype
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
-        if (!entry.is_regular_file() || !entry.path().has_extension()) {
+        if (!entry.is_regular_file() || !entry.path().has_extension())
             continue;
-        }
         file_type = determine_filetype(entry.path().extension().string());
         if (file_type != FileType::INVALID)
             extensions.insert(file_type);
@@ -143,9 +144,9 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
     }
 
     if (config.tag_mode != 'd')
-        this->calculate_loudness(config);
+        calculate_loudness(config);
 
-    this->tag_tracks(config);
+    tag_tracks(config);
     return true;
 }
 
@@ -397,7 +398,7 @@ void ScanJob::calculate_loudness(const Config &config)
 
     // Album loudness calculations
     if (config.do_album)
-        this->calculate_album_loudness(config);
+        calculate_album_loudness(config);
 
     // Check clipping conditions
     if (config.clip_mode != 'n') {
