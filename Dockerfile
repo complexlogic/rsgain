@@ -1,6 +1,6 @@
 FROM debian
 
-ARG VERSION=2.0.1 \
+ARG VERSION=3.0 \
     ARCH=amd64
 
 RUN apt-get update && \

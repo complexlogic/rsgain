@@ -1,4 +1,4 @@
-Unreleased
+v3.0 (2022-9-14)
 - Massive internal rewrite:
     - Source code is now purely C++ instead of mixed C/C++
     - Text formating and output now utilize the fmt library, which is safer and typically faster than C stdio implementations
@@ -11,7 +11,7 @@ Unreleased
 - Added more statistics to Easy Mode output
 - Write uppercase tags by default for all tag types in Easy Mode
 - Optimized scan progress bar, resulting in signifcant speed boost for Windows single threaded scanning
-- "Overrides" feature renamed "preset"
+- "Overrides" feature renamed "Preset"
   - Specified with -p instead of -o
   - Support preset name as argument, which will automatically find the preset in the predetermined location(s) per platform
   - Support "Global" section in preset, which allows the user to specify settings for all formats to reduce duplication
