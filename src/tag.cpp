@@ -293,22 +293,18 @@ static bool tag_riff(Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::ID3v2::Tag *tag;
-    if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>) {
+    if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
         tag = file.ID3v2Tag();
-    }
-    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) {
+    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
         tag = file.tag();
-    }
     tag_clear_id3(tag);
     if (config.tag_mode == 'i')
         tag_write_id3(tag, track.result, config);
 
-    if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>) {
+    if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
         return file.save(T::AllTags, false, config.id3v2version);
-    }
-    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) {
+    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) 
         return file.save();
-    }
 }
 
 template<int flags, typename T>
