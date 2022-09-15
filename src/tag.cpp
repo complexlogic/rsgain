@@ -65,8 +65,8 @@
 
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag);
-template<typename T, typename I>
-static void tag_clear_map(I&& tags, T&& clear);
+template<int flags, typename T>
+static void tag_clear_map(T&& clear);
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag);
 static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, const Config &config);
 template<typename T>
@@ -311,18 +311,18 @@ static bool tag_riff(Track &track, const Config &config)
     }
 }
 
-template<typename T, typename I>
-static void tag_clear_map(I&& tags, T&& clear)
+template<int flags, typename T>
+static void tag_clear_map(T&& clear)
 {
-    if ((tags) & RG_TAGS_UPPERCASE) {
+    if constexpr((flags) & RG_TAGS_UPPERCASE) {
         for (const char *RG_STRING : RG_STRING_UPPER)
             clear(RG_STRING);
     }
-    if ((tags) & RG_TAGS_LOWERCASE) {
+    if constexpr((flags) & RG_TAGS_LOWERCASE) {
         for (const char *RG_STRING : RG_STRING_LOWER)
             clear(RG_STRING);
     }
-    if ((tags) & R128_TAGS) {
+    if constexpr((flags) & R128_TAGS) {
         for (const char *R128_STRING : R128_STRING)
             clear(R128_STRING);
     }
@@ -366,14 +366,14 @@ template<typename T>
 static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
 {   
     if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
-        tag_clear_map(RG_TAGS_UPPERCASE | R128_TAGS,
+        tag_clear_map<RG_TAGS_UPPERCASE | R128_TAGS>(
             [&](const char *t) {
                 tag->removeFields(t);
             }
         );
     }
     else {
-        tag_clear_map(RG_TAGS_UPPERCASE,
+        tag_clear_map<RG_TAGS_UPPERCASE>(
             [&](const char *t) {
                 tag->removeFields(t);
             }
@@ -412,7 +412,7 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
 
 static void tag_clear_mp4(TagLib::MP4::Tag *tag)
 {
-    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+    tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
         [&](const char *t) {
             TagLib::String tag_name;
             FORMAT_MP4_TAG(tag_name, t);
@@ -436,7 +436,7 @@ static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const
 
 static void tag_clear_apev2(TagLib::APE::Tag *tag)
 {
-    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+    tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
         [&](const char *t) {
             tag->removeItem(t);
         }
@@ -456,7 +456,7 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, con
 
 static void tag_clear_asf(TagLib::ASF::Tag *tag) 
 {
-    tag_clear_map(RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE,
+    tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
         [&](const char *t) {
             tag->removeItem(t);
         }
