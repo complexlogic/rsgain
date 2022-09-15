@@ -12,9 +12,9 @@ if (WIN32)
   )
   target_link_libraries(${EXECUTABLE_TITLE}
     ${LIBAVFORMAT}
-	${LIBAVCODEC}
-	${LIBAVUTIL}
-	${LIBSWRESAMPLE}
+    ${LIBAVCODEC}
+    ${LIBAVUTIL}
+    ${LIBSWRESAMPLE}
     ${TAGLIB} 
     ${LIBEBUR128} 
     ${FMT}
@@ -38,8 +38,8 @@ elseif (UNIX)
     PkgConfig::FMT
   )
 
-  # GCC 10 requires linking with pthread for some reason
-  if (CMAKE_COMPILER_IS_GNUCC AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
+  # GCC 10 requires linking directly with pthread for some reason
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11)
     target_link_libraries(${EXECUTABLE_TITLE} pthread)
   endif ()
 endif()
