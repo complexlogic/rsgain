@@ -12,9 +12,10 @@ Download the win64 .zip file from the [latest release](https://github.com/comple
 It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
 
 ### macOS
-There is currently no binary package available for macOS, so Mac users will need to build from source. See [BUILDING](docs/BUILDING.md).
-
-If anybody is willing to maintain a Homebrew package for rsgain, please reach out by making an issue on the  [Issue Tracker](https://github.com/complexlogic/rsgain/issues).
+There is a Homebrew formula available for macOS users. Make sure you have the latest available Xcode installed, as well as Homebrew. Then, execute the following command:
+```
+brew install complexlogic/tap/rsgain
+```
 
 ### Linux
 #### Debian/Ubuntu
@@ -34,6 +35,19 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 
 #### Others
 Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
+
+### Docker
+The repo contains a Dockerfile which can be used to run rsgain in a virtual environment. It will build a container based on the current Debian Stable release:
+```
+docker build -t rsgain https://github.com/complexlogic/rsgain.git
+```
+rsgain requires a relatively up-to-date operating system, so this method can be used to run rsgain on an older system if necessary.
+
+A Docker container doesn't have access to the host filesystem by default. To use rsgain in a container, you need to mount your music library to a mount point in the container. Use the -v option followed by the path to your library and the mount point, separated by a colon. For example, if your music library is located at `/path/to/library`:
+```
+docker run -v /path/to/library:/mnt rsgain easy -m MAX /mnt
+```
+The docker log to `stdout` updates too slowly for the scan progress bar. If you don't use multithreaded mode consider passing `-q` to silence the output. 
 
 ## Supported file formats
 rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table in order to be recognized as valid.
@@ -56,7 +70,7 @@ rsgain contains two separate user interfaces: Easy Mode and Custom Mode. The dis
 
 Legacy ReplayGain tagging utilities such as mp3gain did not support recursive directory-based scanning. The user was required to manually specify a list of files on the command line, preceded by options which were numerous and complex. This interface provided a lot of power and flexibility, but it wasn't particularly user friendly. Performing a full library scan typically required the user to supplement the program with a wrapper script that traversed the directory tree and detected the files.
 
-rsgain's Easy Mode *is* that wrapper script; the functionality is built-in to the program. In Easy Mode, the user simply points the program to their library and it will be recusrively scanned with all recommended settings enabled by default. 
+rsgain's Easy Mode *is* that wrapper script; the functionality is built-in to the program. In Easy Mode, the user simply points the program to their library and it will be recursively scanned with all recommended settings enabled by default. 
 
 The legacy-style interface has been retained as "Custom Mode" for users that require a higher level of control.
 
