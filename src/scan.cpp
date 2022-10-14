@@ -468,8 +468,7 @@ void ScanJob::tag_tracks(const Config &config)
             fmt::print(stream, "{:.6f}\t", track.result.track_peak);
             fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
             fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
-            fmt::print(stream, "{}\t", track.tclip ? "Y" : "N");
-            fmt::print(stream, "\n");
+            fmt::print(stream, "{}\n", track.tclip ? "Y" : "N");
             if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print(stream, "{}\t", "Album");
                 fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
@@ -478,7 +477,6 @@ void ScanJob::tag_tracks(const Config &config)
                 fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
                 fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
                 fmt::print(stream, "{}\n", track.aclip ? "Y" : "N");
-                fmt::print(stream, "\n");
             }
         } 
         
