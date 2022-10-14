@@ -1,3 +1,6 @@
+v3.0.1 (2022-10-13)
+- Fixed inconsistencies in tab output formatting
+
 v3.0 (2022-9-14)
 - Massive internal rewrite:
     - Source code is now purely C++ instead of mixed C/C++
