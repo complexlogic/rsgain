@@ -311,16 +311,16 @@ template<int flags, typename T>
 static void tag_clear_map(T&& clear)
 {
     if constexpr((flags) & RG_TAGS_UPPERCASE) {
-        for (const char *RG_STRING : RG_STRING_UPPER)
-            clear(RG_STRING);
+        for (const char *tag : RG_STRING_UPPER)
+            clear(tag);
     }
     if constexpr((flags) & RG_TAGS_LOWERCASE) {
-        for (const char *RG_STRING : RG_STRING_LOWER)
-            clear(RG_STRING);
+        for (const char *tag : RG_STRING_LOWER)
+            clear(tag);
     }
     if constexpr((flags) & R128_TAGS) {
-        for (const char *R128_STRING : R128_STRING)
-            clear(R128_STRING);
+        for (const char *tag : R128_STRING)
+            clear(tag);
     }
 }
 
