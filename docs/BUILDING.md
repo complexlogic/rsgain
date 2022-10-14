@@ -47,7 +47,7 @@ mkdir build && cd build
 ```
 Generate the Makefile:
 ```
-cmake ..
+cmake .. -DCMAKE_BUILD_TYPE=Release
 ```
 Build and test the program:
 ```
