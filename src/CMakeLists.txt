@@ -3,20 +3,20 @@ if (WIN32)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES} "${PROJECT_BINARY_DIR}/rsgain.manifest" "${PROJECT_BINARY_DIR}/versioninfo.rc")
   target_compile_options(${EXECUTABLE_TITLE} PUBLIC "/Zc:preprocessor")
   target_include_directories(${EXECUTABLE_TITLE} PUBLIC
-    ${FFMPEG_INCLUDE_DIR} 
-    ${TAGLIB_INCLUDE_DIR} 
+    ${FFMPEG_INCLUDE_DIR}
+    ${TAGLIB_INCLUDE_DIR}
     ${LIBEBUR128_INCLUDE_DIR}
     ${FMT_INCLUDE_DIR}
     ${GETOPT_INCLUDE_DIR}
-    ${INIH_INCLUDE_DIR} 
+    ${INIH_INCLUDE_DIR}
   )
   target_link_libraries(${EXECUTABLE_TITLE}
     ${LIBAVFORMAT}
     ${LIBAVCODEC}
     ${LIBAVUTIL}
     ${LIBSWRESAMPLE}
-    ${TAGLIB} 
-    ${LIBEBUR128} 
+    ${TAGLIB}
+    ${LIBEBUR128}
     ${FMT}
     ${GETOPT}
     ${INIH}
@@ -24,7 +24,7 @@ if (WIN32)
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
     target_link_libraries(${EXECUTABLE_TITLE} ${STATIC_LIBS})
   endif ()
-  
+
 elseif (UNIX)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES})
   target_link_libraries(${EXECUTABLE_TITLE}
