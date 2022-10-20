@@ -56,6 +56,8 @@ elseif (UNIX)
   endif (APPLE)
   
   find_package(PkgConfig MODULE REQUIRED)
+  set(THREADS_PREFER_PTHREAD_FLAG ON)
+  find_package(Threads REQUIRED)
   pkg_check_modules(LIBAVCODEC REQUIRED IMPORTED_TARGET libavcodec)
   pkg_check_modules(LIBAVFORMAT REQUIRED IMPORTED_TARGET libavformat)
   pkg_check_modules(LIBSWRESAMPLE REQUIRED IMPORTED_TARGET libswresample)
