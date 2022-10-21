@@ -11,6 +11,9 @@ project(rsgain
   HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES CXX
 )
+
+option(UCHECKMARKS "Enable use of Unicode checkmarks" ON)
+
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "rsgain")
 include_directories(${PROJECT_BINARY_DIR})
