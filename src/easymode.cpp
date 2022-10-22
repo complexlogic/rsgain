@@ -439,14 +439,14 @@ static void load_preset(const char *preset)
 
     if (!std::filesystem::exists(path)) {
         output_error("Could not locate preset '{}'", preset);
-        return;
+        quit(EXIT_FAILURE);
     }
 
     // Parse file
     std::FILE *file = fopen(path.string().c_str(), "r");
     if (file == NULL) {
         output_error("Failed to open preset from '{}'", path.string());
-        return;
+        quit(EXIT_FAILURE);
     }
 
     output_ok("Applying preset...");
