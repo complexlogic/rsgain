@@ -50,7 +50,8 @@
 #define COLOR_OFF	"[0m"
 
 // The default Windows console font doesn't support the ✔ and ✘ characters
-#ifdef _WIN32
+// and make it optional by defining NOUCHECKMARKS
+#if defined _WIN32 || defined NOUCHECKMARKS
 #define OK_CHAR "OK"
 #define ERROR_CHAR "ERROR"
 #define FAIL_CHAR "FAILURE"

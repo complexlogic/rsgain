@@ -27,6 +27,9 @@ if (WIN32)
 
 elseif (UNIX)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES})
+  if(NOT UCHECKMARKS)
+    target_compile_definitions(${EXECUTABLE_TITLE} PUBLIC "NOUCHECKMARKS")
+  endif()
   target_link_libraries(${EXECUTABLE_TITLE}
     PkgConfig::LIBAVFORMAT
     PkgConfig::LIBAVCODEC
