@@ -413,8 +413,7 @@ static void load_preset(const char *preset)
 #ifdef __unix__
 #ifdef __APPLE__
         join_paths(path, {(const char*) getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset});
-#endif
-#ifdef __linux
+#else
         join_paths(path, {(const char*) getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset});
 #endif
         path += ".ini";
