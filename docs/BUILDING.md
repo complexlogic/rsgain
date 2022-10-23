@@ -35,7 +35,12 @@ sudo dnf install libebur128-devel taglib-devel libavformat-free-devel libavcodec
 ```
 ### macOS (Homebrew)
 ```
-brew install libebur128 taglib ffmpeg fmt inih
+brew install libebur128 taglib ffmpeg fmt inih 
+```
+
+### FreeBSD (Packages)
+```
+pkg install libebur128 taglib libfmt inih ffmpeg
 ```
 
 ### Building
