@@ -17,6 +17,14 @@ There is a Homebrew formula available for macOS users. Make sure you have the la
 brew install complexlogic/tap/rsgain
 ```
 
+### FreeBSD
+Available via ports tree or using packages (2023Q1 and later) as listed below:
+```
+cd /usr/ports/audio/rsgain && make install clean
+
+pkg install rsgain
+```
+
 ### Linux
 #### Debian/Ubuntu
 An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bullseye and later, Ubuntu 21.04 and later. It can be installed with the following commands:
