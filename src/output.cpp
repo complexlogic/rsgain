@@ -83,7 +83,7 @@ void ProgressBar::update(int pos)
 	float percent = ((float) pos / (float) len);
 	c = (int) (percent * (float) w);
 
-	// Only output if we've actually made progess since last the call, or the console width changed
+	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
 		fmt::print(" {:3.0f}% [", percent * 100.f);
 		int i;
