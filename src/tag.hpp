@@ -48,6 +48,7 @@
 #define tag_error(t) output_error("Couldn't write to: {}", t.path)
 
 void tag_track(Track &track, const Config &config);
+bool tag_exists(const Track &track);
 void taglib_get_version(std::string &buffer);
 bool set_opus_header_gain(const char *path, int16_t gain);
 

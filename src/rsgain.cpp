@@ -166,6 +166,7 @@ static void custom_mode(int argc, char *argv[])
     const char *short_opts = "+ac:m:tl:Oqs:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",         no_argument,       NULL, 'a' },
+        { "skip-existing", no_argument,       NULL, 'S' },
 
         { "clip-mode",     no_argument,       NULL, 'c' },
         { "max-peak",      required_argument, NULL, 'm' },
@@ -186,6 +187,7 @@ static void custom_mode(int argc, char *argv[])
 
     Config config = {
         .tag_mode = 's',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -201,6 +203,10 @@ static void custom_mode(int argc, char *argv[])
         switch (rc) {
             case 'a':
                 config.do_album = true;
+                break;
+
+            case 'S':
+                config.skip_existing = true;
                 break;
 
             case 'c':
@@ -375,6 +381,7 @@ static inline void help_custom(void) {
     fmt::print("\n");
 
     CMD_HELP("--album",  "-a", "Calculate album gain and peak");
+    CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
     fmt::print("\n");
 
     CMD_HELP("--tagmode=s", "-s s", "Scan files but don't write ReplayGain tags (default)");

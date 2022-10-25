@@ -37,6 +37,7 @@
 #include <bit>
 
 #include <taglib.h>
+#include <fileref.h>
 #include <textidentificationframe.h>
 #include <mpegfile.h>
 #include <id3v2tag.h>
@@ -79,6 +80,15 @@ static void tag_clear_apev2(TagLib::APE::Tag *tag);
 static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config);
 static void tag_clear_asf(TagLib::ASF::Tag *tag);
 static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config);
+
+template<typename T>
+static bool tag_exists_id3(const Track &track);
+template<typename T>
+static bool tag_exists_xiph(const Track &track);
+static bool tag_exists_mp4(const Track &track);
+template<typename T>
+static bool tag_exists_ape(const Track &track);
+static bool tag_exists_asf(const Track &track);
 
 enum class RGTag {
     TRACK_GAIN,
@@ -200,6 +210,136 @@ void tag_track(Track &track, const Config &config)
                 tag_error(track);
             break;
     }
+}
+
+bool tag_exists(const Track &track)
+{
+    switch(track.type) {
+        case FileType::MP2:
+        case FileType::MP3:
+            return tag_exists_id3<TagLib::MPEG::File>(track);
+
+        case FileType::FLAC:
+            return tag_exists_xiph<TagLib::FLAC::File>(track);
+
+        case FileType::OGG:
+            return tag_exists_xiph<TagLib::FileRef>(track);
+
+        case FileType::OPUS:
+            return tag_exists_xiph<TagLib::Ogg::Opus::File>(track);
+
+        case FileType::M4A:
+            return tag_exists_mp4(track);
+
+        case FileType::WMA:
+            return tag_exists_asf(track);
+
+        case FileType::WAV:
+            return tag_exists_id3<TagLib::RIFF::WAV::File>(track);
+
+        case FileType::AIFF:
+            return tag_exists_id3<TagLib::RIFF::AIFF::File>(track);
+
+        case FileType::WAVPACK:
+            return tag_exists_ape<TagLib::WavPack::File>(track);
+
+        case FileType::APE:
+            return tag_exists_ape<TagLib::APE::File>(track);
+
+        default:
+            return false;
+    }
+
+    return false;
+}
+
+template<typename T>
+static bool tag_exists_id3(const Track &track)
+{
+    bool ret = false;
+    TagLib::ID3v2::Tag *tag = nullptr;
+    T file(track.path.c_str());
+    if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
+        tag = file.tag();
+    else
+        tag = file.ID3v2Tag();
+    if (tag != nullptr) {
+        auto frame_list = tag->frameList("TXXX");
+        for (auto it = frame_list.begin(); it != frame_list.end(); ++it) {
+            TagLib::ID3v2::UserTextIdentificationFrame *frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
+            if (frame == nullptr)
+                continue;
+            TagLib::StringList string_list = frame->fieldList();
+            if (string_list.size() < 2)
+                continue;
+            TagLib::String desc = frame->description().upper();
+            if (desc == RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]) {
+                ret = true;
+                break;
+            }
+        }
+    }
+    return ret;
+}
+
+template<typename T>
+static bool tag_exists_xiph(const Track &track)
+{
+    bool ret = false;
+    TagLib::Ogg::XiphComment *tag = nullptr;
+    T file(track.path.c_str());
+    if constexpr(std::is_same_v<T, TagLib::FLAC::File>)
+        tag = file.xiphComment();
+    else
+        tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
+    if (tag != nullptr)
+        ret = tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]);
+        if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
+            if (!ret)
+                ret = tag->contains(R128_STRING[static_cast<int>(R128Tag::TRACK_GAIN)]);
+        }
+    return ret;
+}
+
+static bool tag_exists_mp4(const Track &track)
+{
+    TagLib::MP4::File file(track.path.c_str());
+    TagLib::MP4::Tag *tag = file.tag();
+    if (tag != nullptr) {
+        const TagLib::MP4::ItemMap map = tag->itemMap();
+        TagLib::String key(MP4_ATOM_STRING);
+        key = key.upper();
+        key += RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)];
+        for (const auto &item : map) {
+            if (item.first.upper() == key)
+                return true;
+        }
+    }
+    return false;
+}
+
+template<typename T>
+static bool tag_exists_ape(const Track &track)
+{
+    T file(track.path.c_str());
+    TagLib::APE::Tag *tag = file.APETag();
+    if (tag != nullptr) {
+        const TagLib::APE::ItemListMap map = tag->itemListMap();
+        const char *rg_tag = RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)];
+        for (const auto &item : map) {
+            if (item.first.upper() == rg_tag)
+                return true;
+        }
+    }
+    return false;
+}
+
+static bool tag_exists_asf(const Track &track)
+{
+    TagLib::ASF::File file(track.path.c_str());
+    TagLib::ASF::Tag *tag = file.tag();
+    return tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]) ||
+    tag->contains(RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]);
 }
 
 template<typename T>

@@ -36,6 +36,7 @@ struct ScanResult {
 
 struct ScanData {
     unsigned int files;
+	unsigned int skipped = 0;
     unsigned int clipping_adjustments;
     double total_gain;
     double total_peak;
@@ -75,6 +76,7 @@ class ScanJob {
 		int nb_files;
 		bool error;
 		int clipping_adjustments;
+		unsigned int skipped = 0;
 
 		ScanJob() : nb_files(0), error(false), clipping_adjustments(0) {};
 		bool add_files(char **files, int nb_files);
