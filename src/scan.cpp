@@ -137,6 +137,28 @@ void free_ebur128(ebur128_state *ebur128_state)
 
 bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
 {
+    if (config.skip_existing) {
+        std::vector<int> existing;
+        for (auto track = tracks.rbegin(); track != tracks.rend(); ++track) {
+            if (tag_exists(*track))
+                existing.push_back(tracks.rend() - track - 1);
+        }
+        size_t nb_exists = existing.size();
+        if (nb_exists) {
+            if (nb_exists == tracks.size()) {
+                nb_files = 0;
+                skipped = nb_exists;
+                return true;
+            }
+            else if (!config.do_album) {
+                for (int i : existing) {
+                    tracks.erase(tracks.begin() + i);
+                    skipped++;
+                    nb_files--;
+                }
+            }
+        }
+    }
     for (Track &track : tracks) {
         error = !track.scan(config, ffmpeg_mutex);
         if (error)
@@ -515,6 +537,9 @@ void ScanJob::update_data(ScanData &data)
         return;
     }
     data.files += nb_files;
+    data.skipped += skipped;
+    if (!nb_files)
+        return;
 
     // Collect clipping stats
     for (const Track &track : tracks) {

@@ -44,6 +44,7 @@ static Config configs[] = {
     // MP2 config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -58,6 +59,7 @@ static Config configs[] = {
     // MP3 config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -72,6 +74,7 @@ static Config configs[] = {
     // FLAC config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -86,6 +89,7 @@ static Config configs[] = {
     // OGG config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -100,6 +104,7 @@ static Config configs[] = {
     // OPUS config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -114,6 +119,7 @@ static Config configs[] = {
     // M4A config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -128,6 +134,7 @@ static Config configs[] = {
     // WMA config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -142,6 +149,7 @@ static Config configs[] = {
     // WAV config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -156,6 +164,7 @@ static Config configs[] = {
     // AIFF config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -170,6 +179,7 @@ static Config configs[] = {
     // Wavpack config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -184,6 +194,7 @@ static Config configs[] = {
     // APE config
     {
         .tag_mode = 'i',
+        .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
         .max_peak_level = 0.f,
         .true_peak = false,
@@ -201,7 +212,7 @@ void easy_mode(int argc, char *argv[])
 {
     int rc, i;
     char *preset = NULL;
-    const char *short_opts = "+hql:m:p:O";
+    const char *short_opts = "+hqSl:m:p:O";
     int threads = 1;
     opterr = 0;
 
@@ -209,6 +220,7 @@ void easy_mode(int argc, char *argv[])
         { "help",          no_argument,       NULL, 'h' },
         { "quiet",         no_argument,       NULL, 'q' },
 
+        { "skip-existing", no_argument,       NULL, 'S' },
         { "multithread",   required_argument, NULL, 'm' },
         { "preset",        required_argument, NULL, 'p' },
         { "output",        required_argument, NULL, 'O' },
@@ -226,6 +238,11 @@ void easy_mode(int argc, char *argv[])
 
             case 'q':
                 quiet = true;
+                break;
+
+            case 'S':
+                for (Config &config : configs)
+                    config.skip_existing = true;
                 break;
             
             case 'm':
@@ -656,10 +673,16 @@ void scan_easy(const char *directory, const char *preset, int threads)
             }
             directories.pop_front();
         }
+        fmt::print("\n");
     }
 
     const auto end_time = std::chrono::system_clock::now();
     if (!scan_data.files) {
+        if (scan_data.skipped)
+            fmt::print("Skipped {:L} file{} with existing ReplayGain information\n",
+                scan_data.skipped,
+                scan_data.skipped > 1 ? "s" : ""
+            );
         fmt::print("No files were scanned\n");
         return;
     }
@@ -684,6 +707,8 @@ void scan_easy(const char *directory, const char *preset, int threads)
 
     HELP_STATS("Time Elapsed", "{}", time_string);
     HELP_STATS("Files Scanned", "{:L}", scan_data.files);
+    if (scan_data.skipped)
+        HELP_STATS("Files Skipped", "{:L}", scan_data.skipped);
     HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", scan_data.clipping_adjustments, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
     HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / (double) scan_data.files);
     double average_peak = scan_data.total_peak / (double) scan_data.files;
@@ -715,6 +740,7 @@ static inline void help_easy(void) {
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
     fmt::print("\n");
 
+    CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--preset=s", "-p s", "Load scan preset s");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");

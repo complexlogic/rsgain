@@ -20,6 +20,7 @@ enum class OutputType{
 
 struct Config {
 	char tag_mode;
+	bool skip_existing;
 	double target_loudness;
 	double max_peak_level;
 	bool true_peak;
