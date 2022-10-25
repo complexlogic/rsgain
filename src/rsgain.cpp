@@ -92,9 +92,8 @@ static void set_cursor_visibility(BOOL setting, BOOL *previous)
 {
     CONSOLE_CURSOR_INFO info;
     GetConsoleCursorInfo(console, &info);
-    if (previous != NULL) {
+    if (previous != NULL)
         *previous = info.bVisible;
-    }
     info.bVisible = setting;
     SetConsoleCursorInfo(console, &info);
 }
@@ -162,6 +161,7 @@ static void custom_mode(int argc, char *argv[])
 {
     int rc, i;
     unsigned nb_files   = 0;
+    opterr = 0;
 
     const char *short_opts = "+ac:m:tl:Oqs:LSI:o:h?";
     static struct option long_opts[] = {
@@ -204,11 +204,13 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'c':
-                parse_clip_mode(optarg, config.clip_mode);
+                if (!parse_clip_mode(optarg, config.clip_mode))
+                    quit(EXIT_FAILURE);
                 break;
 
             case 'm': {
-                parse_max_peak_level(optarg, config.max_peak_level);
+                if (!parse_max_peak_level(optarg, config.max_peak_level))
+                    quit(EXIT_FAILURE);
                 break;
             }
 
@@ -218,7 +220,8 @@ static void custom_mode(int argc, char *argv[])
             }
 
             case 'l': {
-                parse_target_loudness(optarg, config.target_loudness);
+                if (!parse_target_loudness(optarg, config.target_loudness))
+                    quit(EXIT_FAILURE);
                 break;
             }
 
@@ -232,7 +235,8 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 's': {
-                parse_tag_mode(optarg, config.tag_mode);
+                if (!parse_tag_mode(optarg, config.tag_mode))
+                    quit(EXIT_FAILURE);
                 break;
             }
 
@@ -241,22 +245,31 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 'I':
-                parse_id3v2_version(optarg, config.id3v2version);
+                if (!parse_id3v2_version(optarg, config.id3v2version))
+                    quit(EXIT_FAILURE);
                 break;
 
             case 'o':
-                parse_opus_mode(optarg, config.opus_mode);
+                if (!parse_opus_mode(optarg, config.opus_mode))
+                    quit(EXIT_FAILURE);
                 break;
                 
             case 'h':
                 help_custom();
                 quit(EXIT_SUCCESS);
+
+            case '?':
+                if (optopt)
+                    output_fail("Unrecognized option '{:c}'", optopt);
+                else
+                    output_fail("Unrecognized option '{}'", argv[optind - 1] + 2);
+                quit(EXIT_FAILURE);
         }
     }
 
     nb_files = argc - optind;
     if (!nb_files) {
-        output_fail("No files were specified\n");
+        output_fail("No files were specified");
         quit(EXIT_FAILURE);
     }
 

@@ -203,6 +203,7 @@ void easy_mode(int argc, char *argv[])
     char *preset = NULL;
     const char *short_opts = "+hql:m:p:O";
     int threads = 1;
+    opterr = 0;
 
     static struct option long_opts[] = {
         { "help",          no_argument,       NULL, 'h' },
@@ -238,7 +239,8 @@ void easy_mode(int argc, char *argv[])
                     else {
                         threads = atoi(optarg);
                         if (threads < 1) {
-                            threads = 1;
+                            output_fail("Invalid multithread argument '{}'", optarg);
+                            quit(EXIT_FAILURE);
                         }
                         else if (threads > max_threads) {
                             output_warn("{} threads were requested, but only {} are available", threads, max_threads);
@@ -258,6 +260,13 @@ void easy_mode(int argc, char *argv[])
                 for (Config &config : configs)
                     config.tab_output = OutputType::FILE;
                 break;
+
+            case '?':
+                if (optopt)
+                    output_fail("Unrecognized option '{:c}'", optopt);
+                else
+                    output_fail("Unrecognized option '{}'", argv[optind - 1] + 2);
+                quit(EXIT_FAILURE);
         }
     }
 
@@ -279,6 +288,7 @@ static bool convert_bool(const char *value, bool &setting)
         setting = false;
         return true;
     }
+    output_fail("'{}' is not a valid boolean", value);
     return false;
 }
 
@@ -314,6 +324,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.do_album = do_album;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "TagMode")) {
         char tag_mode;
@@ -321,6 +333,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.tag_mode = tag_mode;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "ClipMode")) {
         char clip_mode;
@@ -328,6 +342,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.clip_mode = clip_mode;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "TargetLoudness")) {
         double target_loudness;
@@ -335,6 +351,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.target_loudness = target_loudness;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "MaxPeakLevel")) {
         double max_peak_level;
@@ -342,6 +360,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.max_peak_level = max_peak_level;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "TruePeak")) {
         bool true_peak;
@@ -349,6 +369,8 @@ int global_handler(void *user, const char *section, const char *name, const char
             for (Config &config : configs)
                 config.true_peak = true_peak;
         }
+        else
+            quit(EXIT_FAILURE);
     }
     return 0;
 }
@@ -448,7 +470,7 @@ static void load_preset(const char *preset)
         quit(EXIT_FAILURE);
     }
 
-    output_ok("Applying preset...");
+    output_ok("Applying preset '{}'...", preset);
     ini_parse_file(file, global_handler, NULL);
     rewind(file);
     ini_parse_file(file, format_handler, NULL);
