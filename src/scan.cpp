@@ -238,6 +238,16 @@ bool Track::scan(const Config &config, std::mutex *m)
         ret = false;
         goto end;
     }
+
+    // For AAC files, prefer the Fraunhofer library if it's available
+    if (codec->id == AV_CODEC_ID_AAC) {
+#if LIBAVCODEC_VERSION_MAJOR >= 59 
+        const
+#endif
+        AVCodec *aac_codec = avcodec_find_decoder_by_name("libfdk_aac");
+        if (aac_codec != NULL)
+            codec = aac_codec;
+    }
         
     // Create the codec context
     codec_ctx = avcodec_alloc_context3(codec);
