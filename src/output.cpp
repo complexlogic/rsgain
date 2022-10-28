@@ -72,13 +72,15 @@ void ProgressBar::update(int pos)
 	if (pos == pos_prev)
 		return;
 
-#ifdef SCALEDPROGRESSBAR
-	w = this->get_console_width() - 8;
+	w = this->get_console_width();
+#ifdef MAXPROGBARWIDTH
+	if (w > MAXPROGBARWIDTH)
+		w = MAXPROGBARWIDTH;
+#endif
+	w -= 8;
 	if (w <= 0)
 		return;
-#else
-	w = PROGRESSBARWIDTH - 8;
-#endif
+
 	if (w != w_prev) {
 		delete buffer;
 		buffer = new char[w + 3];

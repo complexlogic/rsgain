@@ -12,8 +12,7 @@ project(rsgain
   LANGUAGES CXX
 )
 
-option(SCALEPROGBAR "Scale progress bar to column width" ON)
-set(PROGBARWIDTH "80" CACHE STRING "Fixed width of progress bar")
+set(MAXPROGBARWIDTH "0" CACHE STRING "Maximum width of progress bar")
 option(UCHECKMARKS "Enable use of Unicode checkmarks" ON)
 
 set(CMAKE_CXX_STANDARD 20)
