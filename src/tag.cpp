@@ -173,7 +173,12 @@ void tag_track(Track &track, const Config &config)
                         tag_error(track);
                     break;
                 }
-                break;
+
+                default:
+                    if (!tag_ogg<TagLib::FileRef>(track, config))
+                        tag_error(track);
+                    break;
+            break;
                 
         case FileType::OPUS:
             if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
@@ -249,7 +254,6 @@ bool tag_exists(const Track &track)
         default:
             return false;
     }
-
     return false;
 }
 
@@ -379,7 +383,14 @@ static bool tag_flac(Track &track, const Config &config)
 template<typename T>
 static bool tag_ogg(Track &track, const Config &config) {
     T file(track.path.c_str());
-    TagLib::Ogg::XiphComment *tag = file.tag();
+    TagLib::Ogg::XiphComment *tag = nullptr;
+    if constexpr(std::is_same_v<T, TagLib::FileRef>) {
+        tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
+        if (tag == nullptr)
+            return false;
+    }
+    else
+        tag = file.tag();
     tag_clear_xiph<T>(tag);
     if (config.tag_mode == 'i' && (!std::is_same_v<T, TagLib::Ogg::Opus::File> || 
     (config.opus_mode != 't' && config.opus_mode != 'a')))
