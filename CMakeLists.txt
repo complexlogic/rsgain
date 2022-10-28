@@ -12,6 +12,7 @@ project(rsgain
   LANGUAGES CXX
 )
 
+set(MAXPROGBARWIDTH "0" CACHE STRING "Maximum width of progress bar")
 option(UCHECKMARKS "Enable use of Unicode checkmarks" ON)
 
 set(CMAKE_CXX_STANDARD 20)
