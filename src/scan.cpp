@@ -179,6 +179,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
     bool ret = true;
+    bool repeat = false;
     int peak_mode;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
@@ -239,24 +240,43 @@ bool Track::scan(const Config &config, std::mutex *m)
         goto end;
     }
         
-    // Create the codec context
-    codec_ctx = avcodec_alloc_context3(codec);
-    if (!codec_ctx) {
-        output_error("Could not allocate audio codec context");
-        ret = false;
-        goto end;
-    }
-    avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
-
     // Initialize the decoder
-    rc = avcodec_open2(codec_ctx, codec, NULL);
-    if (rc < 0) {
-        char errbuf[256];
-        av_strerror(rc, errbuf, sizeof(errbuf));
-        output_error("Could not open codec: '{}'", errbuf);
-        ret = false;
-        goto end;
-    }
+    do {
+        codec_ctx = avcodec_alloc_context3(codec);
+        if (!codec_ctx) {
+            output_error("Could not allocate audio codec context");
+            ret = false;
+            goto end;
+        }
+        avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
+        rc = avcodec_open2(codec_ctx, codec, NULL);
+        if (rc < 0) {
+            if (!repeat) {
+#if LIBAVCODEC_VERSION_MAJOR >= 59 
+                    const
+#endif
+                AVCodec *try_codec;
+                avcodec_free_context(&codec_ctx);
+                codec_ctx = NULL;
+
+                // For AAC files, try the Fraunhofer decoder if the default FFmpeg decoder failed
+                if (codec->id == AV_CODEC_ID_AAC) {
+                    try_codec = avcodec_find_decoder_by_name("libfdk_aac");
+                    if (try_codec != NULL) {
+                        codec = try_codec;
+                        repeat = true;
+                        continue;
+                    }
+                }
+            }
+            char errbuf[256];
+            av_strerror(rc, errbuf, sizeof(errbuf));
+            output_error("Could not open codec: {}", errbuf);
+            ret = false;
+            goto end;
+        }
+        repeat = false;
+    } while (repeat);
     codec_id = codec->id;
 
     // For delete tags mode, we don't need to actually scan the file, we only
