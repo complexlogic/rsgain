@@ -205,6 +205,21 @@ static Config configs[] = {
         .id3v2version = 3,
         .opus_mode = 'd'
     },
+
+    // Musepack config
+    {
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.f,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .tab_output = OutputType::NONE,
+        .lowercase = false,
+        .id3v2version = 3,
+        .opus_mode = 'd'
+    }
 };
 
 // Parse Easy Mode command line arguments
@@ -312,17 +327,18 @@ static bool convert_bool(const char *value, bool &setting)
 static FileType determine_section_type(const std::string &section)
 {
     static const std::unordered_map<std::string, FileType> map = {
-        {"MP2",     FileType::MP2},
-        {"MP3",     FileType::MP3},
-        {"FLAC",    FileType::FLAC},
-        {"Ogg",     FileType::OGG},
-        {"Opus",    FileType::OPUS},
-        {"M4A",     FileType::M4A},
-        {"WMA",     FileType::WMA},
-        {"WAV",     FileType::WAV},
-        {"AIFF",    FileType::AIFF},
-        {"Wavpack", FileType::WAVPACK},
-        {"APE",     FileType::APE}
+        {"MP2",      FileType::MP2},
+        {"MP3",      FileType::MP3},
+        {"FLAC",     FileType::FLAC},
+        {"Ogg",      FileType::OGG},
+        {"Opus",     FileType::OPUS},
+        {"M4A",      FileType::M4A},
+        {"WMA",      FileType::WMA},
+        {"WAV",      FileType::WAV},
+        {"AIFF",     FileType::AIFF},
+        {"Wavpack",  FileType::WAVPACK},
+        {"APE",      FileType::APE},
+        {"Musepack", FileType::MPC}
     };
     auto it = map.find(section);
     return it == map.end() ? FileType::INVALID : it->second;

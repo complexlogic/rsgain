@@ -29,6 +29,7 @@
  */
 
 #include <cmath>
+#include <cstdio>
 #include <stdio.h>
 #include <string.h>
 #include <string>
@@ -54,6 +55,7 @@
 #include <aifffile.h>
 #include <wavpackfile.h>
 #include <apefile.h>
+#include <mpcfile.h>
 #include <libavcodec/avcodec.h>
 
 #define CRCPP_USE_CPP11
@@ -172,12 +174,12 @@ void tag_track(Track &track, const Config &config)
                     if (!tag_ogg<TagLib::Ogg::Speex::File>(track, config))
                         tag_error(track);
                     break;
-                }
 
                 default:
                     if (!tag_ogg<TagLib::FileRef>(track, config))
                         tag_error(track);
                     break;
+            }
             break;
                 
         case FileType::OPUS:
@@ -212,6 +214,11 @@ void tag_track(Track &track, const Config &config)
 
         case FileType::APE:
             if (!tag_apev2<TagLib::APE::File>(track, config))
+                tag_error(track);
+            break;
+
+        case FileType::MPC:
+            if (!tag_apev2<TagLib::MPC::File>(track, config))
                 tag_error(track);
             break;
     }
@@ -250,6 +257,9 @@ bool tag_exists(const Track &track)
 
         case FileType::APE:
             return tag_exists_ape<TagLib::APE::File>(track);
+
+        case FileType::MPC:
+            return tag_exists_ape<TagLib::MPC::File>(track);
 
         default:
             return false;
@@ -425,7 +435,14 @@ static bool tag_apev2(Track &track, const Config &config)
     tag_clear_apev2(tag);
     if (config.tag_mode == 'i')
         tag_write_apev2(tag, track.result, config);
-    return file.save();
+    if constexpr(!std::is_same_v<T, TagLib::MPC::File>)
+        return file.save();
+    else {
+        bool ret = file.save();
+        if (ret)
+            ret = set_mpc_packet_rg(track.path.c_str());
+        return ret;
+    }
 }
 
 static bool tag_wma(Track &track, const Config &config)
@@ -652,6 +669,63 @@ bool set_opus_header_gain(const char *path, int16_t gain)
     fseek(file.get(), OPUS_GAIN_OFFSET, SEEK_SET);
     fwrite(&gain, sizeof(gain), 1, file.get());
     return true;
+}
+
+static bool set_mpc_packet_rg(const char *path)
+{
+    std::FILE *fp = fopen(path, "rb+");
+    if (fp == nullptr)
+        return false;
+    std::unique_ptr<std::FILE, decltype(&fclose)> file(fopen(path, "rb+"), fclose);
+
+    fseek(fp, 0L, SEEK_END);
+    size_t nb_bytes = ftell(fp);
+    rewind(fp);
+
+    // Validate magic number
+    char magic_num[4];
+    if (fread(magic_num, 1, sizeof(magic_num), fp) != sizeof(magic_num) 
+    || strncmp(magic_num, "MPCK", sizeof(magic_num)))
+        return false;
+    nb_bytes -= sizeof(magic_num);
+
+    // Loop through all the packets until we find "RG"
+    char key[2];
+    unsigned char length_buffer[4];
+    unsigned int length_bytes; // Tracks width of length buffer (1-4)
+    uint32_t length;
+    size_t total_bytes_read = 0;
+    size_t payload_bytes;
+    while (total_bytes_read < nb_bytes) {
+        total_bytes_read += fread(key, 1, sizeof(key), fp);
+        
+        // Find length of the packet
+        length_bytes = 0;
+        length = 0;
+        do {
+            total_bytes_read += fread(length_buffer + length_bytes, 1, 1, fp);
+            length_bytes++;
+        } while ((length_buffer[length_bytes - 1] & 0x80) && total_bytes_read < nb_bytes && length_bytes < 4);
+        for (int i = 0; i < length_bytes; i++)
+            length += (uint32_t) (0x7F & length_buffer[i]) << (7 * (length_bytes - i - 1));
+        payload_bytes = length - (2 + length_bytes);
+
+        // Clear the ReplayGain info
+        if (!strncmp(key, "RG", 2)) {
+            static char rg_buffer[] = {
+                0x1, // version
+                0x0, 0x0, // track gain
+                0x0, 0x0, // track peak
+                0x0, 0x0, // album gain
+                0x0, 0x0, // album peak
+            };
+            fwrite(rg_buffer, 1, sizeof(rg_buffer), fp);
+            return true;
+        }
+        total_bytes_read += payload_bytes;
+        fseek(fp, payload_bytes, SEEK_CUR);
+    }
+    return false;
 }
 
 void taglib_get_version(std::string &buffer)

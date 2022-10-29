@@ -77,7 +77,8 @@ static FileType determine_filetype(const std::string &extension)
         {".aif",  FileType::AIFF},
         {".snd",  FileType::AIFF},
         {".wv",   FileType::WAVPACK},
-        {".ape",  FileType::APE}
+        {".ape",  FileType::APE},
+        {".mpc",  FileType::MPC}
     };
     auto it = map.find(extension);
     return it == map.end() ? FileType::INVALID : it->second;
@@ -344,12 +345,11 @@ bool Track::scan(const Config &config, std::mutex *m)
     }
 
     if (output_progress) { 
-        if (format_ctx->streams[stream_id]->start_time == AV_NOPTS_VALUE || 
-        format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE) {
+        if (format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE)
             output_progress = false;
-        }
         else {
-            start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
+            if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
+                start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
             len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
             progress_bar.begin(start, len);
         }
@@ -357,10 +357,10 @@ bool Track::scan(const Config &config, std::mutex *m)
     
     while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
-            if (avcodec_send_packet(codec_ctx, packet) == 0) {
-                if (avcodec_receive_frame(codec_ctx, frame) == 0) {
+            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0 || rc == AVERROR(EAGAIN)) {                                          //fmt::print("pkt\n");
+                while (avcodec_receive_frame(codec_ctx, frame) >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
-
+                    
                     // Convert audio format with libswresample if necessary
                     if (swr != NULL) {
                         size_t out_size = av_samples_get_buffer_size(NULL, 
@@ -378,7 +378,7 @@ bool Track::scan(const Config &config, std::mutex *m)
                             goto end;
                         }
                     
-                        rc = ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);         
+                        rc = ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);  
                         av_free(swr_out_data[0]);                        
                     }
 
@@ -389,8 +389,9 @@ bool Track::scan(const Config &config, std::mutex *m)
                     
                     if (output_progress && pos >= 0)
                         progress_bar.update(pos);
-                }
+                    
                 av_frame_unref(frame);
+                }
             }
         }
         av_packet_unref(packet);

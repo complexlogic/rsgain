@@ -51,6 +51,7 @@ void tag_track(Track &track, const Config &config);
 bool tag_exists(const Track &track);
 void taglib_get_version(std::string &buffer);
 bool set_opus_header_gain(const char *path, int16_t gain);
+static bool set_mpc_packet_rg(const char *path);
 
 static bool tag_mp3(Track &track, const Config &config);
 static bool tag_flac(Track &track, const Config &config);
