@@ -293,8 +293,9 @@ static void custom_mode(int argc, char *argv[])
 int main(int argc, char *argv[]) {
     int rc, i;
     char *command = NULL;
+    opterr = 0;
     
-    const char *short_opts = "+hv";
+    const char *short_opts = "+hv?";
     static struct option long_opts[] = {
         { "help",         no_argument,       NULL, 'h' },
         { "version",      no_argument,       NULL, 'v' },
@@ -310,12 +311,17 @@ int main(int argc, char *argv[]) {
             case 'h':
                 help_main();
                 quit(EXIT_SUCCESS);
-                break;
 
             case 'v':
                 version();
                 quit(EXIT_SUCCESS);
-                break;
+
+            case '?':
+                if (optopt)
+                    output_fail("Unrecognized option '{:c}'", optopt);
+                else
+                    output_fail("Unrecognized option '{}'", argv[optind - 1] + 2);
+                quit(EXIT_FAILURE);
         }
     }
 
