@@ -1,5 +1,4 @@
-#ifndef HAS_SCAN_H
-#define HAS_SCAN_H
+#pragma once
 
 #include <mutex>
 #include <vector>
@@ -82,5 +81,3 @@ class ScanJob {
 		bool scan(const Config &config, std::mutex *ffmpeg_mutex = NULL);
 		void update_data(ScanData &data);
 };
-
-#endif

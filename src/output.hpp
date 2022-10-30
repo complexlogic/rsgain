@@ -1,3 +1,5 @@
+#pragma once
+
 /*
  * Loudness normalizer based on the EBU R128 standard
  *
