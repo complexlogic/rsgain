@@ -46,7 +46,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -61,7 +61,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -76,7 +76,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -91,7 +91,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -106,7 +106,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -121,7 +121,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -136,7 +136,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -151,7 +151,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -166,7 +166,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -181,7 +181,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -196,7 +196,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -211,7 +211,7 @@ static Config configs[] = {
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
@@ -510,12 +510,6 @@ static void load_preset(const char *preset)
     fclose(file);
 }
 
-WorkerThread::WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data) :
-ffmpeg_mutex(ffmpeg_mutex), main_mutex(main_mutex), main_cv(main_cv), scan_data(scan_data), quit(false), finished(false), job(NULL)
-{
-    thread = new std::thread(&WorkerThread::work, this);
-}
-
 bool WorkerThread::add_job(ScanJob *job)
 {
     std::unique_lock lk(thread_mutex, std::try_to_lock);
@@ -526,11 +520,6 @@ bool WorkerThread::add_job(ScanJob *job)
     lk.unlock();
     thread_cv.notify_all();
     return true;
-}
-
-WorkerThread::~WorkerThread()
-{
-    delete thread;
 }
 
 void WorkerThread::work()

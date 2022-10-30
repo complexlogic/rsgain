@@ -15,8 +15,9 @@
 class WorkerThread {
 
     public:
-        WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data);
-        ~WorkerThread();
+        WorkerThread(std::mutex *ffmpeg_mutex, std::mutex &main_mutex, std::condition_variable &main_cv, ScanData &scan_data) :
+        ffmpeg_mutex(ffmpeg_mutex), main_mutex(main_mutex), main_cv(main_cv), scan_data(scan_data), thread(new std::thread(&WorkerThread::work, this)) {}
+        ~WorkerThread() { delete thread; };
         void work();
         bool add_job(ScanJob *job);
         bool wait();
@@ -26,9 +27,9 @@ class WorkerThread {
         std::mutex &main_mutex;
         std::condition_variable &main_cv;
         ScanData &scan_data;
-        bool quit;
-        bool finished;
-        ScanJob *job;
+        bool quit = false;
+        bool finished = false;
+        ScanJob *job = NULL;
         std::mutex thread_mutex;
         std::thread *thread;
         std::condition_variable thread_cv;

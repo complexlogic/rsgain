@@ -10,7 +10,7 @@
 #define MAX_TARGET_LOUDNESS -5
 #define MIN_TARGET_LOUDNESS -30
 
-#define RG_TARGET_LOUDNESS -18.f
+#define RG_TARGET_LOUDNESS -18.0
 
 enum class OutputType{
 	NONE,

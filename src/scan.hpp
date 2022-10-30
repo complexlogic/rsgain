@@ -36,16 +36,14 @@ struct ScanResult {
 };
 
 struct ScanData {
-    unsigned int files;
+    unsigned int files = 0;
 	unsigned int skipped = 0;
-    unsigned int clipping_adjustments;
-    double total_gain;
-    double total_peak;
-    unsigned int total_negative;
-    unsigned int total_positive;
+    unsigned int clipping_adjustments = 0;
+    double total_gain = 0.0;
+    double total_peak = 0.0;
+    unsigned int total_negative = 0;
+    unsigned int total_positive = 0;
     std::vector<std::string> error_directories;
-
-    ScanData(void) : files(0), clipping_adjustments(0), total_gain(0.f), total_peak(0.f), total_positive(0), total_negative(0){};
 };
 
 struct Track{
@@ -55,10 +53,10 @@ struct Track{
 	ScanResult result;
 	int codec_id;
 	std::unique_ptr<ebur128_state, void (*)(ebur128_state*)> ebur128;
-	bool tclip;
-	bool aclip;
+	bool tclip = false;
+	bool aclip = false;
 
-	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL, free_ebur128), tclip(false), aclip(false) {};
+	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL, free_ebur128) {};
 	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 	bool calculate_loudness(const Config &config);
 };
@@ -74,12 +72,11 @@ class ScanJob {
 	public:
 		FileType type;
 		std::string path;
-		int nb_files;
-		bool error;
-		int clipping_adjustments;
+		int nb_files = 0;
+		bool error = false;
+		int clipping_adjustments = 0;
 		unsigned int skipped = 0;
 
-		ScanJob() : nb_files(0), error(false), clipping_adjustments(0) {};
 		bool add_files(char **files, int nb_files);
 		FileType add_directory(std::filesystem::path &path);
 		bool scan(const Config &config, std::mutex *ffmpeg_mutex = NULL);

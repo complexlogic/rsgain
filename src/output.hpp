@@ -80,7 +80,7 @@ class ProgressBar {
         int pos_prev;
         int start;
         int len;
-        char *buffer;
+        char *buffer = NULL;
 
 #ifdef _WIN32
         CONSOLE_SCREEN_BUFFER_INFO info;
@@ -91,7 +91,6 @@ class ProgressBar {
         int get_console_width();
 
     public:
-        ProgressBar(void) : buffer(NULL) {};
         void begin(int start, int len);
         void update(int pos);
         void complete(void);

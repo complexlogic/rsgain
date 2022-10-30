@@ -189,7 +189,7 @@ static void custom_mode(int argc, char *argv[])
         .tag_mode = 's',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
-        .max_peak_level = 0.f,
+        .max_peak_level = 0.0,
         .true_peak = false,
         .clip_mode = 'n',
         .do_album = false,
