@@ -20,6 +20,7 @@ if (WIN32)
     ${FMT}
     ${GETOPT}
     ${INIH}
+    FDK-AAC::fdk-aac
   )
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
     target_link_libraries(${EXECUTABLE_TITLE} ${STATIC_LIBS})

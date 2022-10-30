@@ -1,0 +1,62 @@
+name: Publish Source
+
+on:
+  release:
+    types: [published]
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: none
+  checks: none
+  contents: write
+  deployments: none
+  issues: none
+  packages: read
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: read
+
+jobs:
+  build_source:
+    name: Build Source
+    if: startsWith(github.ref, 'refs/tags/')
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Setup
+        run: |
+          sudo apt install -y tar
+          REPO=${{github.repository}}
+          REPO_TITLE=${REPO#*/}
+          RELEASE_TITLE=${{github.event.release.name}}
+          PACKAGE_TITLE=${REPO_TITLE}-${RELEASE_TITLE#*v}
+          
+          echo "PACKAGE_TITLE=${PACKAGE_TITLE}" >> ${GITHUB_ENV}
+
+      - name: Checkout Git repository
+        uses: actions/checkout@v3
+        with:
+          path: ${{env.PACKAGE_TITLE}}
+
+      - name: Package
+        run: |
+          ARCHIVE_NAME=${{env.PACKAGE_TITLE}}-source.tar.xz
+          tar --lzma --exclude ${{env.PACKAGE_TITLE}}/.git -cf $ARCHIVE_NAME ${{env.PACKAGE_TITLE}}
+          SHA256=$(shasum -b -a 256 < $ARCHIVE_NAME | cut -d ' ' -f1)
+          echo "SHA256=${SHA256}" >> ${GITHUB_ENV}
+        
+      - name: Release
+        uses: softprops/action-gh-release@master
+        with:
+          files: ./*.tar.xz
+          append_body: true
+          body: "**Source SHA256:** ${{env.SHA256}}"
+          generate_release_notes: true

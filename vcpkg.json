@@ -1,13 +1,29 @@
 {
   "dependencies": [
-    "libebur128",
-    "taglib",
+    {
+      "name": "libebur128",
+      "platform": "windows"
+    },
+      "taglib",
     {
       "name": "ffmpeg",
-      "features": ["avcodec", "avformat", "swresample"]
+      "platform": "windows",
+      "default-features": false,
+      "features": ["avcodec", "avformat", "swresample", "fdk-aac"]
+    },
+    {
+      "name": "fdk-aac",
+      "platform": "windows",
+      "features": ["he-aac"]
     },
     "fmt",
-    "inih",
-    "getopt"
+    {
+      "name": "inih",
+      "platform": "windows"
+    },
+    {  
+      "name": "getopt",
+      "platform": "windows"
+    }
   ]
 } 
