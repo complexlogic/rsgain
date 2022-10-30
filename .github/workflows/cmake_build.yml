@@ -1,0 +1,144 @@
+name: CMake Build
+
+on:
+  push:
+    paths-ignore:
+      [
+        "**/**.md"
+      ]
+
+  pull_request:
+    branches:
+      - master
+    paths-ignore:
+      [
+        "**/**.md"
+      ]
+
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+permissions:
+  actions: none
+  checks: none
+  contents: write
+  deployments: none
+  issues: none
+  packages: read
+  pull-requests: none
+  repository-projects: none
+  security-events: none
+  statuses: read
+
+jobs:
+  build_windows:
+    name: Build Windows
+    runs-on: windows-2022
+    strategy:
+      fail-fast: false
+
+    env:
+      CMAKE_BUILD_TYPE: Release
+      CMAKE_GENERATOR: Visual Studio 17 2022
+      VCPKG_TRIPLET: custom-triplet
+
+    steps:
+      - name: Checkout Git repository
+        uses: actions/checkout@v3
+        with:
+          submodules: true
+
+      - uses: friendlyanon/setup-vcpkg@v1
+        with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
+
+      - name: Configure
+        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
+
+      - name: Build
+        run: cmake --build build --config ${{ env.CMAKE_BUILD_TYPE }}
+
+      - name: Package
+        run: cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
+
+      - uses: actions/upload-artifact@v3
+        name: Upload package
+        with:
+          name: Windows build
+          path: build/*.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/*.zip
+
+  build_linux:
+    name: Build Linux
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        config:
+          - name: Debian
+            arch: amd64
+            vcpkg_triplet: x64-linux
+            docker_image: debian:bullseye
+    container:
+      image: ${{matrix.config.docker_image}}
+
+    env:
+      CMAKE_BUILD_TYPE: Release
+      VCPKG_DEFAULT_TRIPLET: ${{matrix.config.vcpkg_triplet}}
+
+    steps:
+      - name: Checkout Git repository
+        uses: actions/checkout@v3
+
+      - name: "Install dependencies"
+        run: >
+          apt update && apt install -y 
+          build-essential 
+          git 
+          cmake 
+          pkg-config 
+          curl 
+          zip 
+          unzip 
+          tar 
+          ccache 
+          libavcodec-dev 
+          libavformat-dev 
+          libavutil-dev 
+          libswresample-dev 
+          libebur128-dev 
+          libinih-dev
+
+      - uses: friendlyanon/setup-vcpkg@v1
+        with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
+
+      - name: Configure
+        run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{matrix.config.vcpkg_triplet}} -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=DEB
+
+      - name: Build
+        run: cmake --build build --config ${{env.CMAKE_BUILD_TYPE}}
+
+      - name: Package
+        run: |
+          cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
+
+      - uses: actions/upload-artifact@v3
+        name: Upload Package
+        with:
+          name: Debian build
+          path: build/*.deb
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/*.deb
