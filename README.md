@@ -61,17 +61,18 @@ The docker log to `stdout` updates too slowly for the scan progress bar. If you 
 rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table in order to be recognized as valid.
 |Format | Supported File Extension(s) |
 |-------|-----------------------------|
-|MP3|.mp3|
-|FLAC|.flac|
+|Audio Interchange File Format (AIFF)|.aiff|
+|Free Lossless Audio Codec (FLAC)|.flac|
+|Monkey's Audio|.ape|
+|MPEG-1 Audio Layer II (MP2)|.mp2|
+|MPEG-1 Audio Layer III (MP3)|.mp3|
+|MPEG-4 Audio (AAC, ALAC)|.m4a|
+|Musepack (MPC)|.mpc|
 |Ogg (Vorbis, Speex, FLAC)|.ogg, .oga, .spx|
 |Opus|.opus|
-|MPEG-4 Audio (AAC, ALAC)|.m4a|
+|Waveform Audio File Format (WAV)|.wav|
 |Wavpack|.wv|
-|Monkey's Audio|.ape|
-|WMA|.wma|
-|MP2|.mp2|
-|WAV|.wav|
-|AIFF|.aiff|
+|Windows Media Audio (WMA)|.wma|
 
 ## Usage
 rsgain contains two separate user interfaces: Easy Mode and Custom Mode. The distinction between the two modes is rooted in the history of ReplayGain utilities. 
