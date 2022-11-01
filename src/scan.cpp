@@ -280,10 +280,6 @@ bool Track::scan(const Config &config, std::mutex *m)
     } while (repeat);
     codec_id = codec->id;
 
-    // Try to get default channel layout
-    if (!codec_ctx->channel_layout)
-        codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
-
     // Display some information about the file
     if (output_progress)
         output_ok("Stream #{}: {}, {}{:L} Hz, {} ch",
@@ -296,15 +292,25 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
-        swr = swr_alloc();
-        av_opt_set_channel_layout(swr, "in_channel_layout", codec_ctx->channel_layout, 0);
-        av_opt_set_channel_layout(swr, "out_channel_layout", codec_ctx->channel_layout, 0);
-        av_opt_set_int(swr, "in_channel_count",  codec_ctx->channels, 0);
-        av_opt_set_int(swr, "out_channel_count", codec_ctx->channels, 0);
-        av_opt_set_int(swr, "in_sample_rate", codec_ctx->sample_rate, 0);
-        av_opt_set_int(swr, "out_sample_rate", codec_ctx->sample_rate, 0);
-        av_opt_set_sample_fmt(swr, "in_sample_fmt", codec_ctx->sample_fmt, 0);
-        av_opt_set_sample_fmt(swr, "out_sample_fmt", OUTPUT_FORMAT, 0);
+        AVChannelLayout layout;
+        av_channel_layout_default(&layout, codec_ctx->channels);
+        rc = swr_alloc_set_opts2(&swr,
+                 &layout,
+                 OUTPUT_FORMAT,
+                 codec_ctx->sample_rate,
+                 &layout,
+                 codec_ctx->sample_fmt,
+                 codec_ctx->sample_rate,
+                 0,
+                 NULL
+             );
+        if (rc < 0) {
+            char errbuf[256];
+            av_strerror(rc, errbuf, sizeof(errbuf));
+            output_error("Could not allocate libswresample context: {}", errbuf);
+            ret = false;
+            goto end;
+        }
 
         rc = swr_init(swr);
         if (rc < 0) {
@@ -357,7 +363,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     
     while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
-            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0 || rc == AVERROR(EAGAIN)) {                                          //fmt::print("pkt\n");
+            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0 || rc == AVERROR(EAGAIN)) {
                 while (avcodec_receive_frame(codec_ctx, frame) >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
                     
