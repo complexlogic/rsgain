@@ -241,7 +241,7 @@ static void custom_mode(int argc, char *argv[])
                 break;
 
             case 's': {
-                if (!parse_tag_mode(optarg, config.tag_mode))
+                if (!parse_tag_mode_custom(optarg, config.tag_mode))
                     quit(EXIT_FAILURE);
                 break;
             }

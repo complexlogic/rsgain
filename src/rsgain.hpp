@@ -37,7 +37,8 @@ struct Config {
 
 void quit(int status);
 bool parse_mode(const char *name, const char *valid_modes, const char *value, char &mode);
-#define parse_tag_mode(value, mode) parse_mode("tag", "dis", value, mode)
+#define parse_tag_mode_easy(value, mode) parse_mode("tag", "disn", value, mode)
+#define parse_tag_mode_custom(value, mode) parse_mode("tag", "dis", value, mode)
 #define parse_clip_mode(value, mode) parse_mode("clip", "npa", value, mode)
 #define parse_opus_mode(value, mode) parse_mode("Opus", "drta", value, mode)
 bool parse_target_loudness(const char *value, double &target_loudness);

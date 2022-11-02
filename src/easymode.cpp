@@ -362,7 +362,7 @@ int global_handler(void *user, const char *section, const char *name, const char
     }
     else if (MATCH(name, "TagMode")) {
         char tag_mode;
-        if (parse_tag_mode(value, tag_mode)) {
+        if (parse_tag_mode_easy(value, tag_mode)) {
             for (Config &config : configs)
                 config.tag_mode = tag_mode;
         }
@@ -419,7 +419,7 @@ int format_handler(void *user, const char *section, const char *name, const char
         convert_bool(value, configs[static_cast<int>(file_type)].do_album);
     }
     else if (MATCH(name, "TagMode")) {
-        parse_tag_mode(value, configs[static_cast<int>(file_type)].tag_mode);
+        parse_tag_mode_easy(value, configs[static_cast<int>(file_type)].tag_mode);
     }
     else if (MATCH(name, "ClipMode")) {
         parse_clip_mode(value, configs[static_cast<int>(file_type)].clip_mode);
@@ -597,6 +597,7 @@ void scan_easy(const char *directory, const char *preset, int threads)
     if (infinite_loop)
         directories_static = directories;
 #endif
+    FileType type;
 
     // Multithread scannning
     if (multithread) {
@@ -609,7 +610,6 @@ void scan_easy(const char *directory, const char *preset, int threads)
         // Create threads
         for (int i = 0; i < threads; i++)
             worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
-
         std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Wait a bit for the threads to initialize;
 
         ScanJob *job;
@@ -617,14 +617,14 @@ void scan_easy(const char *directory, const char *preset, int threads)
         while (directories.size()) {
             job = new ScanJob();
             std::filesystem::path &dir = directories.front();
-            if (job->add_directory(dir) != FileType::INVALID) {
+            if ((type = job->add_directory(dir)) != FileType::INVALID &&
+            configs[static_cast<int>(type)].tag_mode != 'n') {
                 bool job_placed = false;
 
                 // Feed the generated job to the first available worker thread
                 while (!job_placed) {
-                    for (auto wt = worker_threads.begin(); wt != worker_threads.end() && !job_placed; ++wt) {
+                    for (auto wt = worker_threads.begin(); wt != worker_threads.end() && !job_placed; ++wt)
                         job_placed = (*wt)->add_job(job);
-                    }
                     if (job_placed) {
                         multithread_progress(dir.string(), num_directories - directories.size(), num_directories);
                     }
@@ -640,7 +640,6 @@ void scan_easy(const char *directory, const char *preset, int threads)
                 delete job;
             }
             directories.pop_front();
-
 #ifdef DEBUG
             if (infinite_loop && !directories.size())
                 directories = directories_static;
@@ -668,12 +667,12 @@ void scan_easy(const char *directory, const char *preset, int threads)
     
     // Single threaded scanning
     else {
-        FileType file_type;
         while (directories.size()) {
             ScanJob job;
-            if ((file_type = job.add_directory(directories.front())) != FileType::INVALID) {
+            if ((type = job.add_directory(directories.front())) != FileType::INVALID &&
+            configs[static_cast<int>(type)].tag_mode != 'n') {
                 output_ok("Scanning directory: '{}'", job.path);
-                job.scan(configs[static_cast<int>(file_type)]);
+                job.scan(configs[static_cast<int>(type)]);
                 job.update_data(scan_data);
             }
             directories.pop_front();
