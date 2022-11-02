@@ -711,7 +711,7 @@ static bool set_mpc_packet_rg(const char *path)
         payload_bytes = length - (2 + length_bytes);
 
         // Clear the ReplayGain info
-        if (!strncmp(key, "RG", 2)) {
+        if (!strncmp(key, "RG", 2) && length == 12) {
             static char rg_buffer[] = {
                 0x1, // version
                 0x0, 0x0, // track gain
