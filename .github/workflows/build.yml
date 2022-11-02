@@ -1,4 +1,4 @@
-name: CMake Build
+name: Build
 
 on:
   push:
@@ -35,7 +35,7 @@ permissions:
 
 jobs:
   build_windows:
-    name: Build Windows
+    name: Windows
     runs-on: windows-2022
     strategy:
       fail-fast: false
@@ -51,20 +51,18 @@ jobs:
         with:
           submodules: true
 
-      - uses: friendlyanon/setup-vcpkg@v1
+      - name: Setup vcpkg
+        uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
 
       - name: Configure
         run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
 
       - name: Build
-        run: cmake --build build --config ${{ env.CMAKE_BUILD_TYPE }}
-
-      - name: Package
         run: cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
 
-      - uses: actions/upload-artifact@v3
-        name: Upload package
+      - name: Upload Package
+        uses: actions/upload-artifact@v3
         with:
           name: Windows build
           path: build/*.zip
@@ -76,7 +74,7 @@ jobs:
           files: build/*.zip
 
   build_linux:
-    name: Build Linux
+    name: Linux
     runs-on: ubuntu-latest
     permissions:
       packages: write
@@ -85,7 +83,6 @@ jobs:
       matrix:
         config:
           - name: Debian
-            arch: amd64
             vcpkg_triplet: x64-linux
             docker_image: debian:bullseye
     container:
@@ -118,21 +115,18 @@ jobs:
           libebur128-dev 
           libinih-dev
 
-      - uses: friendlyanon/setup-vcpkg@v1
+      - name: Setup vcpkg
+        uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
 
       - name: Configure
         run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{matrix.config.vcpkg_triplet}} -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=DEB
 
       - name: Build
-        run: cmake --build build --config ${{env.CMAKE_BUILD_TYPE}}
+        run: cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
 
-      - name: Package
-        run: |
-          cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
-
-      - uses: actions/upload-artifact@v3
-        name: Upload Package
+      - name: Upload Package
+        uses: actions/upload-artifact@v3
         with:
           name: Debian build
           path: build/*.deb
