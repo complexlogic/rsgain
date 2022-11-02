@@ -131,4 +131,3 @@ inline int ProgressBar::get_console_width()
 	return ws.ws_col;
 #endif
 }
-

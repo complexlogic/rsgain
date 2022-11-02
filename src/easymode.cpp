@@ -415,33 +415,24 @@ int format_handler(void *user, const char *section, const char *name, const char
         return 0;
 
     // Parse setting keys
-    if (MATCH(name, "Album")) {
+    if (MATCH(name, "Album"))
         convert_bool(value, configs[static_cast<int>(file_type)].do_album);
-    }
-    else if (MATCH(name, "TagMode")) {
+    else if (MATCH(name, "TagMode"))
         parse_tag_mode_easy(value, configs[static_cast<int>(file_type)].tag_mode);
-    }
-    else if (MATCH(name, "ClipMode")) {
+    else if (MATCH(name, "ClipMode"))
         parse_clip_mode(value, configs[static_cast<int>(file_type)].clip_mode);
-    }
-    else if (MATCH(name, "Lowercase")) {
+    else if (MATCH(name, "Lowercase"))
         convert_bool(value, configs[static_cast<int>(file_type)].lowercase);
-    }
-    else if (MATCH(name, "ID3v2Version")) {
+    else if (MATCH(name, "ID3v2Version"))
         parse_id3v2_version(value, configs[static_cast<int>(file_type)].id3v2version);
-    }
-    else if (MATCH(name, "TargetLoudness")) {
+    else if (MATCH(name, "TargetLoudness"))
         parse_target_loudness(value, configs[static_cast<int>(file_type)].target_loudness);
-    }
-    else if (MATCH(name, "MaxPeakLevel")) {
+    else if (MATCH(name, "MaxPeakLevel"))
         parse_max_peak_level(value, configs[static_cast<int>(file_type)].max_peak_level);
-    }
-    else if (MATCH(name, "TruePeak")) {
+    else if (MATCH(name, "TruePeak"))
         convert_bool(value, configs[static_cast<int>(file_type)].true_peak);
-    }
-    else if (MATCH(name, "OpusMode")) {
+    else if (MATCH(name, "OpusMode"))
         parse_opus_mode(value, configs[static_cast<int>(file_type)].opus_mode);
-    }
     return 0;
 }
 
