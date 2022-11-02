@@ -276,9 +276,9 @@ static bool tag_exists_id3(const Track &track)
     else
         tag = file.ID3v2Tag();
     if (tag != nullptr) {
-        auto frame_list = tag->frameList("TXXX");
-        for (auto it = frame_list.begin(); it != frame_list.end(); ++it) {
-            TagLib::ID3v2::UserTextIdentificationFrame *frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
+        auto frames = tag->frameList("TXXX");
+        for (auto &f : frames) {
+            TagLib::ID3v2::UserTextIdentificationFrame *frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
             if (frame == nullptr)
                 continue;
             TagLib::StringList string_list = frame->fieldList();
@@ -381,7 +381,6 @@ static bool tag_flac(Track &track, const Config &config)
 {
     TagLib::FLAC::File file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = file.xiphComment(true);
-
     tag_clear_xiph<TagLib::FLAC::File>(tag);
     if (config.tag_mode == 'i')
         tag_write_xiph<TagLib::FLAC::File>(tag, track.result, config);
@@ -493,12 +492,10 @@ static void tag_clear_map(T&& clear)
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
 {
     TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
-    for (auto it = frames.begin(); it != frames.end(); ++it) {
+    for (auto &f : frames) {
         TagLib::ID3v2::UserTextIdentificationFrame *frame =
-        dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(*it);
-
-        // this removes all variants of upper-/lower-/mixed-case tags
-        if (frame && frame->fieldList().size() >= 2) {
+        dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
+        if (frame != nullptr && frame->fieldList().size() >= 2) {
             TagLib::String desc = frame->description().upper();
             auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
                               std::cend(RG_STRING_UPPER),
