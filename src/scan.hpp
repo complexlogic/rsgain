@@ -51,7 +51,7 @@ struct Track{
 	std::string container;
 	ScanResult result;
 	int codec_id;
-	std::unique_ptr<ebur128_state, void (*)(ebur128_state*)> ebur128;
+	std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
 	bool tclip = false;
 	bool aclip = false;
 

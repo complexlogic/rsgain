@@ -647,7 +647,7 @@ bool set_opus_header_gain(const char *path, int16_t gain)
         gain = ((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
     
     // Read header into memory
-    std::unique_ptr<FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
+    std::unique_ptr<FILE, decltype(&fclose)> file(fopen(path, "rb+"), fclose);
     size_t read = fread(buffer, 1, sizeof(buffer), file.get());
     
     // Make sure we have a valid Ogg/Opus header

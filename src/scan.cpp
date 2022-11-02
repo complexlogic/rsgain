@@ -423,7 +423,7 @@ end:
 
     // Use a smart pointer to manage the remaining lifetime of the ebur128 state
     if (ebur128 != NULL) 
-        this->ebur128 = std::unique_ptr<ebur128_state, void (*)(ebur128_state*)>(ebur128, free_ebur128);
+        this->ebur128 = std::unique_ptr<ebur128_state, decltype(&free_ebur128)>(ebur128, free_ebur128);
     
     delete lk;
     return ret;
