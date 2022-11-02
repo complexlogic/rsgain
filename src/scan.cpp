@@ -292,19 +292,19 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
-        AVChannelLayout layout;
-        av_channel_layout_default(&layout, codec_ctx->channels);
-        rc = swr_alloc_set_opts2(&swr,
-                 &layout,
+        if (!codec_ctx->channel_layout)
+            codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
+        swr = swr_alloc_set_opts(NULL,
+                 codec_ctx->channel_layout,
                  OUTPUT_FORMAT,
                  codec_ctx->sample_rate,
-                 &layout,
+                 codec_ctx->channel_layout,
                  codec_ctx->sample_fmt,
                  codec_ctx->sample_rate,
                  0,
                  NULL
              );
-        if (rc < 0) {
+        if (swr == NULL) {
             char errbuf[256];
             av_strerror(rc, errbuf, sizeof(errbuf));
             output_error("Could not allocate libswresample context: {}", errbuf);
