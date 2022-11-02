@@ -381,6 +381,8 @@ bool Track::scan(const Config &config, std::mutex *m)
                             output_error("Could not convert audio frame");
                             ret = false;
                             av_free(swr_out_data[0]);
+                            av_frame_unref(frame);
+                            av_packet_unref(packet);
                             goto end;
                         }
                     
