@@ -24,7 +24,7 @@
 </details>
 
 ## About
-**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
+**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, Linux, and BSD. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
 rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
 
@@ -71,7 +71,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 #### Fedora
 A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
 ```
-dnf install https://github.com/complexlogic/rsgain/releases/download/v3.1/rsgain-3.1-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.1/rsgain-3.1-1.x86_64.rpm
 ```
 
 #### Others
