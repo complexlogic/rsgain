@@ -28,7 +28,6 @@ if (WIN32)
 
 elseif (UNIX)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES})
-  target_compile_definitions(${EXECUTABLE_TITLE} PUBLIC "PROGRESSBARWIDTH=${PROGBARWIDTH}")
   if(NOT UCHECKMARKS)
     target_compile_definitions(${EXECUTABLE_TITLE} PUBLIC "NOUCHECKMARKS")
   endif()
