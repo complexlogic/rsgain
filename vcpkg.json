@@ -21,9 +21,9 @@
       "name": "inih",
       "platform": "windows"
     },
-    {  
+    {
       "name": "getopt",
       "platform": "windows"
     }
   ]
-} 
+}
