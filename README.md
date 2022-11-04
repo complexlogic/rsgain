@@ -1,14 +1,11 @@
 # rsgain
-**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
-
-rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
-
-rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.org/) ReplayGain 2.0 plugin. Users that are not comfortable with command line interfaces may prefer this method since the plugin provides a GUI frontend to rsgain. See [MusicBrainz Picard Plugin](#musicbrainz-picard-plugin) for more information.
-
 </div>
 <details open>
   <summary>Table of Contents</summary>
   <ol>
+    <li>
+      <a href="#about">About</a>
+    </li>
     <li>
       <a href="#installation">Installation</a>
     </li>
@@ -25,6 +22,13 @@ rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.or
     <li><a href="#license">License</a></li>
   </ol>
 </details>
+
+## About
+**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
+
+rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
+
+rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.org/) ReplayGain 2.0 plugin. Users that are not comfortable with command line interfaces may prefer this method since the plugin provides a GUI frontend to rsgain. See [MusicBrainz Picard Plugin](#musicbrainz-picard-plugin) for more information.
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
@@ -95,13 +99,15 @@ rsgain supports all popular file formats. See the below table for compatibility.
 |Monkey's Audio|.ape|
 |MPEG-1 Audio Layer II (MP2)|.mp2|
 |MPEG-1 Audio Layer III (MP3)|.mp3|
-|MPEG-4 Audio (AAC, ALAC)|.m4a|
-|Musepack (MPC)|.mpc|
+|MPEG-4 Audio (AAC, ALAC)<sup>1</sup>|.m4a|
+|Musepack (MPC)<sup>2</sup>|.mpc|
 |Ogg (Vorbis, Speex, FLAC)|.ogg, .oga, .spx|
 |Opus|.opus|
 |Waveform Audio File Format (WAV)|.wav|
 |Wavpack|.wv|
 |Windows Media Audio (WMA)|.wma|
+<sup>1</sup> *Support for HE-AAC and xHE-AAC are available via the Fraunhofer AAC library. On Windows, the statically-linked FFmpeg already includes support, so no further action is required. On Unix platforms, you will need to check if your build of FFmpeg was complied with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
+<sup>2</sup> *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
 
 ## Usage
 rsgain contains two separate user interfaces: Easy Mode and Custom Mode. The distinction between the two modes is rooted in the history of ReplayGain utilities. 
