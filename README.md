@@ -31,7 +31,7 @@ rsgain is designed with a "batteries included" philosophy, allowing a user to sc
 rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.org/) ReplayGain 2.0 plugin. Users that are not comfortable with command line interfaces may prefer this method since the plugin provides a GUI frontend to rsgain. See [MusicBrainz Picard Plugin](#musicbrainz-picard-plugin) for more information.
 
 ## Installation
-Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
+Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program yourself, see [BUILDING](docs/BUILDING.md).
 
 ### Windows
 Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest) and extract its contents to a directory of your choice. rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
@@ -106,7 +106,9 @@ rsgain supports all popular file formats. See the below table for compatibility.
 |Waveform Audio File Format (WAV)|.wav|
 |Wavpack|.wv|
 |Windows Media Audio (WMA)|.wma|
+
 <sup>1</sup> *Support for HE-AAC and xHE-AAC are available via the Fraunhofer AAC library. On Windows, the statically-linked FFmpeg already includes support, so no further action is required. On Unix platforms, you will need to check if your build of FFmpeg was complied with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
+
 <sup>2</sup> *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
 
 ## Usage
