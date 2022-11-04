@@ -1,3 +1,12 @@
+Unreleased
+- Added support for Musepack format
+- Added support for HE-AAC, xHE-AAC formats
+- Added option '-S' to skip files with existing ReplayGain data
+- Easy mode: Added tag mode 'n' which will always skip files regardless of whether or not they have existing ReplayGain tags
+- Always fail if a requested command line option or scan preset is invalid
+- Build binary packages via GitHub Actions CI
+- Added support for BSD operating systems
+
 v3.0.1 (2022-10-13)
 - Fixed inconsistencies in tab output formatting
 
