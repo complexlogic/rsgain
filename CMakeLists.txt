@@ -5,9 +5,9 @@
 # This file is released under the 2 clause BSD license, see COPYING
 
 cmake_minimum_required(VERSION 3.13)
-project(rsgain 
+project(rsgain
   VERSION 3.1
-  DESCRIPTION "ReplayGain 2.0 loudness normalizer" 
+  DESCRIPTION "ReplayGain 2.0 loudness normalizer"
   HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES CXX
 )
@@ -53,13 +53,13 @@ if (WIN32)
     find_library(ZLIB zlib REQUIRED)
 	set(STATIC_LIBS ${ZLIB} "ws2_32.lib" "secur32.lib" "mfplat.lib" "mfuuid.lib" "strmiids.lib" "bcrypt.lib")
   endif ()
-  
+
 # Find dependencies - Linux/Mac
 elseif (UNIX)
   if (APPLE)
     link_directories(/usr/local/lib) # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
   endif (APPLE)
-  
+
   find_package(PkgConfig MODULE REQUIRED)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
@@ -96,7 +96,7 @@ add_subdirectory(src)
 
 # Installation - Windows
 if (WIN32)
-  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")  
+  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")
   foreach(item "CHANGELOG" "LICENSE")
     configure_file("${PROJECT_SOURCE_DIR}/${item}" "${PROJECT_BINARY_DIR}/${item}.txt")
     install(FILES "${PROJECT_BINARY_DIR}/${item}.txt" DESTINATION ".")
@@ -109,7 +109,7 @@ if (WIN32)
     configure_file(${preset} ${PROJECT_BINARY_DIR}/presets/${preset_name})
   endforeach ()
   install(DIRECTORY "${PROJECT_BINARY_DIR}/presets" DESTINATION ".")
-  
+
   # Copy the Visual C++ runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
   include(InstallRequiredSystemLibraries)
@@ -121,18 +121,18 @@ if (WIN32)
       endif ()
     endforeach ()
   endforeach ()
-  
+
   # Set up CPack
   set(CPACK_PACKAGE_NAME ${EXECUTABLE_TITLE})
   set(CPACK_GENERATOR "ZIP")
   include(CPack)
-  
+
 # Installation - Linux/Mac
 elseif (UNIX)
   install(TARGETS ${EXECUTABLE_TITLE} DESTINATION "${CMAKE_INSTALL_PREFIX}/bin")
   install(DIRECTORY "${PROJECT_SOURCE_DIR}/config/presets" DESTINATION "${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE}")
   set(PRESETS_DIR ${CMAKE_INSTALL_PREFIX}/share/${EXECUTABLE_TITLE}/presets)
-  
+
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
