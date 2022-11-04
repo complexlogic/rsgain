@@ -137,3 +137,4 @@ jobs:
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: build/*${{matrix.config.package_ext}}
+          token: ${{secrets.GITHUB_TOKEN}}
