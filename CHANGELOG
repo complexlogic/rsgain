@@ -1,4 +1,4 @@
-Unreleased
+v3.1 (2022-11-4)
 - Added support for Musepack format
 - Added support for HE-AAC, xHE-AAC formats
 - Added option '-S' to skip files with existing ReplayGain data
