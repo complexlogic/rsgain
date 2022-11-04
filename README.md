@@ -1,7 +1,30 @@
 # rsgain
-**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 tagging utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
+**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, and Linux. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
 rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
+
+rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.org/) ReplayGain 2.0 plugin. Users that are not comfortable with command line interfaces may prefer this method since the plugin provides a GUI frontend to rsgain. See [MusicBrainz Picard Plugin](#musicbrainz-picard-plugin) for more information.
+
+</div>
+<details open>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#installation">Installation</a>
+    </li>
+    <li>
+      <a href="#supported-file-formats">Supported File Formats</a>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+      <ul>
+        <li><a href="#easy-mode">Easy Mode</a></li>
+        <li><a href="#custom-mode">Custom Mode</a></li>
+        <li><a href="#musicbrainz-picard-plugin">MusicBrainz Picard Plugin</a></li>
+      </ul>
+    <li><a href="#design-philosophy">Design Philosophy</a></li>
+    <li><a href="#license">License</a></li>
+  </ol>
+</details>
 
 ## Installation
 Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program youself, see [BUILDING](docs/BUILDING.md).
@@ -32,7 +55,7 @@ An amd64 .deb package is provided on the [release page](https://github.com/compl
 wget https://github.com/complexlogic/rsgain/releases/download/v3.0.1/rsgain_3.0.1_amd64.deb
 sudo apt install ./rsgain_3.0.1_amd64.deb
 ```
-This package contains a staticly linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
+This package contains a statically linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
 
 #### Arch/Manjaro
 There is an AUR package [rsgain-git](https://aur.archlinux.org/packages/rsgain-git) based on the current `master` (which is relatively stable). You can easily install it with an AUR helper such as yay:
@@ -40,6 +63,12 @@ There is an AUR package [rsgain-git](https://aur.archlinux.org/packages/rsgain-g
 yay -S rsgain-git
 ```
 There is also a PKGBUILD script based on the latest release source tarball located in the `config` directory of the repo.
+
+#### Fedora
+A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
+```
+dnf install https://github.com/complexlogic/rsgain/releases/download/v3.0.1/rsgain-3.0.1-1.x86_64.rpm
+```
 
 #### Others
 Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
@@ -107,6 +136,11 @@ Parallel scan jobs are generated on a *per-directory* basis, not a per-file basi
 
 The speed gains offered by multithreaded scanning are significant. With `-m 4` or higher, you can typically expect to see a 50-80% reduction in total scan time, depending on your hardware, settings, and library composition.
 
+#### Skip Files with Existing Tags
+rsgain has an option which will skip files with existing ReplayGain information, invoked by passing `-S` or `--skip-existing`. When enabled, rsgain will check whether the given file has a `REPLAYGAIN_TRACK_GAIN` tag, and skip scanning any files that do. If album tags are enabled, the files in the list will be judged collectively, i.e. if a single file is missing ReplayGain info, then *all* of them will be scanned.
+
+This feature merely checks for the *existence* of the tags, and does not verify that the tags are complete, and are compatible with your current settings, e.g. target loudness. You should use this feature only if you are confident in the integrity of the files in the directory to be scanned. It's generally not a good idea to run this on files that you've recently download from the internet, which may have pre-existing ReplayGain information that was tagged by a different scanner.
+
 #### Logging
 You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application such as Microsoft Excel or LibreOffice Calc.
 
@@ -148,6 +182,20 @@ Each setting key in a presets file corresponds to a command line option in Custo
 
 See [Custom Mode](#custom-mode) for more information.
 
+#### Tag Mode `n`
+Easy Mode features an exclusive fourth tag mod `n` which skips files. This is distinct from the `-S` command line option in that it will skip files regardless of whether or not they have ReplayGain information, and it can be applied on a per-format basis in a preset file.
+
+This can be useful in the case that you only want to scan certain file formats. For example, suppose your Opus files are tagged with standard ReplayGain tags, but you later change your mind and want the R128_*_GAIN tags instead. Prepare a preset with the following:
+```INI
+[Global]
+TagMode=n
+
+[Opus]
+TagMode=i
+OpusMode=r
+```
+This will skip over all files *except* Opus, so you don't waste time scanning files that you don't want to change, as would otherwise be necessary with the `s` mode.
+
 ### Custom Mode
 Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and other legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
 
@@ -156,6 +204,15 @@ Custom Mode is invoked with `rsgain custom` followed by options and a list of fi
  rsgain custom -a -s i file1.mp3 file2.mp3 file3.mp3
  ```
 Run `rsgain custom -h` for a full list of available options
+
+### MusicBrainz Picard Plugin
+[MusicBrainz Picard](https://picard.musicbrainz.org/) is a free, cross-platform music tagging application. Picard features a robust plugin ecosystem that greatly extends its functionality. rsgain serves as the backend for the ReplayGain 2.0 plugin, which is available from the official plugins repository. Users that prefer a graphical interface over a command line interface can use this plugin to scan their music library.
+
+To install the plugin, navigate to the Options menu in Picard. Select "Plugins" in the sidebar, then find "ReplayGain 2.0" and click the download button. The plugin itself does not include rsgain; you'll still need to download and install rsgain separately per the [Installation](#installation) section for your chosen platform.
+
+You need to set the path to rsgain in the plugin settings. This field is pre-populated with the `rsgain` command. On Unix platforms, programs are typically installed into a directory that's already in your `PATH`, so no further action is necessary in that case. On Windows, you will need to either manually add the folder containing rsgain to your `Path` as per the installation instructions, or use the exact path to `rsgain.exe` in the plugin settings.
+
+To use the plugin, add files to Picard and associate them with a release (so the files are in the right window). The plugin can scan albums or individual tracks. Select one or more albums of tracks, then right click and select "Plugins->Calculate ReplayGain" from the context menu. This calculates the ReplayGain information for the selected items, but does not tag the files. The new tags are available for viewing in the metadata window at the bottom. Click the save button to write the new tags to file.
 
 ## Design Philosophy 
 This section provides a brief overview of modern audio theories, how they influenced the design of rsgain, and how rsgain differs from other popular ReplayGain scanners.
