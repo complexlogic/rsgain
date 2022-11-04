@@ -56,7 +56,7 @@ jobs:
         with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
 
       - name: Configure
-        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
+        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
 
       - name: Build
         run: cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
@@ -83,44 +83,45 @@ jobs:
       matrix:
         config:
           - name: Debian
-            vcpkg_triplet: x64-linux
             docker_image: debian:bullseye
+            package_type: DEB
+            package_ext: .deb
+
+          - name: Fedora
+            docker_image: fedora:36
+            package_type: RPM
+            package_ext: .rpm
+
     container:
       image: ${{matrix.config.docker_image}}
 
     env:
       CMAKE_BUILD_TYPE: Release
-      VCPKG_DEFAULT_TRIPLET: ${{matrix.config.vcpkg_triplet}}
+      VCPKG_COMMITISH: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46
+      VCPKG_TRIPLET: x64-linux
 
     steps:
       - name: Checkout Git repository
         uses: actions/checkout@v3
 
       - name: "Install dependencies"
-        run: >
-          apt update && apt install -y 
-          build-essential 
-          git 
-          cmake 
-          pkg-config 
-          curl 
-          zip 
-          unzip 
-          tar 
-          ccache 
-          libavcodec-dev 
-          libavformat-dev 
-          libavutil-dev 
-          libswresample-dev 
-          libebur128-dev 
-          libinih-dev
+        run: |
+          if [[ "${{matrix.config.name}}" == "Debian" ]]; then
+            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libinih-dev
+          fi
+          if [[ "${{matrix.config.name}}" == "Fedora" ]]; then
+            dnf install -y curl zip unzip tar git make pkg-config gcc-c++ fedora-packager rpmdevtools cmake libavcodec-free-devel libavformat-free-devel libswresample-free-devel libavutil-free-devel libebur128-devel taglib-devel inih-devel
+          fi
 
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 94ce0dab56f4d8ba6bd631ba59ed682b02d45c46 }
+        with:
+          committish: ${{env.VCPKG_COMMITISH}}
+          cache-key: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
+          cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
 
       - name: Configure
-        run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{matrix.config.vcpkg_triplet}} -DCMAKE_BUILD_TYPE=${{ env.CMAKE_BUILD_TYPE }} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=DEB
+        run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=${{matrix.config.package_type}}
 
       - name: Build
         run: cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
@@ -128,11 +129,11 @@ jobs:
       - name: Upload Package
         uses: actions/upload-artifact@v3
         with:
-          name: Debian build
-          path: build/*.deb
+          name: ${{matrix.config.name}} build
+          path: build/*${{matrix.config.package_ext}}
 
       - name: Release
         uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: build/*.deb
+          files: build/*${{matrix.config.package_ext}}

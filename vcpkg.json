@@ -4,7 +4,7 @@
       "name": "libebur128",
       "platform": "windows"
     },
-      "taglib",
+    "taglib",
     {
       "name": "ffmpeg",
       "platform": "windows",
