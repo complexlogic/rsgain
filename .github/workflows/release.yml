@@ -38,7 +38,7 @@ jobs:
           REPO_TITLE=${REPO#*/}
           RELEASE_TITLE=${{github.event.release.name}}
           PACKAGE_TITLE=${REPO_TITLE}-${RELEASE_TITLE#*v}
-          
+
           echo "PACKAGE_TITLE=${PACKAGE_TITLE}" >> ${GITHUB_ENV}
 
       - name: Checkout Git repository
@@ -52,7 +52,7 @@ jobs:
           tar --lzma --exclude ${{env.PACKAGE_TITLE}}/.git -cf $ARCHIVE_NAME ${{env.PACKAGE_TITLE}}
           SHA256=$(shasum -b -a 256 < $ARCHIVE_NAME | cut -d ' ' -f1)
           echo "SHA256=${SHA256}" >> ${GITHUB_ENV}
-        
+
       - name: Release
         uses: softprops/action-gh-release@master
         with:
