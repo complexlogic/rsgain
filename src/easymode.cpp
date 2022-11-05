@@ -455,8 +455,8 @@ static void load_preset(const char *preset)
     // Find preset file from name
     if (!path.has_extension()) {
 
-        // Mac/Linux check user directory before system directory
-#ifdef __unix__
+    // Mac/Windows check user directory before system directory
+#ifndef _WIN32
 #ifdef __APPLE__
         join_paths(path, {(const char*) getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset});
 #else
