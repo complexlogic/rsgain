@@ -3,6 +3,6 @@
 #define PROJECT_VERSION "@PROJECT_VERSION@"
 #define PROJECT_URL "@PROJECT_HOMEPAGE_URL@"
 
-#ifdef __unix__
+#ifndef _WIN32
 #define PRESETS_DIR "@PRESETS_DIR@"
 #endif

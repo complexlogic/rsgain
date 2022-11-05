@@ -39,6 +39,10 @@
 #include <sys/ioctl.h>
 #endif
 
+#ifdef __APPLE__
+#include <util.h>
+#endif
+
 #ifdef _WIN32
 #include <windows.h>
 #endif
