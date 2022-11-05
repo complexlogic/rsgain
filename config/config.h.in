@@ -6,3 +6,4 @@
 #ifndef _WIN32
 #define PRESETS_DIR "@PRESETS_DIR@"
 #endif
+
