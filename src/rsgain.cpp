@@ -140,7 +140,7 @@ bool parse_id3v2_version(const char *value, int &version)
         return false;
     }
     version = id3v2version;
-    return false;
+    return true;
 }
 
 bool parse_max_peak_level(const char *value, double &peak)
