@@ -57,8 +57,6 @@ extern "C" {
 
 extern bool multithread;
 
-static void scan_av_log(void *avcl, int level, const char *fmt, va_list args);
-
 // A function to determine a file type
 static FileType determine_filetype(const std::string &extension)
 {
@@ -210,7 +208,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     if (lk != NULL)
         lk->lock();
-    av_log_set_callback(scan_av_log);
+    av_log_set_callback(NULL);
     rc = avformat_open_input(&format_ctx, path.c_str(), NULL, NULL);
     if (rc < 0) {
         char errbuf[256];
@@ -625,6 +623,3 @@ void ScanJob::calculate_album_loudness(const Config &config) {
     }
 }
 
-static void scan_av_log(void *avcl, int level, const char *fmt, va_list args) {
-
-}
