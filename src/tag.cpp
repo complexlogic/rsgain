@@ -671,7 +671,7 @@ static bool set_mpc_packet_rg(const char *path)
     std::FILE *fp = fopen(path, "rb+");
     if (fp == nullptr)
         return false;
-    std::unique_ptr<std::FILE, decltype(&fclose)> file(fopen(path, "rb+"), fclose);
+    std::unique_ptr<std::FILE, decltype(&fclose)> file(fp, fclose);
 
     fseek(fp, 0L, SEEK_END);
     size_t nb_bytes = ftell(fp);
