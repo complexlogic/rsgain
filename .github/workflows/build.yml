@@ -55,7 +55,9 @@ jobs:
         run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
 
       - name: Build
-        run: cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
+        run: |
+          cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
+          build/${{env.CMAKE_BUILD_TYPE}}/rsgain.exe -v
 
       - name: Upload Package
         uses: actions/upload-artifact@v3
@@ -120,7 +122,9 @@ jobs:
         run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=${{matrix.config.package_type}}
 
       - name: Build
-        run: cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
+        run: | 
+          cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
+          build/rsgain -v
 
       - name: Upload Package
         uses: actions/upload-artifact@v3
@@ -134,3 +138,31 @@ jobs:
         with:
           files: build/*${{matrix.config.package_ext}}
           token: ${{secrets.ACTIONS_SECRET}}
+
+  build_macos:
+    name: macOS
+    runs-on: macos-12
+    permissions:
+      packages: write
+    strategy:
+      fail-fast: false
+
+    env:
+      CMAKE_BUILD_TYPE: Release
+
+    steps:
+      - name: Checkout Git repository
+        uses: actions/checkout@v3
+
+      - name: "Install dependencies"
+        run: |
+          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr
+
+      - name: Build
+        run: |
+          cmake --build build --config ${{env.CMAKE_BUILD_TYPE}}
+          build/rsgain -v

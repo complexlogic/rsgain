@@ -479,11 +479,11 @@ static void version(void) {
     PRINT_LIB("taglib", taglib_version);
     fmt::print("\n");
 
-#ifdef __GNUC__
+#if defined(__GNUC__) && !defined(__clang__)
     fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " GCC {}.{}\n", "Compiler:", __GNUC__, __GNUC_MINOR__);
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
     fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Clang {}.{}.{}\n", "Compiler:", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #endif
 
