@@ -1,3 +1,6 @@
+v3.1.1 (2022-11-15)
+- Fix ID3v2 version parsing bug
+
 v3.1 (2022-11-4)
 - Added support for Musepack format
 - Added support for HE-AAC, xHE-AAC formats

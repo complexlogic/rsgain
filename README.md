@@ -55,8 +55,8 @@ pkg install rsgain
 An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bullseye and later, Ubuntu 21.04 and later. It can be installed with the following commands:
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.1/rsgain_3.1_amd64.deb
-sudo apt install ./rsgain_3.1_amd64.deb
+wget https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain_3.1.1_amd64.deb
+sudo apt install ./rsgain_3.1.1_amd64.deb
 ```
 
 This package contains a statically linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
@@ -76,7 +76,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.1/rsgain-3.1-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain-3.1.1-1.x86_64.rpm
 ```
 
 #### Others
