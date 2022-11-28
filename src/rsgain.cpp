@@ -167,7 +167,7 @@ static void custom_mode(int argc, char *argv[])
         { "album",         no_argument,       NULL, 'a' },
         { "skip-existing", no_argument,       NULL, 'S' },
 
-        { "clip-mode",     no_argument,       NULL, 'c' },
+        { "clip-mode",     required_argument, NULL, 'c' },
         { "max-peak",      required_argument, NULL, 'm' },
         { "true-peak",     required_argument, NULL, 't' },
 
