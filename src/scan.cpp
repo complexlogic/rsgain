@@ -88,28 +88,20 @@ FileType ScanJob::add_directory(std::filesystem::path &path)
     std::vector<std::string> file_list;
     FileType file_type;
 
-    // Determine directory filetype
-    for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
-        if (!entry.is_regular_file() || !entry.path().has_extension())
-            continue;
-        file_type = determine_filetype(entry.path().extension().string());
-        if (file_type != FileType::INVALID)
-            extensions.insert(file_type);
-    }
-    if (extensions.size() != 1) 
-        return FileType::INVALID;
-    file_type = *extensions.begin();
-
     // Generate vector of files with directory file type
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file() && entry.path().has_extension() &&
-        determine_filetype(entry.path().extension().string()) == file_type)
+        (file_type = determine_filetype(entry.path().extension().string())) != FileType::INVALID) {
             tracks.push_back(Track(entry.path().string(), file_type));
+            extensions.insert(file_type);
+        }
     }
-    type = file_type;
     nb_files = tracks.size();
+    if (!nb_files)
+        return FileType::INVALID;
+    type = extensions.size() > 1 ? FileType::DEFAULT : *extensions.begin();
     this->path = path.string();
-    return nb_files ? file_type : FileType::INVALID;
+    return type;
 }
 
 bool ScanJob::add_files(char **files, int nb_files)

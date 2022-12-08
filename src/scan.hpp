@@ -10,6 +10,7 @@ void free_ebur128(ebur128_state *ebur128);
 
 enum class FileType {
     INVALID = -1,
+    DEFAULT,
     MP2,
     MP3,
     FLAC,

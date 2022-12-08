@@ -1,3 +1,7 @@
+Unreleased
+- Easy Mode: Support scanning directories with multiple file types
+- Fix -c long option
+
 v3.1.1 (2022-11-15)
 - Fix ID3v2 version parsing bug
 

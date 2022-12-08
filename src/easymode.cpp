@@ -40,7 +40,22 @@ bool multithread = false;
 
 // Default configs
 static Config configs[] = {
-    
+
+    // Default config
+    {
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.0,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .tab_output = OutputType::NONE,
+        .lowercase = false,
+        .id3v2version = 3,
+        .opus_mode = 'd'
+    },
+
     // MP2 config
     {
         .tag_mode = 'i',
