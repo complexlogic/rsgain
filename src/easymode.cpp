@@ -420,6 +420,33 @@ int global_handler(void *user, const char *section, const char *name, const char
         else
             quit(EXIT_FAILURE);
     }
+    else if (MATCH(name, "Lowercase")) {
+        bool lowercase;
+        if (convert_bool(value, lowercase)) {
+            for (Config &config : configs)
+                config.lowercase = lowercase;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
+    else if (MATCH(name, "ID3v2Version")) {
+        int id3v2version;
+        if (parse_id3v2_version(value, id3v2version)) {
+            for (Config &config : configs)
+                config.id3v2version = id3v2version;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
+    else if (MATCH(name, "OpusMode")) {
+        char opus_mode;
+        if (parse_opus_mode(value, opus_mode)) {
+            for (Config &config : configs)
+                config.opus_mode = opus_mode;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
     return 0;
 }
 
