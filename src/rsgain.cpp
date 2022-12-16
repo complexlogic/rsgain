@@ -169,7 +169,7 @@ static void custom_mode(int argc, char *argv[])
 
         { "clip-mode",     required_argument, NULL, 'c' },
         { "max-peak",      required_argument, NULL, 'm' },
-        { "true-peak",     required_argument, NULL, 't' },
+        { "true-peak",     no_argument,       NULL, 't' },
 
         { "loudness",      required_argument, NULL, 'l' },
 
@@ -179,7 +179,7 @@ static void custom_mode(int argc, char *argv[])
         { "tagmode",       required_argument, NULL, 's' },
         { "lowercase",     no_argument,       NULL, 'L' },
         { "id3v2-version", required_argument, NULL, 'I' },
-        { "opus-mode",     no_argument,       NULL, 'o' },
+        { "opus-mode",     required_argument, NULL, 'o' },
         { "help",          no_argument,       NULL, 'h' },
         { 0, 0, 0, 0 }
     };

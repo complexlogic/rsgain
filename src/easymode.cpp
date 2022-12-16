@@ -253,7 +253,7 @@ void easy_mode(int argc, char *argv[])
         { "skip-existing", no_argument,       NULL, 'S' },
         { "multithread",   required_argument, NULL, 'm' },
         { "preset",        required_argument, NULL, 'p' },
-        { "output",        required_argument, NULL, 'O' },
+        { "output",        no_argument,       NULL, 'O' },
 #ifdef DEBUG
         { "infinite-loop", no_argument,       &infinite_loop, 1 },
 #endif
