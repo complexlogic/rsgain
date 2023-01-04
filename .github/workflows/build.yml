@@ -49,7 +49,7 @@ jobs:
 
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 5ec554416305ca7de10b3ef8b9b3a8bb27c7fe79 }
+        with: { committish: 0f719b3fdfc36f8dd45229370a0df180fdbf68f6 }
 
       - name: Configure
         run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
@@ -95,7 +95,7 @@ jobs:
 
     env:
       CMAKE_BUILD_TYPE: Release
-      VCPKG_COMMITISH: 5ec554416305ca7de10b3ef8b9b3a8bb27c7fe79
+      VCPKG_COMMITISH: 0f719b3fdfc36f8dd45229370a0df180fdbf68f6
       VCPKG_TRIPLET: x64-linux
 
     steps:
