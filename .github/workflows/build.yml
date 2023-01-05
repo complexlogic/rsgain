@@ -157,7 +157,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config
+          brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config || true
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr
