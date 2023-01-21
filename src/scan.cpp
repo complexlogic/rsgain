@@ -175,6 +175,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = NULL;
     ebur128_state *ebur128 = NULL;
+    int nb_channels;
 
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
@@ -279,6 +280,7 @@ bool Track::scan(const Config &config, std::mutex *m)
             codec_ctx->sample_rate, 
             codec_ctx->channels
         );
+    nb_channels = codec_ctx->channels;
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
@@ -353,42 +355,43 @@ bool Track::scan(const Config &config, std::mutex *m)
     
     while (av_read_frame(format_ctx, packet) == 0) {
         if (packet->stream_index == stream_id) {
-            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0 || rc == AVERROR(EAGAIN)) {
-                while (avcodec_receive_frame(codec_ctx, frame) >= 0) {
+            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
+                while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
-                    
-                    // Convert audio format with libswresample if necessary
-                    if (swr != NULL) {
-                        size_t out_size = av_samples_get_buffer_size(NULL, 
-                                              frame->channels, 
-                                              frame->nb_samples, 
-                                              OUTPUT_FORMAT, 
-                                              0
-                                          );
-                        swr_out_data[0] = (uint8_t*) av_malloc(out_size);
+                    if (frame->channels == nb_channels) {
 
-                        if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
-                            output_error("Could not convert audio frame");
-                            ret = false;
+                        // Convert audio format with libswresample if necessary
+                        if (swr != NULL) {
+                            size_t out_size = av_samples_get_buffer_size(NULL, 
+                                                nb_channels, 
+                                                frame->nb_samples, 
+                                                OUTPUT_FORMAT, 
+                                                0
+                                            );
+                            swr_out_data[0] = (uint8_t*) av_malloc(out_size);
+                            if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
+                                output_error("Could not convert audio frame");
+                                ret = false;
+                                av_free(swr_out_data[0]);
+                                av_frame_unref(frame);
+                                av_packet_unref(packet);
+                                goto end;
+                            }
+
+                            ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);
                             av_free(swr_out_data[0]);
-                            av_frame_unref(frame);
-                            av_packet_unref(packet);
-                            goto end;
                         }
-                    
-                        rc = ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);  
-                        av_free(swr_out_data[0]);                        
-                    }
 
-                    // Audio is already in correct format
-                    else {
-                        ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
+                        // Audio is already in correct format
+                        else {
+                            ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
+                        }
+
+                        if (output_progress && pos >= 0)
+                            progress_bar.update(pos);
+
+                    av_frame_unref(frame);
                     }
-                    
-                    if (output_progress && pos >= 0)
-                        progress_bar.update(pos);
-                    
-                av_frame_unref(frame);
                 }
             }
         }
