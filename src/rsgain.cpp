@@ -77,7 +77,7 @@ static void init_console()
         "CONOUT$",
         GENERIC_READ | GENERIC_WRITE,
         FILE_SHARE_WRITE,
-        NULL,
+        nullptr,
         OPEN_EXISTING,
         0,
         0
@@ -92,7 +92,7 @@ static void set_cursor_visibility(BOOL setting, BOOL *previous)
 {
     CONSOLE_CURSOR_INFO info;
     GetConsoleCursorInfo(console, &info);
-    if (previous != NULL)
+    if (previous != nullptr)
         *previous = info.bVisible;
     info.bVisible = setting;
     SetConsoleCursorInfo(console, &info);
@@ -103,7 +103,7 @@ void quit(int status)
 {
 #ifdef _WIN32
     if (initial_cursor_visibility)
-        set_cursor_visibility(TRUE, NULL);
+        set_cursor_visibility(TRUE, nullptr);
 #endif
     exit(status);
 }
@@ -144,7 +144,7 @@ bool parse_id3v2_version(const char *value, int &version)
 
 bool parse_max_peak_level(const char *value, double &peak)
 {
-    char *rest = NULL;
+    char *rest = nullptr;
     float max_peak = strtod(value, &rest);
     if (rest == value || !isfinite(max_peak)) {
         output_error("Invalid max peak level '{}'", value);
@@ -164,23 +164,23 @@ static void custom_mode(int argc, char *argv[])
 
     const char *short_opts = "+ac:m:tl:Oqs:LSI:o:h?";
     static struct option long_opts[] = {
-        { "album",         no_argument,       NULL, 'a' },
-        { "skip-existing", no_argument,       NULL, 'S' },
+        { "album",         no_argument,       nullptr, 'a' },
+        { "skip-existing", no_argument,       nullptr, 'S' },
 
-        { "clip-mode",     required_argument, NULL, 'c' },
-        { "max-peak",      required_argument, NULL, 'm' },
-        { "true-peak",     no_argument,       NULL, 't' },
+        { "clip-mode",     required_argument, nullptr, 'c' },
+        { "max-peak",      required_argument, nullptr, 'm' },
+        { "true-peak",     no_argument,       nullptr, 't' },
 
-        { "loudness",      required_argument, NULL, 'l' },
+        { "loudness",      required_argument, nullptr, 'l' },
 
-        { "output",        no_argument,       NULL, 'O' },
-        { "quiet",         no_argument,       NULL, 'q' },
+        { "output",        no_argument,       nullptr, 'O' },
+        { "quiet",         no_argument,       nullptr, 'q' },
 
-        { "tagmode",       required_argument, NULL, 's' },
-        { "lowercase",     no_argument,       NULL, 'L' },
-        { "id3v2-version", required_argument, NULL, 'I' },
-        { "opus-mode",     required_argument, NULL, 'o' },
-        { "help",          no_argument,       NULL, 'h' },
+        { "tagmode",       required_argument, nullptr, 's' },
+        { "lowercase",     no_argument,       nullptr, 'L' },
+        { "id3v2-version", required_argument, nullptr, 'I' },
+        { "opus-mode",     required_argument, nullptr, 'o' },
+        { "help",          no_argument,       nullptr, 'h' },
         { 0, 0, 0, 0 }
     };
 
@@ -291,13 +291,13 @@ static void custom_mode(int argc, char *argv[])
 // Parse main arguments
 int main(int argc, char *argv[]) {
     int rc, i;
-    char *command = NULL;
+    char *command = nullptr;
     opterr = 0;
     
     const char *short_opts = "+hv?";
     static struct option long_opts[] = {
-        { "help",         no_argument,       NULL, 'h' },
-        { "version",      no_argument,       NULL, 'v' },
+        { "help",         no_argument,       nullptr, 'h' },
+        { "version",      no_argument,       nullptr, 'v' },
         { 0, 0, 0, 0 }
     };
     std::locale::global(std::locale(""));

@@ -56,7 +56,7 @@ struct Track{
 	bool tclip = false;
 	bool aclip = false;
 
-	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(NULL, free_ebur128) {};
+	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
 	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 	bool calculate_loudness(const Config &config);
 };
@@ -79,6 +79,6 @@ class ScanJob {
 
 		bool add_files(char **files, int nb_files);
 		FileType add_directory(std::filesystem::path &path);
-		bool scan(const Config &config, std::mutex *ffmpeg_mutex = NULL);
+		bool scan(const Config &config, std::mutex *ffmpeg_mutex = nullptr);
 		void update_data(ScanData &data);
 };

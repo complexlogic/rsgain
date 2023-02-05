@@ -31,7 +31,7 @@ class WorkerThread {
         ScanData &scan_data;
         bool quit = false;
         bool finished = false;
-        ScanJob *job = NULL;
+        ScanJob *job = nullptr;
         std::mutex thread_mutex;
         std::thread *thread;
         std::condition_variable thread_cv;

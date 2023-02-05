@@ -241,19 +241,19 @@ static Config configs[] = {
 void easy_mode(int argc, char *argv[])
 {
     int rc, i;
-    char *preset = NULL;
+    char *preset = nullptr;
     const char *short_opts = "+hqSl:m:p:O";
     int threads = 1;
     opterr = 0;
 
     static struct option long_opts[] = {
-        { "help",          no_argument,       NULL, 'h' },
-        { "quiet",         no_argument,       NULL, 'q' },
+        { "help",          no_argument,       nullptr, 'h' },
+        { "quiet",         no_argument,       nullptr, 'q' },
 
-        { "skip-existing", no_argument,       NULL, 'S' },
-        { "multithread",   required_argument, NULL, 'm' },
-        { "preset",        required_argument, NULL, 'p' },
-        { "output",        no_argument,       NULL, 'O' },
+        { "skip-existing", no_argument,       nullptr, 'S' },
+        { "multithread",   required_argument, nullptr, 'm' },
+        { "preset",        required_argument, nullptr, 'p' },
+        { "output",        no_argument,       nullptr, 'O' },
 #ifdef DEBUG
         { "infinite-loop", no_argument,       &infinite_loop, 1 },
 #endif
@@ -299,7 +299,7 @@ void easy_mode(int argc, char *argv[])
                 break;
             
             case 'p':
-                if (preset == NULL)
+                if (preset == nullptr)
                     preset = optarg;
                 break;
 
@@ -484,7 +484,7 @@ inline void join_paths(std::filesystem::path &p, std::initializer_list<const cha
     p = *it;
     it++;
     for (it; it != list.end(); ++it) {
-        if (*it == NULL)
+        if (*it == nullptr)
             return;
         p /= *it;
     }
@@ -516,7 +516,7 @@ static void load_preset(const char *preset)
         // Only one preset folder on Windows
 #ifdef _WIN32
         char buffer[MAX_PATH];
-        if (GetModuleFileNameA(NULL, buffer, sizeof(buffer))) {
+        if (GetModuleFileNameA(nullptr, buffer, sizeof(buffer))) {
             std::filesystem::path exe = buffer;
             join_paths(path, {exe.parent_path().string().c_str(), "presets", preset});
             path += ".ini";
@@ -531,22 +531,22 @@ static void load_preset(const char *preset)
 
     // Parse file
     std::FILE *file = fopen(path.string().c_str(), "r");
-    if (file == NULL) {
+    if (file == nullptr) {
         output_error("Failed to open preset from '{}'", path.string());
         quit(EXIT_FAILURE);
     }
 
     output_ok("Applying preset '{}'...", preset);
-    ini_parse_file(file, global_handler, NULL);
+    ini_parse_file(file, global_handler, nullptr);
     rewind(file);
-    ini_parse_file(file, format_handler, NULL);
+    ini_parse_file(file, format_handler, nullptr);
     fclose(file);
 }
 
 bool WorkerThread::add_job(ScanJob *job)
 {
     std::unique_lock lk(thread_mutex, std::try_to_lock);
-    if (!lk.owns_lock() || this->job != NULL)
+    if (!lk.owns_lock() || this->job != nullptr)
         return false;
     
     this->job = job;
@@ -560,14 +560,14 @@ void WorkerThread::work()
     std::unique_lock main_lock(main_mutex, std::defer_lock);
     std::unique_lock thread_lock(thread_mutex);
     while (!quit) {
-        if (job != NULL) {
+        if (job != nullptr) {
             job->scan(configs[static_cast<int>(job->type)], ffmpeg_mutex);
             
             // Inform the main thread that the scanning is finished
             main_lock.lock();
             job->update_data(scan_data);
             delete job;
-            job = NULL;
+            job = nullptr;
             main_lock.unlock();
             main_cv.notify_all();
         }
@@ -582,7 +582,7 @@ void WorkerThread::work()
 bool WorkerThread::wait()
 {
     std::unique_lock lk(thread_mutex, std::try_to_lock);
-    if (!lk.owns_lock() || job != NULL) 
+    if (!lk.owns_lock() || job != nullptr) 
         return false;
 
     quit = true;
@@ -608,7 +608,7 @@ void scan_easy(const char *directory, const char *preset, int threads)
     }
 
     // Load scan preset
-    if (preset != NULL)
+    if (preset != nullptr)
         load_preset(preset);
 
     // Record start time

@@ -52,7 +52,7 @@ extern HANDLE console;
 #include "config.h"
 
 #ifdef _WIN32
-#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, NULL, NULL)
+#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, nullptr, nullptr)
 #else
 #define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
 #endif
@@ -116,7 +116,7 @@ void ProgressBar::complete()
 		this->update(len);
 
 	delete buffer;
-	buffer = NULL;
+	buffer = nullptr;
 	fmt::print("\n");
 }
 

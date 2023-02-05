@@ -86,7 +86,7 @@ class ProgressBar {
         int pos_prev;
         int start;
         int len;
-        char *buffer = NULL;
+        char *buffer = nullptr;
 
 #ifdef _WIN32
         CONSOLE_SCREEN_BUFFER_INFO info;

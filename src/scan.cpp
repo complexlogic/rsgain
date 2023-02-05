@@ -122,7 +122,7 @@ bool ScanJob::add_files(char **files, int nb_files)
 
 void free_ebur128(ebur128_state *ebur128_state)
 {
-    if (ebur128_state != NULL)
+    if (ebur128_state != nullptr)
         ebur128_destroy(&ebur128_state);
 }
 
@@ -173,20 +173,20 @@ bool Track::scan(const Config &config, std::mutex *m)
     bool repeat = false;
     int peak_mode;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
-    std::unique_lock<std::mutex> *lk = NULL;
-    ebur128_state *ebur128 = NULL;
+    std::unique_lock<std::mutex> *lk = nullptr;
+    ebur128_state *ebur128 = nullptr;
     int nb_channels;
 
     // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
     const 
 #endif
-    AVCodec *codec = NULL;
-    AVPacket *packet = NULL;
-    AVCodecContext *codec_ctx = NULL;
-    AVFrame *frame = NULL;
-    SwrContext *swr = NULL;
-    AVFormatContext *format_ctx = NULL;
+    AVCodec *codec = nullptr;
+    AVPacket *packet = nullptr;
+    AVCodecContext *codec_ctx = nullptr;
+    AVFrame *frame = nullptr;
+    SwrContext *swr = nullptr;
+    AVFormatContext *format_ctx = nullptr;
 
     // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
     // gain with no way to disable. To get the actual loudness of the audio signal,
@@ -194,15 +194,15 @@ bool Track::scan(const Config &config, std::mutex *m)
     if (type == FileType::OPUS && config.tag_mode != 's')
         set_opus_header_gain(path.c_str(), 0);
     
-    if (m != NULL)
+    if (m != nullptr)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (output_progress)
         output_ok("Scanning '{}'", path);
 
-    if (lk != NULL)
+    if (lk != nullptr)
         lk->lock();
-    av_log_set_callback(NULL);
-    rc = avformat_open_input(&format_ctx, path.c_str(), NULL, NULL);
+    av_log_set_callback(nullptr);
+    rc = avformat_open_input(&format_ctx, path.c_str(), nullptr, nullptr);
     if (rc < 0) {
         char errbuf[256];
         av_strerror(rc, errbuf, sizeof(errbuf));
@@ -215,7 +215,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     if (output_progress)
         output_ok("Container: {} [{}]", format_ctx->iformat->long_name, format_ctx->iformat->name);
 
-    rc = avformat_find_stream_info(format_ctx, NULL);
+    rc = avformat_find_stream_info(format_ctx, nullptr);
     if (rc < 0) {
         char errbuf[256];
         av_strerror(rc, errbuf, sizeof(errbuf));
@@ -241,7 +241,7 @@ bool Track::scan(const Config &config, std::mutex *m)
             goto end;
         }
         avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
-        rc = avcodec_open2(codec_ctx, codec, NULL);
+        rc = avcodec_open2(codec_ctx, codec, nullptr);
         if (rc < 0) {
             if (!repeat) {
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
@@ -249,12 +249,12 @@ bool Track::scan(const Config &config, std::mutex *m)
 #endif
                 AVCodec *try_codec;
                 avcodec_free_context(&codec_ctx);
-                codec_ctx = NULL;
+                codec_ctx = nullptr;
 
                 // For AAC files, try the Fraunhofer decoder if the default FFmpeg decoder failed
                 if (codec->id == AV_CODEC_ID_AAC) {
                     try_codec = avcodec_find_decoder_by_name("libfdk_aac");
-                    if (try_codec != NULL) {
+                    if (try_codec != nullptr) {
                         codec = try_codec;
                         repeat = true;
                         continue;
@@ -286,7 +286,7 @@ bool Track::scan(const Config &config, std::mutex *m)
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
         if (!codec_ctx->channel_layout)
             codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
-        swr = swr_alloc_set_opts(NULL,
+        swr = swr_alloc_set_opts(nullptr,
                  codec_ctx->channel_layout,
                  OUTPUT_FORMAT,
                  codec_ctx->sample_rate,
@@ -294,9 +294,9 @@ bool Track::scan(const Config &config, std::mutex *m)
                  codec_ctx->sample_fmt,
                  codec_ctx->sample_rate,
                  0,
-                 NULL
+                 nullptr
              );
-        if (swr == NULL) {
+        if (swr == nullptr) {
             char errbuf[256];
             av_strerror(rc, errbuf, sizeof(errbuf));
             output_error("Could not allocate libswresample context: {}", errbuf);
@@ -314,13 +314,13 @@ bool Track::scan(const Config &config, std::mutex *m)
         }
     }
 
-    if (lk != NULL)
+    if (lk != nullptr)
         lk->unlock();
 
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
     ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
-    if (ebur128 == NULL) {
+    if (ebur128 == nullptr) {
         output_error("Could not initialize libebur128 scanner");
         ret = false;
         goto end;
@@ -328,7 +328,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // Allocate AVPacket structure
     packet = av_packet_alloc();
-    if (packet == NULL) {
+    if (packet == nullptr) {
         output_error("Could not allocate packet");
         ret = false;
         goto end;
@@ -336,7 +336,7 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     // Alocate AVFrame structure
     frame = av_frame_alloc();
-    if (frame == NULL) {
+    if (frame == nullptr) {
         output_error("Could not allocate frame");
         ret = false;
         goto end;
@@ -361,8 +361,8 @@ bool Track::scan(const Config &config, std::mutex *m)
                     if (frame->channels == nb_channels) {
 
                         // Convert audio format with libswresample if necessary
-                        if (swr != NULL) {
-                            size_t out_size = av_samples_get_buffer_size(NULL, 
+                        if (swr != nullptr) {
+                            size_t out_size = av_samples_get_buffer_size(nullptr, 
                                                 nb_channels, 
                                                 frame->nb_samples, 
                                                 OUTPUT_FORMAT, 
@@ -405,17 +405,17 @@ bool Track::scan(const Config &config, std::mutex *m)
 end:
     av_packet_free(&packet);
     av_frame_free(&frame);
-    if (codec_ctx != NULL)
+    if (codec_ctx != nullptr)
         avcodec_free_context(&codec_ctx);
-    if (format_ctx != NULL)
+    if (format_ctx != nullptr)
         avformat_close_input(&format_ctx);
-    if (swr != NULL) {
+    if (swr != nullptr) {
         swr_close(swr);
         swr_free(&swr);
     }
 
     // Use a smart pointer to manage the remaining lifetime of the ebur128 state
-    if (ebur128 != NULL) 
+    if (ebur128 != nullptr) 
         this->ebur128 = std::unique_ptr<ebur128_state, decltype(&free_ebur128)>(ebur128, free_ebur128);
     
     delete lk;
@@ -479,7 +479,7 @@ void ScanJob::calculate_loudness(const Config &config)
 
 void ScanJob::tag_tracks(const Config &config)
 {
-    std::FILE *stream = NULL;
+    std::FILE *stream = nullptr;
     if (config.tab_output != OutputType::NONE) {
         if (config.tab_output == OutputType::FILE) {
             std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.csv";
@@ -488,12 +488,12 @@ void ScanJob::tag_tracks(const Config &config)
         else {
             stream = stdout;
         }
-        if (stream != NULL)
+        if (stream != nullptr)
             fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stream);
     }
 
     // Tag the files
-    bool tab_output = config.tab_output != OutputType::NONE && stream != NULL;
+    bool tab_output = config.tab_output != OutputType::NONE && stream != nullptr;
     bool human_output = !multithread && !quiet && config.tag_mode != 'd';
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
@@ -543,7 +543,7 @@ void ScanJob::tag_tracks(const Config &config)
             fmt::print("\n");
         }
     }
-    if (config.tab_output == OutputType::FILE && stream != NULL)
+    if (config.tab_output == OutputType::FILE && stream != nullptr)
         fclose(stream);
 }
 
