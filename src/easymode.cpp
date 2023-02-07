@@ -565,7 +565,7 @@ void WorkerThread::work()
 {
     std::unique_lock lock(mutex);
     {
-        std::scoped_lock(main_mutex);
+        std::scoped_lock main_lock(main_mutex);
         main_cv.notify_all();
     }
 
@@ -575,7 +575,7 @@ void WorkerThread::work()
             
             // Update statistics
             {
-                std::scoped_lock(main_mutex);
+                std::scoped_lock main_lock(main_mutex);
                 job->update_data(data);
             }
             job_available = false;
