@@ -198,7 +198,7 @@ static void custom_mode(int argc, char *argv[])
         .opus_mode = 'd'
     };
 
-    while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) !=-1) {
+    while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
         switch (rc) {
             case 'a':
                 config.do_album = true;
@@ -278,13 +278,13 @@ static void custom_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
 
-    ScanJob job;
-    if (!job.add_files(argv + optind, nb_files)) {
+    std::unique_ptr<ScanJob> job(ScanJob::factory(argv + optind, nb_files, config));
+    if (!job) {
         output_fail("No valid files were specified");
         quit(EXIT_FAILURE);
     }
-    job.scan(config);
-    if (job.error)
+    job->scan();
+    if (job->error)
         quit(EXIT_FAILURE);
 }
 
@@ -301,6 +301,8 @@ int main(int argc, char *argv[]) {
         { 0, 0, 0, 0 }
     };
     std::locale::global(std::locale(""));
+    av_log_set_callback(nullptr);
+
 #ifdef _WIN32
     init_console();
 #endif 
@@ -334,14 +336,12 @@ int main(int argc, char *argv[]) {
     char **subargs = argv + optind;
     int num_subargs = argc - optind;
     optind = 1;
-    if (MATCH(command, "easy")) {
+    if (MATCH(command, "easy"))
         easy_mode(num_subargs, subargs);
-    }
-    else if (!strcmp(command, "custom")) {
+    else if (MATCH(command, "custom"))
         custom_mode(num_subargs, subargs);
-    }
     else {
-        output_fail("Invalid command '{}'\n", command);
+        output_fail("Invalid command '{}'", command);
         quit(EXIT_FAILURE);
     }
     quit(EXIT_SUCCESS);

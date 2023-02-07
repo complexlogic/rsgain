@@ -47,6 +47,8 @@
 #include <windows.h>
 #endif
 
+#include <string>
+#include <string_view>
 #include <fmt/core.h>
 
 #define COLOR_GREEN	"[1;32m"
@@ -89,15 +91,26 @@ class ProgressBar {
         char *buffer = nullptr;
 
 #ifdef _WIN32
-        CONSOLE_SCREEN_BUFFER_INFO info;
+        inline static CONSOLE_SCREEN_BUFFER_INFO info;
 #else
-        struct winsize ws;
+        inline static struct winsize ws;
 #endif
 
-        int get_console_width();
-
     public:
+        static int get_console_width();
         void begin(int start, int len);
         void update(int pos);
         void complete(void);
+};
+
+class MTProgress {
+    private:
+        int total;
+        int cur = 0;
+
+        int utf8_length(std::string_view string);
+    
+    public:
+        MTProgress(int total) : total(total) {}
+        void update(const std::string &path);
 };

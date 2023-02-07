@@ -1,6 +1,6 @@
 #include <filesystem>
 #include <vector>
-#include <deque>
+#include <queue>
 #include <chrono>
 #include <set>
 #include <string>
@@ -20,6 +20,8 @@
 #include <ini.h>
 #include <getopt.h>
 #include <fmt/core.h>
+#include <fmt/chrono.h>
+
 #include <config.h>
 #include "rsgain.hpp"
 #include "easymode.hpp"
@@ -38,7 +40,6 @@ bool multithread = false;
     int infinite_loop = 0;
 #endif
 
-// Default configs
 static Config configs[] = {
 
     // Default config
@@ -236,6 +237,11 @@ static Config configs[] = {
         .opus_mode = 'd'
     }
 };
+
+const Config& get_config(FileType type)
+{
+    return configs[static_cast<int>(type)];
+}
 
 // Parse Easy Mode command line arguments
 void easy_mode(int argc, char *argv[])
@@ -543,59 +549,63 @@ static void load_preset(const char *preset)
     fclose(file);
 }
 
-bool WorkerThread::add_job(ScanJob *job)
+bool WorkerThread::place_job(std::unique_ptr<ScanJob> &job)
 {
-    std::unique_lock lk(thread_mutex, std::try_to_lock);
-    if (!lk.owns_lock() || this->job != nullptr)
+    std::unique_lock lock(mutex, std::try_to_lock);
+    if (!lock.owns_lock())
         return false;
     
-    this->job = job;
-    lk.unlock();
-    thread_cv.notify_all();
+    this->job = std::move(job);
+    job_available = true;
+    cv.notify_all();
     return true;
 }
 
 void WorkerThread::work()
 {
-    std::unique_lock main_lock(main_mutex, std::defer_lock);
-    std::unique_lock thread_lock(thread_mutex);
+    std::unique_lock lock(mutex);
+    {
+        std::scoped_lock(main_mutex);
+        main_cv.notify_all();
+    }
+
     while (!quit) {
-        if (job != nullptr) {
-            job->scan(configs[static_cast<int>(job->type)], ffmpeg_mutex);
+        if (job_available) {
+            job->scan(&ffmpeg_mutex);
             
-            // Inform the main thread that the scanning is finished
-            main_lock.lock();
-            job->update_data(scan_data);
-            delete job;
-            job = nullptr;
-            main_lock.unlock();
+            // Update statistics
+            {
+                std::scoped_lock(main_mutex);
+                job->update_data(data);
+            }
+            job_available = false;
             main_cv.notify_all();
         }
                                                                                                                                                                                                                                                                                                                                                                         
         // Wait until we get a new job from the main thread
-        thread_cv.wait_for(thread_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
+        cv.wait_for(lock, std::chrono::seconds(MAX_THREAD_SLEEP));
     }
-    return;
 }
-
 
 bool WorkerThread::wait()
 {
-    std::unique_lock lk(thread_mutex, std::try_to_lock);
-    if (!lk.owns_lock() || job != nullptr) 
-        return false;
+    {
+        std::unique_lock lock(mutex, std::try_to_lock);
+        if (!lock.owns_lock()) 
+            return false;
+        quit = true;
+        cv.notify_all();
+    }
 
-    quit = true;
-    lk.unlock();
-    thread_cv.notify_all();
     thread->join();
     return true;
 }
 
-void scan_easy(const char *directory, const char *preset, int threads)
+void scan_easy(const char *directory, const char *preset, int nb_threads)
 {
     std::filesystem::path path(directory);
-    ScanData scan_data;
+    std::queue<std::unique_ptr<ScanJob>> jobs;
+    ScanData data;
 
     // Verify directory exists and is valid
     if (!std::filesystem::exists(path)) {
@@ -608,7 +618,7 @@ void scan_easy(const char *directory, const char *preset, int threads)
     }
 
     // Load scan preset
-    if (preset != nullptr)
+    if (preset)
         load_preset(preset);
 
     // Record start time
@@ -616,148 +626,118 @@ void scan_easy(const char *directory, const char *preset, int threads)
 
     // Generate queue of all directories in directory tree
     output_ok("Building directory tree...");
-    std::deque<std::filesystem::path> directories;
-    directories.push_back(path);
+    std::queue<std::filesystem::path> directories;
+    directories.emplace(path);
     for (const std::filesystem::directory_entry &entry : std::filesystem::recursive_directory_iterator(path)) {
         if (entry.is_directory())
-            directories.push_back(entry.path());
+            directories.emplace(entry.path());
     }
-    int num_directories = directories.size();
-    output_ok("Found {:L} {}...", num_directories, num_directories > 1 ? "directories" : "directory");
+    int nb_directories = directories.size();
+    output_ok("Found {:L} {}...", nb_directories, nb_directories > 1 ? "directories" : "directory");
+    output_ok("Scanning {} for files...", nb_directories > 1 ? "directories" : "directory");
+    ScanJob *job;
+    while(directories.size()) {
+        if ((job = ScanJob::factory(directories.front())))
+            jobs.emplace(job);
+        directories.pop();
+    }
+    int nb_jobs = jobs.size();
+    if (nb_threads > nb_jobs)
+        nb_threads = nb_jobs;
 
-#ifdef DEBUG
-    std::deque<std::filesystem::path> directories_static;
-    if (infinite_loop)
-        directories_static = directories;
-#endif
-    FileType type;
-
-    // Multithread scannning
-    if (multithread) {
-        std::vector<WorkerThread*> worker_threads;
+    // Mulithreaded scanning
+    if (nb_threads > 1) {
+        MTProgress progress(nb_jobs);
+        std::vector<std::unique_ptr<WorkerThread>> threads;
         std::mutex ffmpeg_mutex;
-        std::mutex main_mutex;
-        std::unique_lock main_lock(main_mutex);
-        std::condition_variable main_cv;
+        std::mutex mutex;
+        std::condition_variable cv;
+        std::unique_lock lock(mutex);
 
-        // Create threads
-        for (int i = 0; i < threads; i++)
-            worker_threads.push_back(new WorkerThread(&ffmpeg_mutex, main_mutex, main_cv, scan_data));
-        std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Wait a bit for the threads to initialize;
-
-        ScanJob *job;
-        output_ok("Scanning with {} threads...", threads);
-        while (directories.size()) {
-            job = new ScanJob();
-            std::filesystem::path &dir = directories.front();
-            if ((type = job->add_directory(dir)) != FileType::INVALID &&
-            configs[static_cast<int>(type)].tag_mode != 'n') {
-                bool job_placed = false;
-
-                // Feed the generated job to the first available worker thread
-                while (!job_placed) {
-                    for (auto wt = worker_threads.begin(); wt != worker_threads.end() && !job_placed; ++wt)
-                        job_placed = (*wt)->add_job(job);
-                    if (job_placed) {
-                        multithread_progress(dir.string(), num_directories - directories.size(), num_directories);
-                    }
-
-                    // Wait until one of the worker threads informs that us that it is ready for a new job
-                    else {
-                        main_cv.wait_for(main_lock, std::chrono::seconds(MAX_THREAD_SLEEP));
-                        std::this_thread::sleep_for(std::chrono::milliseconds(10));
-                    }
-                }
-            }
-            else {
-                delete job;
-            }
-            directories.pop_front();
-#ifdef DEBUG
-            if (infinite_loop && !directories.size())
-                directories = directories_static;
-#endif
+        // Spawn worker threads
+        output_ok("Scanning with {} threads...", nb_threads);
+        for (int i = 0; i < nb_threads; i++) {
+            progress.update(jobs.front()->path);
+            threads.emplace_back(std::make_unique<WorkerThread>(
+                jobs.front(),
+                mutex,
+                ffmpeg_mutex,
+                cv,
+                data
+            ));
+            cv.wait_for(lock, std::chrono::milliseconds(100));
+            jobs.pop();
         }
 
-        // Wait for worker threads to finish scanning
-        while (worker_threads.size()) {
-            for (auto wt = worker_threads.begin(); wt != worker_threads.end();)
-                if((*wt)->wait()) {
-                    delete *wt;
-                    worker_threads.erase(wt);
+        // Feed jobs to workers
+        std::string current_job;
+        if (jobs.size())
+            current_job = jobs.front()->path;
+        while (jobs.size()) {
+            cv.wait_for(lock, std::chrono::milliseconds(200));
+            for (auto &thread : threads) {
+                if (thread->place_job(jobs.front())) {
+                    jobs.pop();
+                    progress.update(current_job);
+                    if (jobs.size())
+                        current_job = jobs.front()->path;
+                    break;
                 }
-                else {
-                    ++wt;
-                }
-
-            if (worker_threads.size()) {
-                main_cv.wait_for(main_lock, std::chrono::seconds(1));
-                std::this_thread::sleep_for(std::chrono::milliseconds(10)); // Sometimes we have to wait a bit for the thread to release the mutex
             }
+        }
+        cv.wait_for(lock, std::chrono::milliseconds(200));
+
+        // All jobs have been placed, wait for threads to finish scanning
+        while (1) {
+            for (auto thread = threads.begin(); thread != threads.end();)
+                thread = (*thread)->wait() ? threads.erase(thread) : thread + 1;
+            if (!threads.size())
+                break;
+            cv.wait_for(lock, std::chrono::milliseconds(200));
         }
         fmt::print("\33[2K\n");
     }
-    
+
     // Single threaded scanning
     else {
-        while (directories.size()) {
-            ScanJob job;
-            if ((type = job.add_directory(directories.front())) != FileType::INVALID &&
-            configs[static_cast<int>(type)].tag_mode != 'n') {
-                output_ok("Scanning directory: '{}'", job.path);
-                job.scan(configs[static_cast<int>(type)]);
-                job.update_data(scan_data);
-            }
-            directories.pop_front();
+        while (jobs.size()) {
+            auto &job = jobs.front();
+            job->scan();
+            job->update_data(data);
+            jobs.pop();
         }
         fmt::print("\n");
     }
 
-    const auto end_time = std::chrono::system_clock::now();
-    if (!scan_data.files) {
-        if (scan_data.skipped)
+    // Output statistics at the end
+    auto duration = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now() - start_time);
+    if (!data.files) {
+        if (data.skipped)
             fmt::print("Skipped {:L} file{} with existing ReplayGain information\n",
-                scan_data.skipped,
-                scan_data.skipped > 1 ? "s" : ""
+                data.skipped,
+                data.skipped > 1 ? "s" : ""
             );
         fmt::print("No files were scanned\n");
         return;
     }
+    
     fmt::print(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
-
-    // Format time string
-    int s = std::chrono::duration_cast<std::chrono::seconds>(end_time - start_time).count();
-    int h = s / 3600;
-    s -= h * 3600;
-    int m = s / 60;
-    s -= m * 60;
-    std::string time_string;
-    if (h) {
-        time_string = fmt::format("{}h {}m", h, m);
-    }
-    else if (m) {
-        time_string = fmt::format("{}m {}s", m, s);
-    }
-    else {
-        time_string = fmt::format("{}s", s);
-    }
-
-    HELP_STATS("Time Elapsed", "{}", time_string);
-    HELP_STATS("Files Scanned", "{:L}", scan_data.files);
-    if (scan_data.skipped)
-        HELP_STATS("Files Skipped", "{:L}", scan_data.skipped);
-    HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", scan_data.clipping_adjustments, 100.f * (float) scan_data.clipping_adjustments / (float) scan_data.files);
-    HELP_STATS("Average Gain", "{:.2f} dB", scan_data.total_gain / (double) scan_data.files);
-    double average_peak = scan_data.total_peak / (double) scan_data.files;
+    HELP_STATS("Time Elapsed", "{:%H:%M:%S}", duration);
+    HELP_STATS("Files Scanned", "{:L}", data.files);
+    if (data.skipped)
+        HELP_STATS("Files Skipped", "{:L}", data.skipped);
+    HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", data.clipping_adjustments, 100.f * (float) data.clipping_adjustments / (float) data.files);
+    HELP_STATS("Average Gain", "{:.2f} dB", data.total_gain / (double) data.files);
+    double average_peak = data.total_peak / (double) data.files;
     HELP_STATS("Average Peak", "{:.6f} ({:.2f} dB)", average_peak, 20.0 * log10(average_peak));
-    HELP_STATS("Negative Gains", "{:L} ({:.1f}% of files)", scan_data.total_negative, 100.f * (float) scan_data.total_negative / (float) scan_data.files);
-    HELP_STATS("Positive Gains", "{:L} ({:.1f}% of files)", scan_data.total_positive, 100.f * (float) scan_data.total_positive / (float) scan_data.files);
+    HELP_STATS("Negative Gains", "{:L} ({:.1f}% of files)", data.total_negative, 100.f * (float) data.total_negative / (float) data.files);
+    HELP_STATS("Positive Gains", "{:L} ({:.1f}% of files)", data.total_positive, 100.f * (float) data.total_positive / (float) data.files);
     fmt::print("\n");
 
     // Inform user of errors
-    if (scan_data.error_directories.size()) {
+    if (data.error_directories.size()) {
         fmt::print(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
-        for (std::string &s : scan_data.error_directories)
+        for (std::string &s : data.error_directories)
             fmt::print("{}\n", s);
         fmt::print("\n");
     }

@@ -49,19 +49,19 @@
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
 #define tag_error(t) output_error("Couldn't write to: {}", t.path)
 
-void tag_track(Track &track, const Config &config);
-bool tag_exists(const Track &track);
+void tag_track(ScanJob::Track &track, const Config &config);
+bool tag_exists(const ScanJob::Track &track);
 void taglib_get_version(std::string &buffer);
 bool set_opus_header_gain(const char *path, int16_t gain);
 static bool set_mpc_packet_rg(const char *path);
 
-static bool tag_mp3(Track &track, const Config &config);
-static bool tag_flac(Track &track, const Config &config);
+static bool tag_mp3(ScanJob::Track &track, const Config &config);
+static bool tag_flac(ScanJob::Track &track, const Config &config);
 template<typename T>
-static bool tag_ogg(Track &track, const Config &config);
-static bool tag_mp4(Track &track, const Config &config);
+static bool tag_ogg(ScanJob::Track &track, const Config &config);
+static bool tag_mp4(ScanJob::Track &track, const Config &config);
 template <typename T>
-static bool tag_apev2(Track &track, const Config &config);
-static bool tag_wma(Track &track, const Config &config);
+static bool tag_apev2(ScanJob::Track &track, const Config &config);
+static bool tag_wma(ScanJob::Track &track, const Config &config);
 template<typename T>
-static bool tag_riff(Track &track, const Config &config);
+static bool tag_riff(ScanJob::Track &track, const Config &config);

@@ -4,7 +4,6 @@
 #include <vector>
 #include <filesystem>
 #include <ebur128.h>
-#include "scan.hpp"
 
 void free_ebur128(ebur128_state *ebur128);
 
@@ -46,39 +45,42 @@ struct ScanData {
     std::vector<std::string> error_directories;
 };
 
-struct Track{
-	std::string path;
-	FileType type;
-	std::string container;
-	ScanResult result;
-	int codec_id;
-	std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
-	bool tclip = false;
-	bool aclip = false;
-
-	Track(const std::string &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
-	bool scan(const Config &config, std::mutex *ffmpeg_mutex);
-	bool calculate_loudness(const Config &config);
-};
 
 class ScanJob {
-	private:
-		std::vector<Track> tracks;
-
-		void calculate_loudness(const Config &config);
-		void calculate_album_loudness(const Config &config);
-		void tag_tracks(const Config &config);
-
 	public:
+		struct Track {
+			std::string path;
+			FileType type;
+			std::string container;
+			ScanResult result;
+			int codec_id;
+			std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
+			bool tclip = false;
+			bool aclip = false;
+
+			Track(const std::string &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
+			bool scan(const Config &config, std::mutex *ffmpeg_mutex);
+			bool calculate_loudness(const Config &config);
+		};
+
 		FileType type;
+		const Config &config;
 		std::string path;
-		int nb_files = 0;
+		int nb_files;
 		bool error = false;
 		int clipping_adjustments = 0;
 		unsigned int skipped = 0;
 
-		bool add_files(char **files, int nb_files);
-		FileType add_directory(std::filesystem::path &path);
-		bool scan(const Config &config, std::mutex *ffmpeg_mutex = nullptr);
+		ScanJob(const std::string &path, std::vector<Track> &&tracks, const Config &config) : path(path), tracks(std::move(tracks)), nb_files(tracks.size()), config(config) {}
+		static ScanJob* factory(char **files, int nb_files, const Config &config);
+		static ScanJob* factory(const std::filesystem::path &path);
+		bool scan(std::mutex *ffmpeg_mutex = nullptr);
 		void update_data(ScanData &data);
+
+	private:
+		std::vector<Track> tracks;
+
+		void calculate_loudness();
+		void calculate_album_loudness();
+		void tag_tracks();
 };

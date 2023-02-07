@@ -36,6 +36,8 @@
 #include <string.h>
 #include <stdbool.h>
 #include <cmath>
+#include <string>
+#include <string_view>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -57,6 +59,13 @@ extern HANDLE console;
 #define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
 #endif
 
+#define MT_MESSAGE " Scanning directory: "
+
+constexpr int str_literal_len(const char *str)
+{
+	return *str ? 1 + strlen(str + 1) : 0;
+}
+
 void ProgressBar::begin(int start, int len)
 {
 	this->start = start;
@@ -72,7 +81,7 @@ void ProgressBar::update(int pos)
 	if (pos == pos_prev)
 		return;
 
-	w = this->get_console_width();
+	w = get_console_width();
 #ifdef MAXPROGBARWIDTH
 	if (w > MAXPROGBARWIDTH)
 		w = MAXPROGBARWIDTH;
@@ -92,13 +101,8 @@ void ProgressBar::update(int pos)
 	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
 		fmt::print(" {:3.0f}% [", percent * 100.f);
-		int i;
-		for (i = 0; i < c; i++)
-			buffer[i] = '=';
-		
-		for (i; i < w; i++)
-			buffer[i] = ' ';
-
+		memset(buffer, '=', c);
+		memset(buffer + c, ' ', w - c);
 		buffer[w] = ']';
 		buffer[w + 1] = '\r';
 		buffer[w + 2] = '\0';
@@ -113,7 +117,7 @@ void ProgressBar::update(int pos)
 void ProgressBar::complete()
 {
 	if (c_prev != w_prev)
-		this->update(len);
+		update(len);
 
 	delete buffer;
 	buffer = nullptr;
@@ -130,4 +134,43 @@ inline int ProgressBar::get_console_width()
 		return 0;
 	return ws.ws_col;
 #endif
+}
+
+void MTProgress::update(const std::string &path)
+{
+	if (quiet)
+		return;
+	static constexpr int w_message = 7 + str_literal_len(MT_MESSAGE);
+	int w_console = ProgressBar::get_console_width();
+	if (!w_console)
+		return;
+	int w_path = utf8_length(path);
+	if (w_path + w_message >= w_console)
+		w_path = w_console - w_message;
+
+	fmt::print("\33[2K " COLOR_GREEN "{:5.1f}%" COLOR_OFF  MT_MESSAGE "{:.{}}\r", 
+		100.f * ((float) (cur) / (float) (total)), 
+		path,
+		w_path < 0 ? 0 : w_path
+	);
+	fflush(stdout);
+	cur++;
+}
+
+int MTProgress::utf8_length(std::string_view string)
+{
+    int length = 0;
+    auto it = string.cbegin();
+    while (it < string.cend()) {
+        if ((*it & 0x80) == 0) // If byte is 0xxxxxxx, then it's a 1 byte (ASCII) char
+            it++;
+        else if ((*it & 0xE0) == 0xC0) // If byte is 110xxxxx, then it's a 2 byte char
+            it +=2;
+        else if ((*it & 0xF0) == 0xE0) // If byte is 1110xxxx, then it's a 3 byte char
+            it +=3;
+        else if ((*it & 0xF8) == 0xF0 || 1) // If byte is 11110xxx, then it's a 4 byte char
+            it +=4;
+        length++;
+    }
+    return length;
 }

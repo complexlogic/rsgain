@@ -32,7 +32,7 @@
 
 #include <mutex>
 #include <thread>
-#include <set>
+#include <unordered_set>
 #include <algorithm>
 #include <filesystem>
 #include <unordered_map>
@@ -49,6 +49,7 @@ extern "C" {
 }
 
 #include "rsgain.hpp"
+#include "easymode.hpp"
 #include "scan.hpp"
 #include "output.hpp"
 #include "tag.hpp"
@@ -82,42 +83,41 @@ static FileType determine_filetype(const std::string &extension)
     return it == map.end() ? FileType::INVALID : it->second;
 }
 
-FileType ScanJob::add_directory(std::filesystem::path &path)
+ScanJob* ScanJob::factory(const std::filesystem::path &path)
 {
-    std::set<FileType> extensions;
-    std::vector<std::string> file_list;
+    std::unordered_set<FileType> extensions;
     FileType file_type;
+    std::vector<Track> tracks;
 
     // Generate vector of files with directory file type
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file() && entry.path().has_extension() &&
         (file_type = determine_filetype(entry.path().extension().string())) != FileType::INVALID) {
-            tracks.push_back(Track(entry.path().string(), file_type));
+            tracks.emplace_back(entry.path().string(), file_type);
             extensions.insert(file_type);
         }
     }
-    nb_files = tracks.size();
-    if (!nb_files)
-        return FileType::INVALID;
-    type = extensions.size() > 1 ? FileType::DEFAULT : *extensions.begin();
-    this->path = path.string();
-    return type;
+    if (!tracks.size())
+        return nullptr;
+    file_type = extensions.size() > 1 ? FileType::DEFAULT : *extensions.begin();
+    return new ScanJob(path.string(), std::move(tracks), get_config(file_type));
 }
 
-bool ScanJob::add_files(char **files, int nb_files)
+ScanJob* ScanJob::factory(char **files, int nb_files, const Config &config)
 {
     FileType file_type;
     std::filesystem::path path;
+    std::vector<Track> tracks;
     for (int i = 0; i < nb_files; i++) {
         path = files[i];
-        file_type = determine_filetype(path.extension().string());
-        if (file_type == FileType::INVALID)
+        if ((file_type = determine_filetype(path.extension().string())) == FileType::INVALID)
             output_error("File '{}' is not of a supported type", files[i]);
         else 
-            tracks.push_back(Track(path.string(), file_type));
+            tracks.emplace_back(path.string(), file_type);
     }
-    this->nb_files = tracks.size();
-    return this->nb_files ? true : false;
+    if (!tracks.size())
+        return nullptr;
+    return new ScanJob("", std::move(tracks), config);
 }
 
 void free_ebur128(ebur128_state *ebur128_state)
@@ -126,7 +126,7 @@ void free_ebur128(ebur128_state *ebur128_state)
         ebur128_destroy(&ebur128_state);
 }
 
-bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
+bool ScanJob::scan(std::mutex *ffmpeg_mutex)
 {
     if (config.tag_mode != 'd') {
         if (config.skip_existing) {
@@ -156,14 +156,14 @@ bool ScanJob::scan(const Config &config, std::mutex *ffmpeg_mutex)
             if (error)
                 return false;
         }
-        calculate_loudness(config);
+        calculate_loudness();
     }
 
-    tag_tracks(config);
+    tag_tracks();
     return true;
 }
 
-bool Track::scan(const Config &config, std::mutex *m)
+bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 {
     ProgressBar progress_bar;
     int rc, stream_id = -1;
@@ -201,7 +201,6 @@ bool Track::scan(const Config &config, std::mutex *m)
 
     if (lk != nullptr)
         lk->lock();
-    av_log_set_callback(nullptr);
     rc = avformat_open_input(&format_ctx, path.c_str(), nullptr, nullptr);
     if (rc < 0) {
         char errbuf[256];
@@ -251,7 +250,7 @@ bool Track::scan(const Config &config, std::mutex *m)
                 avcodec_free_context(&codec_ctx);
                 codec_ctx = nullptr;
 
-                // For AAC files, try the Fraunhofer decoder if the default FFmpeg decoder failed
+                // For AAC files, try the Fraunhofer decoder if the native FFmpeg decoder failed
                 if (codec->id == AV_CODEC_ID_AAC) {
                     try_codec = avcodec_find_decoder_by_name("libfdk_aac");
                     if (try_codec != nullptr) {
@@ -383,15 +382,13 @@ bool Track::scan(const Config &config, std::mutex *m)
                         }
 
                         // Audio is already in correct format
-                        else {
+                        else
                             ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
-                        }
 
                         if (output_progress && pos >= 0)
                             progress_bar.update(pos);
-
-                    av_frame_unref(frame);
                     }
+                    av_frame_unref(frame);
                 }
             }
         }
@@ -422,7 +419,7 @@ end:
     return ret;
 }
 
-void ScanJob::calculate_loudness(const Config &config)
+void ScanJob::calculate_loudness()
 {
     // Track loudness calculations
     for (auto track = tracks.begin(); track != tracks.end();) {
@@ -430,14 +427,13 @@ void ScanJob::calculate_loudness(const Config &config)
             tracks.erase(track);
             nb_files--;
         }
-        else {
+        else
             ++track;
-        }
     }
 
     // Album loudness calculations
     if (config.do_album)
-        calculate_album_loudness(config);
+        calculate_album_loudness();
 
     // Check clipping conditions
     if (config.clip_mode != 'n') {
@@ -477,7 +473,7 @@ void ScanJob::calculate_loudness(const Config &config)
     }
 }
 
-void ScanJob::tag_tracks(const Config &config)
+void ScanJob::tag_tracks()
 {
     std::FILE *stream = nullptr;
     if (config.tab_output != OutputType::NONE) {
@@ -485,9 +481,9 @@ void ScanJob::tag_tracks(const Config &config)
             std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.csv";
             stream = fopen(output_file.string().c_str(), "wb");
         }
-        else {
+        else
             stream = stdout;
-        }
+
         if (stream != nullptr)
             fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stream);
     }
@@ -571,7 +567,8 @@ void ScanJob::update_data(ScanData &data)
     }
 }
 
-bool Track::calculate_loudness(const Config &config) {
+bool ScanJob::Track::calculate_loudness(const Config &config) 
+{
     unsigned channel = 0;
     double track_loudness, track_peak;
     ebur128_state *ebur128 = this->ebur128.get();
@@ -594,8 +591,8 @@ bool Track::calculate_loudness(const Config &config) {
     return true;
 }
 
-
-void ScanJob::calculate_album_loudness(const Config &config) {
+void ScanJob::calculate_album_loudness() 
+{
     double album_loudness, album_peak;
     int nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
@@ -607,7 +604,7 @@ void ScanJob::calculate_album_loudness(const Config &config) {
 
     album_peak = std::max_element(tracks.begin(),
                      tracks.end(),
-                     [](auto &a, auto &b) {return a.result.track_peak < b.result.track_peak;}
+                     [](const auto &a, const auto &b) {return a.result.track_peak < b.result.track_peak;}
                  )->result.track_peak;
     
     double album_gain = config.target_loudness - album_loudness;

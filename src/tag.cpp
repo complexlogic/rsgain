@@ -82,13 +82,13 @@ static void tag_clear_asf(TagLib::ASF::Tag *tag);
 static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config);
 
 template<typename T>
-static bool tag_exists_id3(const Track &track);
+static bool tag_exists_id3(const ScanJob::Track &track);
 template<typename T>
-static bool tag_exists_xiph(const Track &track);
-static bool tag_exists_mp4(const Track &track);
+static bool tag_exists_xiph(const ScanJob::Track &track);
+static bool tag_exists_mp4(const ScanJob::Track &track);
 template<typename T>
-static bool tag_exists_ape(const Track &track);
-static bool tag_exists_asf(const Track &track);
+static bool tag_exists_ape(const ScanJob::Track &track);
+static bool tag_exists_asf(const ScanJob::Track &track);
 
 enum class RGTag {
     TRACK_GAIN,
@@ -137,7 +137,7 @@ static const char *R128_STRING[] = {
 };
 static_assert((size_t) R128Tag::MAX_VAL == array_size(R128_STRING));
 
-void tag_track(Track &track, const Config &config)
+void tag_track(ScanJob::Track &track, const Config &config)
 {
     switch (track.type) {
         case FileType::MP2:
@@ -222,7 +222,7 @@ void tag_track(Track &track, const Config &config)
     }
 }
 
-bool tag_exists(const Track &track)
+bool tag_exists(const ScanJob::Track &track)
 {
     switch(track.type) {
         case FileType::MP2:
@@ -266,7 +266,7 @@ bool tag_exists(const Track &track)
 }
 
 template<typename T>
-static bool tag_exists_id3(const Track &track)
+static bool tag_exists_id3(const ScanJob::Track &track)
 {
     bool ret = false;
     TagLib::ID3v2::Tag *tag = nullptr;
@@ -295,7 +295,7 @@ static bool tag_exists_id3(const Track &track)
 }
 
 template<typename T>
-static bool tag_exists_xiph(const Track &track)
+static bool tag_exists_xiph(const ScanJob::Track &track)
 {
     bool ret = false;
     TagLib::Ogg::XiphComment *tag = nullptr;
@@ -313,7 +313,7 @@ static bool tag_exists_xiph(const Track &track)
     return ret;
 }
 
-static bool tag_exists_mp4(const Track &track)
+static bool tag_exists_mp4(const ScanJob::Track &track)
 {
     TagLib::MP4::File file(track.path.c_str());
     TagLib::MP4::Tag *tag = file.tag();
@@ -331,7 +331,7 @@ static bool tag_exists_mp4(const Track &track)
 }
 
 template<typename T>
-static bool tag_exists_ape(const Track &track)
+static bool tag_exists_ape(const ScanJob::Track &track)
 {
     T file(track.path.c_str());
     TagLib::APE::Tag *tag = file.APETag();
@@ -346,7 +346,7 @@ static bool tag_exists_ape(const Track &track)
     return false;
 }
 
-static bool tag_exists_asf(const Track &track)
+static bool tag_exists_asf(const ScanJob::Track &track)
 {
     TagLib::ASF::File file(track.path.c_str());
     TagLib::ASF::Tag *tag = file.tag();
@@ -365,7 +365,7 @@ static void write_rg_tags(const ScanResult &result, const Config &config, T&& wr
     }
 }
 
-static bool tag_mp3(Track &track, const Config &config)
+static bool tag_mp3(ScanJob::Track &track, const Config &config)
 {
     TagLib::MPEG::File file(track.path.c_str());
     TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
@@ -377,7 +377,7 @@ static bool tag_mp3(Track &track, const Config &config)
     return file.save(TagLib::MPEG::File::ID3v2, false, config.id3v2version);
 }
 
-static bool tag_flac(Track &track, const Config &config) 
+static bool tag_flac(ScanJob::Track &track, const Config &config) 
 {
     TagLib::FLAC::File file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = file.xiphComment(true);
@@ -388,7 +388,7 @@ static bool tag_flac(Track &track, const Config &config)
 }
 
 template<typename T>
-static bool tag_ogg(Track &track, const Config &config) {
+static bool tag_ogg(ScanJob::Track &track, const Config &config) {
     T file(track.path.c_str());
     TagLib::Ogg::XiphComment *tag = nullptr;
     if constexpr(std::is_same_v<T, TagLib::FileRef>) {
@@ -413,7 +413,7 @@ static bool tag_ogg(Track &track, const Config &config) {
     return set_opus_header_gain(track.path.c_str(), gain);
 }
 
-static bool tag_mp4(Track &track, const Config &config)
+static bool tag_mp4(ScanJob::Track &track, const Config &config)
 {
     TagLib::MP4::File file(track.path.c_str());
     TagLib::MP4::Tag *tag = file.tag();
@@ -425,7 +425,7 @@ static bool tag_mp4(Track &track, const Config &config)
 }
 
 template <typename T>
-static bool tag_apev2(Track &track, const Config &config)
+static bool tag_apev2(ScanJob::Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::APE::Tag *tag = file.APETag(true);
@@ -442,7 +442,7 @@ static bool tag_apev2(Track &track, const Config &config)
     }
 }
 
-static bool tag_wma(Track &track, const Config &config)
+static bool tag_wma(ScanJob::Track &track, const Config &config)
 {
     TagLib::ASF::File file(track.path.c_str());
     TagLib::ASF::Tag *tag = file.tag();
@@ -454,7 +454,7 @@ static bool tag_wma(Track &track, const Config &config)
 }
 
 template<typename T>
-static bool tag_riff(Track &track, const Config &config)
+static bool tag_riff(ScanJob::Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::ID3v2::Tag *tag;
