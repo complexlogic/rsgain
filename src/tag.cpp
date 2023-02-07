@@ -268,30 +268,27 @@ bool tag_exists(const ScanJob::Track &track)
 template<typename T>
 static bool tag_exists_id3(const ScanJob::Track &track)
 {
-    bool ret = false;
     TagLib::ID3v2::Tag *tag = nullptr;
     T file(track.path.c_str());
     if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
         tag = file.tag();
     else
         tag = file.ID3v2Tag();
-    if (tag != nullptr) {
-        auto frames = tag->frameList("TXXX");
-        for (auto &f : frames) {
+    if (tag) {
+        const auto &frames = tag->frameList("TXXX");
+        for (const auto &f : frames) {
             TagLib::ID3v2::UserTextIdentificationFrame *frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
-            if (frame == nullptr)
+            if (!frame)
                 continue;
             TagLib::StringList string_list = frame->fieldList();
             if (string_list.size() < 2)
                 continue;
             TagLib::String desc = frame->description().upper();
-            if (desc == RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]) {
-                ret = true;
-                break;
-            }
+            if (desc == RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)])
+                return true;
         }
     }
-    return ret;
+    return false;
 }
 
 template<typename T>
@@ -304,7 +301,7 @@ static bool tag_exists_xiph(const ScanJob::Track &track)
         tag = file.xiphComment();
     else
         tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
-    if (tag != nullptr)
+    if (tag)
         ret = tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]);
         if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
             if (!ret)
@@ -315,15 +312,25 @@ static bool tag_exists_xiph(const ScanJob::Track &track)
 
 static bool tag_exists_mp4(const ScanJob::Track &track)
 {
+    // Build static vector of upper and lowercase RG tags with iTunes atom
+    static std::vector<TagLib::String> keys;
+    if (keys.empty()) {
+        keys.resize(2);
+        static const char *tags[] = {
+            RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)],
+            RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]
+        };
+        for (auto &key : keys) {
+            key = MP4_ATOM_STRING;
+            key += tags[&key - &keys[0]];
+        }
+    }
+
     TagLib::MP4::File file(track.path.c_str());
     TagLib::MP4::Tag *tag = file.tag();
-    if (tag != nullptr) {
-        const TagLib::MP4::ItemMap map = tag->itemMap();
-        TagLib::String key(MP4_ATOM_STRING);
-        key = key.upper();
-        key += RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)];
-        for (const auto &item : map) {
-            if (item.first.upper() == key)
+    if (tag) {
+        for (const auto &key : keys) {
+            if (tag->contains(key))
                 return true;
         }
     }
@@ -335,13 +342,9 @@ static bool tag_exists_ape(const ScanJob::Track &track)
 {
     T file(track.path.c_str());
     TagLib::APE::Tag *tag = file.APETag();
-    if (tag != nullptr) {
-        const TagLib::APE::ItemListMap map = tag->itemListMap();
-        const char *rg_tag = RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)];
-        for (const auto &item : map) {
-            if (item.first.upper() == rg_tag)
-                return true;
-        }
+    if (tag) {
+        const auto &map = tag->itemListMap();
+        return map.contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]);
     }
     return false;
 }
@@ -393,7 +396,7 @@ static bool tag_ogg(ScanJob::Track &track, const Config &config) {
     TagLib::Ogg::XiphComment *tag = nullptr;
     if constexpr(std::is_same_v<T, TagLib::FileRef>) {
         tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
-        if (tag == nullptr)
+        if (!tag)
             return false;
     }
     else
@@ -495,7 +498,7 @@ static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
     for (auto &f : frames) {
         TagLib::ID3v2::UserTextIdentificationFrame *frame =
         dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
-        if (frame != nullptr && frame->fieldList().size() >= 2) {
+        if (frame && frame->fieldList().size() >= 2) {
             TagLib::String desc = frame->description().upper();
             auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
                               std::cend(RG_STRING_UPPER),
