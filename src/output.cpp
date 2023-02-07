@@ -63,7 +63,7 @@ extern HANDLE console;
 
 constexpr int str_literal_len(const char *str)
 {
-	return *str ? 1 + strlen(str + 1) : 0;
+	return *str ? 1 + str_literal_len(str + 1) : 0;
 }
 
 void ProgressBar::begin(int start, int len)
