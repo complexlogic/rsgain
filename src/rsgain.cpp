@@ -56,43 +56,32 @@ extern "C" {
 
 #ifdef _WIN32
 #include <windows.h>
-void init_console(void);
-void set_cursor_visibility(BOOL setting, BOOL *previous);
+void init_console();
+void set_cursor_visibility(HANDLE console, BOOL setting, BOOL *previous);
 #endif
 
-static void help_main(void);
-static void version(void);
-static inline void help_custom(void);
+static void help_main();
+static void version();
+static inline void help_custom();
 
 int quiet = 0;
 
 #ifdef _WIN32
-HANDLE console;
 BOOL initial_cursor_visibility;
-
 static void init_console()
 {
-    SetConsoleCP(CP_UTF8);
-    console = CreateFileA(
-        "CONOUT$",
-        GENERIC_READ | GENERIC_WRITE,
-        FILE_SHARE_WRITE,
-        nullptr,
-        OPEN_EXISTING,
-        0,
-        0
-    );
-    SetConsoleOutputCP(CP_UTF8);
+    HANDLE console = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleMode(console, ENABLE_PROCESSED_OUTPUT | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
-    set_cursor_visibility(FALSE, &initial_cursor_visibility);
+    set_cursor_visibility(console, FALSE, &initial_cursor_visibility);
+    ProgressBar::set_console(console);
 }
 
 // Make the console cursor invisible for the progress bar
-static void set_cursor_visibility(BOOL setting, BOOL *previous)
+static void set_cursor_visibility(HANDLE console, BOOL setting, BOOL* previous)
 {
     CONSOLE_CURSOR_INFO info;
     GetConsoleCursorInfo(console, &info);
-    if (previous != nullptr)
+    if (previous)
         *previous = info.bVisible;
     info.bVisible = setting;
     SetConsoleCursorInfo(console, &info);
@@ -103,7 +92,7 @@ void quit(int status)
 {
 #ifdef _WIN32
     if (initial_cursor_visibility)
-        set_cursor_visibility(TRUE, nullptr);
+        set_cursor_visibility(GetStdHandle(STD_OUTPUT_HANDLE), TRUE, nullptr);
 #endif
     exit(status);
 }
@@ -347,7 +336,7 @@ int main(int argc, char *argv[]) {
     quit(EXIT_SUCCESS);
 }
 
-static void help_main(void) {
+static void help_main() {
     fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
     fmt::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
@@ -374,7 +363,7 @@ static void help_main(void) {
 }
 
 
-static inline void help_custom(void) {
+static inline void help_custom() {
     fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
     fmt::print("  Custom Mode allows the user to specify the options to scan the files with. The\n");
@@ -429,7 +418,7 @@ static inline void help_custom(void) {
 }
 
 
-static void version(void) {
+static void version() {
     int  ebur128_v_major     = 0;
     int  ebur128_v_minor     = 0;
     int  ebur128_v_patch     = 0;

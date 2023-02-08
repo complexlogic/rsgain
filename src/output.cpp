@@ -41,7 +41,6 @@
 
 #ifdef _WIN32
 #include <windows.h>
-extern HANDLE console;
 #else
 #include <unistd.h>
 #include <syslog.h>
@@ -52,12 +51,6 @@ extern HANDLE console;
 #include <fmt/core.h>
 #include "output.hpp"
 #include "config.h"
-
-#ifdef _WIN32
-#define print_buffer(buffer, length, stream) WriteConsoleA(console, buffer, length, nullptr, nullptr)
-#else
-#define print_buffer(buffer, length, stream) fputs(buffer, stream); fflush(stream)
-#endif
 
 #define MT_MESSAGE " Scanning directory: "
 
@@ -106,7 +99,12 @@ void ProgressBar::update(int pos)
 		buffer[w] = ']';
 		buffer[w + 1] = '\r';
 		buffer[w + 2] = '\0';
-		print_buffer(buffer, w + 2, stdout);
+#ifdef _WIN32
+		WriteConsoleA(console, buffer, w + 2, nullptr, nullptr);
+#else
+		fputs(buffer, stdout);
+		fflush(stdout);
+#endif
 	}
 
 	c_prev = c;

@@ -92,6 +92,7 @@ class ProgressBar {
 
 #ifdef _WIN32
         inline static CONSOLE_SCREEN_BUFFER_INFO info;
+        inline static HANDLE console;
 #else
         inline static struct winsize ws;
 #endif
@@ -101,6 +102,9 @@ class ProgressBar {
         void begin(int start, int len);
         void update(int pos);
         void complete(void);
+#ifdef _WIN32
+        static void set_console(HANDLE c) { console = c;  }
+#endif
 };
 
 class MTProgress {
