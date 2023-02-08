@@ -101,7 +101,7 @@ class ProgressBar {
         static int get_console_width();
         void begin(int start, int len);
         void update(int pos);
-        void complete(void);
+        void complete();
 #ifdef _WIN32
         static void set_console(HANDLE c) { console = c;  }
 #endif

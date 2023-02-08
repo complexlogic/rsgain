@@ -33,7 +33,7 @@ extern "C" {
     int global_handler(void *user, const char *section, const char *name, const char *value);
 }
 
-static inline void help_easy(void);
+static inline void help_easy();
 bool multithread = false;
 
 #ifdef DEBUG
@@ -743,7 +743,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
     }
 }
 
-static inline void help_easy(void) {
+static inline void help_easy() {
     fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
     fmt::print("  Easy Mode recursively scans a directory using the recommended settings for each\n");

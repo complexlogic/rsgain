@@ -122,7 +122,7 @@ ScanJob* ScanJob::factory(char **files, int nb_files, const Config &config)
 
 void free_ebur128(ebur128_state *ebur128_state)
 {
-    if (ebur128_state != nullptr)
+    if (ebur128_state)
         ebur128_destroy(&ebur128_state);
 }
 
@@ -194,12 +194,12 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     if (type == FileType::OPUS && config.tag_mode != 's')
         set_opus_header_gain(path.c_str(), 0);
     
-    if (m != nullptr)
+    if (m)
         lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
     if (output_progress)
         output_ok("Scanning '{}'", path);
 
-    if (lk != nullptr)
+    if (lk)
         lk->lock();
     rc = avformat_open_input(&format_ctx, path.c_str(), nullptr, nullptr);
     if (rc < 0) {
@@ -253,7 +253,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                 // For AAC files, try the Fraunhofer decoder if the native FFmpeg decoder failed
                 if (codec->id == AV_CODEC_ID_AAC) {
                     try_codec = avcodec_find_decoder_by_name("libfdk_aac");
-                    if (try_codec != nullptr) {
+                    if (try_codec) {
                         codec = try_codec;
                         repeat = true;
                         continue;
@@ -313,7 +313,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         }
     }
 
-    if (lk != nullptr)
+    if (lk)
         lk->unlock();
 
     // Initialize libebur128
@@ -360,7 +360,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                     if (frame->channels == nb_channels) {
 
                         // Convert audio format with libswresample if necessary
-                        if (swr != nullptr) {
+                        if (swr) {
                             size_t out_size = av_samples_get_buffer_size(nullptr, 
                                                 nb_channels, 
                                                 frame->nb_samples, 
@@ -402,17 +402,15 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 end:
     av_packet_free(&packet);
     av_frame_free(&frame);
-    if (codec_ctx != nullptr)
+    if (codec_ctx)
         avcodec_free_context(&codec_ctx);
-    if (format_ctx != nullptr)
+    if (format_ctx)
         avformat_close_input(&format_ctx);
-    if (swr != nullptr) {
-        swr_close(swr);
+    if (swr)
         swr_free(&swr);
-    }
 
     // Use a smart pointer to manage the remaining lifetime of the ebur128 state
-    if (ebur128 != nullptr) 
+    if (ebur128) 
         this->ebur128 = std::unique_ptr<ebur128_state, decltype(&free_ebur128)>(ebur128, free_ebur128);
     
     delete lk;
@@ -484,7 +482,7 @@ void ScanJob::tag_tracks()
         else
             stream = stdout;
 
-        if (stream != nullptr)
+        if (stream)
             fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stream);
     }
 
