@@ -51,8 +51,14 @@ jobs:
         uses: friendlyanon/setup-vcpkg@v1
         with: { committish: 0f719b3fdfc36f8dd45229370a0df180fdbf68f6 }
 
+      - name: Setup Overlays
+        run: |
+          mkdir build
+          mkdir build/overlays
+          git clone -b rsgain --depth 1 https://github.com/complexlogic/vcpkg build/overlays
+
       - name: Configure
-        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
+        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_OVERLAY_PORTS=build/overlays/ports -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
 
       - name: Build
         run: |
