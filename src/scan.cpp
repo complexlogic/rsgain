@@ -54,6 +54,7 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
+#define output_fferror(e, msg) char errbuf[256]; av_strerror(e, errbuf, sizeof(errbuf)); output_error(msg ": {}", errbuf) 
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 
 extern bool multithread;
@@ -89,7 +90,6 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     FileType file_type;
     std::vector<Track> tracks;
 
-    // Generate vector of files with directory file type
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file() && entry.path().has_extension() &&
         (file_type = determine_filetype(entry.path().extension().string())) != FileType::INVALID) {
@@ -169,7 +169,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     int rc, stream_id = -1;
     int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
-    bool ret = true;
+    bool ret = false;
     bool repeat = false;
     int peak_mode;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
@@ -203,10 +203,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         lk->lock();
     rc = avformat_open_input(&format_ctx, path.c_str(), nullptr, nullptr);
     if (rc < 0) {
-        char errbuf[256];
-        av_strerror(rc, errbuf, sizeof(errbuf));
-        output_error("Could not open input: '{}'", errbuf);
-        ret = false;
+        output_fferror(rc, "Could not open input");
         goto end;
     }
 
@@ -216,10 +213,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     rc = avformat_find_stream_info(format_ctx, nullptr);
     if (rc < 0) {
-        char errbuf[256];
-        av_strerror(rc, errbuf, sizeof(errbuf));
-        output_error("Could not find stream info: {}", errbuf);
-        ret = false;
+        output_fferror(rc, "Could not find stream info");
         goto end;
     }
 
@@ -227,7 +221,6 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
     if (stream_id < 0) {
         output_error("Could not find audio stream");
-        ret = false;
         goto end;
     }
         
@@ -236,7 +229,6 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         codec_ctx = avcodec_alloc_context3(codec);
         if (!codec_ctx) {
             output_error("Could not allocate audio codec context");
-            ret = false;
             goto end;
         }
         avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
@@ -260,10 +252,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                     }
                 }
             }
-            char errbuf[256];
-            av_strerror(rc, errbuf, sizeof(errbuf));
-            output_error("Could not open codec: {}", errbuf);
-            ret = false;
+            output_fferror(rc, "Could not open codec");
             goto end;
         }
         repeat = false;
@@ -295,20 +284,14 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                  0,
                  nullptr
              );
-        if (swr == nullptr) {
-            char errbuf[256];
-            av_strerror(rc, errbuf, sizeof(errbuf));
-            output_error("Could not allocate libswresample context: {}", errbuf);
-            ret = false;
+        if (!swr) {
+            output_error("Could not allocate libswresample context");
             goto end;
         }
 
         rc = swr_init(swr);
         if (rc < 0) {
-            char errbuf[256];
-            av_strerror(rc, errbuf, sizeof(errbuf));
-            output_error("Could not open libswresample context: {}", errbuf);
-            ret = false;
+            output_fferror(rc, "Could not open libswresample context");
             goto end;
         }
     }
@@ -319,25 +302,22 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
     ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
-    if (ebur128 == nullptr) {
+    if (!ebur128) {
         output_error("Could not initialize libebur128 scanner");
-        ret = false;
         goto end;
     }
 
     // Allocate AVPacket structure
     packet = av_packet_alloc();
-    if (packet == nullptr) {
+    if (!packet) {
         output_error("Could not allocate packet");
-        ret = false;
         goto end;
     }
 
     // Alocate AVFrame structure
     frame = av_frame_alloc();
-    if (frame == nullptr) {
+    if (!frame) {
         output_error("Could not allocate frame");
-        ret = false;
         goto end;
     }
 
@@ -370,10 +350,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                             swr_out_data[0] = (uint8_t*) av_malloc(out_size);
                             if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                                 output_error("Could not convert audio frame");
-                                ret = false;
                                 av_free(swr_out_data[0]);
-                                av_frame_unref(frame);
-                                av_packet_unref(packet);
                                 goto end;
                             }
 
@@ -399,6 +376,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     if (output_progress)
         progress_bar.complete();
 
+    ret = true;
 end:
     av_packet_free(&packet);
     av_frame_free(&frame);
@@ -612,4 +590,3 @@ void ScanJob::calculate_album_loudness()
         track.result.album_loudness = album_loudness;
     }
 }
-
