@@ -665,7 +665,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
                 cv,
                 data
             ));
-            cv.wait_for(lock, std::chrono::milliseconds(100));
+            cv.wait_for(lock, std::chrono::milliseconds(200));
             jobs.pop();
         }
 
