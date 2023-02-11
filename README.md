@@ -26,9 +26,16 @@ Binary packages are available for some platforms on the [Release Page](https://g
 
 ### Windows
 
-Download the win64 .zip file from the [latest release](https://github.com/complexlogic/rsgain/releases/latest) and extract its contents to a directory of your choice. rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
+Download the ZIP file from the link below and extract its contents to a folder of your choice:
+- [rsgain v3.2 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain-3.1.1-win64.zip)
+
+rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
 It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
+
+#### Scoop
+
+rsgain can also be installed from [several community Scoop buckets](https://scoop.sh/#/apps?q=rsgain&s=0&d=1&o=false). This installation method enables you to receive automatic upgrades to future versions, unlike the manual installation method described above.
 
 ### macOS
 
@@ -55,8 +62,8 @@ pkg install rsgain
 An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bullseye and later, Ubuntu 21.04 and later. It can be installed with the following commands:
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain_3.1.1_amd64.deb
-sudo apt install ./rsgain_3.1.1_amd64.deb
+wget https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain_3.2_amd64.deb
+sudo apt install ./rsgain_3.2_amd64.deb
 ```
 
 This package contains a statically linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
@@ -76,7 +83,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain-3.1.1-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain-3.2-1.x86_64.rpm
 ```
 
 #### Others
@@ -135,11 +142,7 @@ The legacy-style interface has been retained as "Custom Mode" for users that req
 
 ### Easy Mode
 
-Easy Mode recursively scans your entire music library using the recommended settings for each file type. You can use Easy Mode if the following conditions apply:
-
-- Your music library is organized by album i.e. each album has its own folder
-- In each album folder, all audio files are of the same type. It is acceptable to have non-audio files mixed in such as log files or artwork, but if multiple *audio* file types are detected, the folder will not be scanned.
-
+Easy Mode recursively scans your entire music library using the recommended settings for each file type.
 Easy Mode is invoked with the command `rsgain easy` followed by the root of the directory you want to scan:
 
 ```bash
@@ -150,7 +153,7 @@ rsgain easy /path/to/music/library
 rsgain easy "C:\path\to\music library"
 ```
 
-This is all that is required for most users. Advanced users should see the [Scan Presets](#scan-presets) section for more information about the default settings and how to change them, if desired.
+Easy Mode assumes that you have you have your music library organized by album, so that each album is contained in its own folder. The album gain calculations rely on this assumption. If you do *not* have your music library organized by album, you should disable the album tags because the calculated values will not be valid. rsgain ships with a scan preset which can disable the album tags for you; invoke it with `-p no_album`. See the [Scan Presets](#scan-presets) section for more information about how the scan preset feature works.
 
 #### Multithreaded Scanning
 
@@ -191,6 +194,8 @@ Easy Mode scans files with the following settings by default:
 These settings are recommended for maximum compatibility with modern players. However, if you need one or more of the settings changed, you can use a preset file.
 
 A preset file is an INI-formatted configuration file that contains sections enclosed in square brackets, and each section contains key=value pairs that correspond to settings. The first section in a presets file is titled "Global" and contains settings that will be applied to every format. The remaining sections pertain to a particular audio format, and the settings within them will only be applied to that format. This allows the user to define settings on a per-format basis. If a setting in the "Global" section is in conflict with one in the format-specific section, the format-specific value will always take precedence.
+
+It should be noted that the format-specific configurations will only be applied if *all* files in the directory have the same file type. The Global settings will always be applied to files in directories that have multiple file types in them, regardless of the individual file type
 
 A preset is specified with the `-p` option, followed by the path to a preset file *or* a preset name. A preset name is the filename of a preset without the directory or .ini file extension; rsgain will search the default preset location(s) for the file based on your platform:
 

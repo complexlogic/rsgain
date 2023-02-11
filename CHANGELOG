@@ -1,4 +1,4 @@
-Unreleased
+v3.2 (2023-2-10)
 - Support scanning directories with multiple file types in Easy Mode
 - Redesigned the multithreading mode to increase reliability and effiency
 - Progress update in multithreading mode now detects the width of the console and limits it so the output doesn't wrap to a new line on long directory names
