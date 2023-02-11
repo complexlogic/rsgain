@@ -27,7 +27,7 @@ Binary packages are available for some platforms on the [Release Page](https://g
 ### Windows
 
 Download the ZIP file from the link below and extract its contents to a folder of your choice:
-- [rsgain v3.2 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.1.1/rsgain-3.1.1-win64.zip)
+- [rsgain v3.2 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain-3.2-win64.zip)
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
