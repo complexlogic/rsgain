@@ -177,7 +177,6 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     ebur128_state *ebur128 = nullptr;
     int nb_channels;
 
-    // FFmpeg 5.0 workaround
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
     const 
 #endif
@@ -236,7 +235,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         if (rc < 0) {
             if (!repeat) {
 #if LIBAVCODEC_VERSION_MAJOR >= 59 
-                    const
+                const
 #endif
                 AVCodec *try_codec;
                 avcodec_free_context(&codec_ctx);
@@ -258,6 +257,11 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         repeat = false;
     } while (repeat);
     codec_id = codec->id;
+#if LIBAVCODEC_VERSION_MAJOR < 59
+    nb_channels = codec_ctx->channels;
+#else
+    nb_channels = codec_ctx->ch_layout.nb_channels;
+#endif
 
     // Display some information about the file
     if (output_progress)
@@ -266,12 +270,12 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             codec->long_name, 
             codec_ctx->bits_per_raw_sample > 0 ? fmt::format("{} bit, ", codec_ctx->bits_per_raw_sample) : "", 
             codec_ctx->sample_rate, 
-            codec_ctx->channels
+            nb_channels
         );
-    nb_channels = codec_ctx->channels;
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
+#if LIBAVCODEC_VERSION_MAJOR < 59
         if (!codec_ctx->channel_layout)
             codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
         swr = swr_alloc_set_opts(nullptr,
@@ -284,6 +288,18 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                  0,
                  nullptr
              );
+#else
+        swr_alloc_set_opts2(&swr,
+            &codec_ctx->ch_layout,
+            OUTPUT_FORMAT,
+            codec_ctx->sample_rate,
+            &codec_ctx->ch_layout,
+            codec_ctx->sample_fmt,
+            codec_ctx->sample_rate,
+            0,
+            nullptr
+        );
+#endif
         if (!swr) {
             output_error("Could not allocate libswresample context");
             goto end;
@@ -301,7 +317,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
-    ebur128 = ebur128_init(codec_ctx->channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
+    ebur128 = ebur128_init(nb_channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
     if (!ebur128) {
         output_error("Could not initialize libebur128 scanner");
         goto end;
@@ -337,8 +353,11 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
                 while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
+#if LIBAVCODEC_VERSION_MAJOR < 59
                     if (frame->channels == nb_channels) {
-
+#else
+                    if (frame->ch_layout.nb_channels == nb_channels) {
+#endif
                         // Convert audio format with libswresample if necessary
                         if (swr) {
                             size_t out_size = av_samples_get_buffer_size(nullptr, 
@@ -549,9 +568,8 @@ bool ScanJob::Track::calculate_loudness(const Config &config)
 {
     unsigned channel = 0;
     double track_loudness, track_peak;
-    ebur128_state *ebur128 = this->ebur128.get();
 
-    if (ebur128_loudness_global(ebur128, &track_loudness) != EBUR128_SUCCESS)
+    if (ebur128_loudness_global(ebur128.get(), &track_loudness) != EBUR128_SUCCESS)
         track_loudness = config.target_loudness;
 
     if (track_loudness == -HUGE_VAL) // Don't bother tagging silent tracks
@@ -560,7 +578,7 @@ bool ScanJob::Track::calculate_loudness(const Config &config)
     std::vector<double> peaks(ebur128->channels);
     int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
     for (double &pk : peaks)
-        get_peak(ebur128, channel++, &pk);
+        get_peak(ebur128.get(), channel++, &pk);
     track_peak = *std::max_element(peaks.begin(), peaks.end());
 
     result.track_gain           = config.target_loudness - track_loudness;

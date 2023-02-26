@@ -1,3 +1,7 @@
+Unreleased
+- Fix minor bug with Easy Mode statistics output
+- Port to new FFmpeg channel layout API
+
 v3.2 (2023-2-10)
 - Support scanning directories with multiple file types in Easy Mode
 - Redesigned the multithreading mode to increase reliability and effiency
