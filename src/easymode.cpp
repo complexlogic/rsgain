@@ -489,10 +489,11 @@ inline void join_paths(std::filesystem::path &p, std::initializer_list<const cha
     auto it = list.begin();
     p = *it;
     it++;
-    for (it; it != list.end(); ++it) {
+    while (it != list.end()) {
         if (*it == nullptr)
             return;
         p /= *it;
+        it++;
     }
 }
 

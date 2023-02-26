@@ -222,6 +222,9 @@ void tag_track(ScanJob::Track &track, const Config &config)
             if (!tag_apev2<TagLib::MPC::File>(track, config))
                 tag_error(track);
             break;
+
+        default:
+            break;
     }
 }
 
