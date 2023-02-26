@@ -730,7 +730,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
     HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", data.clipping_adjustments, 100.f * (float) data.clipping_adjustments / (float) data.files);
     HELP_STATS("Average Gain", "{:.2f} dB", data.total_gain / (double) data.files);
     double average_peak = data.total_peak / (double) data.files;
-    HELP_STATS("Average Peak", "{:.6f} ({:.2f} dB)", average_peak, 20.0 * log10(average_peak));
+    HELP_STATS("Average Peak", "{:.6f}{}", average_peak, average_peak != 0.0 ? fmt::format(" ({:.2f} dB)", 20.0 * log10(average_peak)) : "");
     HELP_STATS("Negative Gains", "{:L} ({:.1f}% of files)", data.total_negative, 100.f * (float) data.total_negative / (float) data.files);
     HELP_STATS("Positive Gains", "{:L} ({:.1f}% of files)", data.total_positive, 100.f * (float) data.total_positive / (float) data.files);
     fmt::print("\n");

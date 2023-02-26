@@ -536,10 +536,12 @@ void ScanJob::update_data(ScanData &data)
             data.clipping_adjustments++;
     }
 
-    for (const Track &track : tracks) {
-        data.total_gain += track.result.track_gain;
-        data.total_peak += track.result.track_peak;
-        track.result.track_gain < 0.f ? data.total_negative++ : data.total_positive++;
+    if (config.tag_mode != 'd') {
+        for (const Track &track : tracks) {
+            data.total_gain += track.result.track_gain;
+            data.total_peak += track.result.track_peak;
+            track.result.track_gain > 0.0 ? data.total_positive++ : data.total_negative++;
+        }
     }
 }
 
