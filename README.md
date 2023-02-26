@@ -27,7 +27,7 @@ Binary packages are available for some platforms on the [Release Page](https://g
 ### Windows
 
 Download the ZIP file from the link below and extract its contents to a folder of your choice:
-- [rsgain v3.2 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain-3.2-win64.zip)
+- [rsgain v3.2.1 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.2.1/rsgain-3.2.1-win64.zip)
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
@@ -62,8 +62,8 @@ pkg install rsgain
 An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bullseye and later, Ubuntu 21.04 and later. It can be installed with the following commands:
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain_3.2_amd64.deb
-sudo apt install ./rsgain_3.2_amd64.deb
+wget https://github.com/complexlogic/rsgain/releases/download/v3.2.1/rsgain_3.2.1_amd64.deb
+sudo apt install ./rsgain_3.2.1_amd64.deb
 ```
 
 This package contains a statically linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
@@ -83,7 +83,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.2/rsgain-3.2-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.2.1/rsgain-3.2.1-1.x86_64.rpm
 ```
 
 #### Others

@@ -1,8 +1,9 @@
-Unreleased
+v3.2.1 (2023-02-26)
 - Fix minor bug with Easy Mode statistics output
 - Port to new FFmpeg channel layout API
+- Remove deprecated TagLib functions
 
-v3.2 (2023-2-10)
+v3.2 (2023-02-10)
 - Support scanning directories with multiple file types in Easy Mode
 - Redesigned the multithreading mode to increase reliability and effiency
 - Progress update in multithreading mode now detects the width of the console and limits it so the output doesn't wrap to a new line on long directory names
@@ -13,7 +14,7 @@ v3.2 (2023-2-10)
 v3.1.1 (2022-11-15)
 - Fix ID3v2 version parsing bug
 
-v3.1 (2022-11-4)
+v3.1 (2022-11-04)
 - Added support for Musepack format
 - Added support for HE-AAC, xHE-AAC formats
 - Added option '-S' to skip files with existing ReplayGain data
@@ -25,7 +26,7 @@ v3.1 (2022-11-4)
 v3.0.1 (2022-10-13)
 - Fixed inconsistencies in tab output formatting
 
-v3.0 (2022-9-14)
+v3.0 (2022-09-14)
 - Massive internal rewrite:
     - Source code is now purely C++ instead of mixed C/C++
     - Text formating and output now utilize the fmt library, which is safer and typically faster than C stdio implementations
@@ -68,19 +69,19 @@ v3.0 (2022-9-14)
 - Windows: Support static linking of dependencies
 - Linux: Enforce a minimum taglib version 1.12. Provide a static taglib build for the .deb package
 
-v2.0.1 (2022-5-18)
+v2.0.1 (2022-05-18)
 - Set max thread sleep period to prevent hanging in multithreaded mode
 
-v2.0 (2022-5-10)
+v2.0 (2022-05-10)
 - Changed project name to rsgain
 - Added "Easy Mode" with recursive directory scanning. Old command line syntax now known as "Custom Mode"
 - Added multithreaded scanning
 - Added override feature for Easy Mode
 
-v1.0.1 (2022-4-15)
+v1.0.1 (2022-04-15)
 - Refactored scan.py script, renamed to loudgain-scanner.py
 - Strictly enforce libebur128 minimum version 1.2.4
 
-v1.0 (2022-2-21)
+v1.0 (2022-02-21)
 - Fork from Moonbase59/loudgain v0.6.8
 - Native Windows port
