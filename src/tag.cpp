@@ -64,6 +64,9 @@
 #include "tag.hpp"
 #include "output.hpp"
 
+
+#define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 + TAGLIB_MINOR_VERSION * 100 + TAGLIB_PATCH_VERSION)
+
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag);
 template<int flags, typename T>
@@ -376,8 +379,14 @@ static bool tag_mp3(ScanJob::Track &track, const Config &config)
     if (config.tag_mode == 'i')
         tag_write_id3(tag, track.result, config);
 
-    // Using the deprecated calls until taglib 1.12+ becomes more widely adopted
+#if TAGLIB_VERSION < 11200
     return file.save(TagLib::MPEG::File::ID3v2, false, config.id3v2version);
+#else
+    return file.save(TagLib::MPEG::File::ID3v2, 
+        TagLib::File::StripTags::StripNone,
+        config.id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
+    );
+#endif
 }
 
 static bool tag_flac(ScanJob::Track &track, const Config &config) 
@@ -470,7 +479,14 @@ static bool tag_riff(ScanJob::Track &track, const Config &config)
         tag_write_id3(tag, track.result, config);
 
     if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
+#if TAGLIB_VERSION < 11200
         return file.save(T::AllTags, false, config.id3v2version);
+#else
+        return file.save(T::AllTags,
+            TagLib::File::StripTags::StripNone,
+            config.id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
+        );
+#endif
     else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) 
         return file.save();
 }
