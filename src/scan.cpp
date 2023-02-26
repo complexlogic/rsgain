@@ -54,7 +54,8 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
-#define output_fferror(e, msg) char errbuf[256]; av_strerror(e, errbuf, sizeof(errbuf)); output_error(msg ": {}", errbuf) 
+#define output_fferror(e, msg) char errbuf[256]; av_strerror(e, errbuf, sizeof(errbuf)); output_error(msg ": {}", errbuf)
+#define OLD_CHANNEL_LAYOUT LIBAVUTIL_VERSION_MAJOR < 57 || (LIBAVUTIL_VERSION_MAJOR == 57 && LIBAVUTIL_VERSION_MINOR < 18)
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 
 extern bool multithread;
@@ -257,7 +258,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         repeat = false;
     } while (repeat);
     codec_id = codec->id;
-#if LIBAVCODEC_VERSION_MAJOR < 59
+#if OLD_CHANNEL_LAYOUT
     nb_channels = codec_ctx->channels;
 #else
     nb_channels = codec_ctx->ch_layout.nb_channels;
@@ -275,7 +276,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     // Only initialize swresample if we need to convert the format
     if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
-#if LIBAVCODEC_VERSION_MAJOR < 59
+#if OLD_CHANNEL_LAYOUT
         if (!codec_ctx->channel_layout)
             codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
         swr = swr_alloc_set_opts(nullptr,
@@ -353,7 +354,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
                 while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
                     pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
-#if LIBAVCODEC_VERSION_MAJOR < 59
+#if OLD_CHANNEL_LAYOUT
                     if (frame->channels == nb_channels) {
 #else
                     if (frame->ch_layout.nb_channels == nb_channels) {
