@@ -484,17 +484,17 @@ int format_handler(void *user, const char *section, const char *name, const char
     return 0;
 }
 
-inline void join_paths(std::filesystem::path &p, std::initializer_list<const char*> list)
+inline bool join_paths(const std::filesystem::path &p)
+{
+    return true;
+}
+template<typename T, typename... Args>
+inline bool join_paths(std::filesystem::path &p, const T first, const Args&... args)
 {    
-    auto it = list.begin();
-    p = *it;
-    it++;
-    while (it != list.end()) {
-        if (*it == nullptr)
-            return;
-        p /= *it;
-        it++;
-    }
+    if (!first)
+        return false;
+    p /= first;
+    return join_paths(p, args...);
 }
 
 static void load_preset(const char *preset)
@@ -503,32 +503,35 @@ static void load_preset(const char *preset)
 
     // Find preset file from name
     if (!path.has_extension()) {
+        path.clear();
 
-        // Mac/Linux check user directory before system directory
-#ifndef _WIN32
-#ifdef __APPLE__
-        join_paths(path, {(const char*) getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset});
+        // Check user directory
+#ifdef _WIN32
+        char buffer[MAX_PATH];
+        if (GetEnvironmentVariableA("USERPROFILE", buffer, sizeof(buffer)))
+            join_paths(path, buffer, "." EXECUTABLE_TITLE, "presets", preset);
 #else
-        join_paths(path, {(const char*) getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset});
+#ifdef __APPLE__
+        join_paths(path, getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset);
+#else
+        join_paths(path, getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset);
+#endif
 #endif
         path += ".ini";
 
-        // Check system directory
+        // Check .exe preset folder on Windows, system directory on Unix
         if (!std::filesystem::exists(path)) {
-            join_paths(path, {PRESETS_DIR, preset});
-            path += ".ini";
-        }
-#endif
-
-        // Only one preset folder on Windows
+            path.clear();
 #ifdef _WIN32
-        char buffer[MAX_PATH];
-        if (GetModuleFileNameA(nullptr, buffer, sizeof(buffer))) {
-            std::filesystem::path exe = buffer;
-            join_paths(path, {exe.parent_path().string().c_str(), "presets", preset});
+            if (GetModuleFileNameA(nullptr, buffer, sizeof(buffer))) {
+                std::filesystem::path exe = buffer;
+                join_paths(path, exe.parent_path().string().c_str(), "presets", preset);
+            }
+#else
+            join_paths(path, PRESETS_DIR, preset);
+#endif
             path += ".ini";
         }
-#endif
     }
 
     if (!std::filesystem::exists(path)) {
@@ -538,7 +541,7 @@ static void load_preset(const char *preset)
 
     // Parse file
     std::FILE *file = fopen(path.string().c_str(), "r");
-    if (file == nullptr) {
+    if (!file) {
         output_error("Failed to open preset from '{}'", path.string());
         quit(EXIT_FAILURE);
     }
