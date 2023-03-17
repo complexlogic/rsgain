@@ -480,8 +480,11 @@ void ScanJob::tag_tracks()
         else
             stream = stdout;
 
-        if (stream)
+        if (stream) {
+            if (config.sep_header)
+                fputs("sep=\t\n", stream);
             fputs("Filename\tLoudness (LUFS)\tGain (dB)\tPeak\t Peak (dB)\tPeak Type\tClipping Adjustment?\n", stream);
+        }
     }
 
     // Tag the files

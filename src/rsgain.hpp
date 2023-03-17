@@ -29,6 +29,7 @@ struct Config {
 	char clip_mode;
 	bool do_album;
 	OutputType tab_output;
+	bool sep_header;
 	bool lowercase;
 	int id3v2version;
 	char opus_mode;

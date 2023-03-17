@@ -1,4 +1,5 @@
 Unreleased
+- Added -O 's' option to write sep header to CSV output for Microsoft Excel compatibility
 - Windows: Search for Easy Mode presets in a default user directory similar to macOS and Linux
 
 v3.2.1 (2023-02-26)

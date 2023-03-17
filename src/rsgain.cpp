@@ -151,7 +151,7 @@ static void custom_mode(int argc, char *argv[])
     unsigned nb_files   = 0;
     opterr = 0;
 
-    const char *short_opts = "+ac:m:tl:Oqs:LSI:o:h?";
+    const char *short_opts = "+ac:m:tl:O::qs:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",         no_argument,       nullptr, 'a' },
         { "skip-existing", no_argument,       nullptr, 'S' },
@@ -162,7 +162,7 @@ static void custom_mode(int argc, char *argv[])
 
         { "loudness",      required_argument, nullptr, 'l' },
 
-        { "output",        no_argument,       nullptr, 'O' },
+        { "output",        optional_argument, nullptr, 'O' },
         { "quiet",         no_argument,       nullptr, 'q' },
 
         { "tagmode",       required_argument, nullptr, 's' },
@@ -221,6 +221,14 @@ static void custom_mode(int argc, char *argv[])
 
             case 'O':
                 config.tab_output = OutputType::STDOUT;
+                if (optarg) {
+                    if (*optarg == 's')
+                        config.sep_header = true;
+                    else {
+                        output_fail("Unrecognized output argument '{}'", optarg);
+                        quit(EXIT_FAILURE);
+                    }
+                }
                 quiet = 1;
                 break;
 
@@ -409,6 +417,8 @@ static inline void help_custom() {
     fmt::print("\n");
 
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to stdout");
+    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
+
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
     fmt::print("\n");

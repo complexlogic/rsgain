@@ -36,10 +36,6 @@ extern "C" {
 static inline void help_easy();
 bool multithread = false;
 
-#ifdef DEBUG
-    int infinite_loop = 0;
-#endif
-
 static Config configs[] = {
 
     // Default config
@@ -52,6 +48,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -67,6 +64,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -82,6 +80,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -97,6 +96,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -112,6 +112,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -127,6 +128,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -142,6 +144,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -157,6 +160,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -172,6 +176,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -187,6 +192,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -202,6 +208,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -217,6 +224,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -232,6 +240,7 @@ static Config configs[] = {
         .clip_mode = 'p',
         .do_album = true,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -248,7 +257,7 @@ void easy_mode(int argc, char *argv[])
 {
     int rc, i;
     char *preset = nullptr;
-    const char *short_opts = "+hqSl:m:p:O";
+    const char *short_opts = "+hqSl:m:p:O::";
     int threads = 1;
     opterr = 0;
 
@@ -259,10 +268,7 @@ void easy_mode(int argc, char *argv[])
         { "skip-existing", no_argument,       nullptr, 'S' },
         { "multithread",   required_argument, nullptr, 'm' },
         { "preset",        required_argument, nullptr, 'p' },
-        { "output",        no_argument,       nullptr, 'O' },
-#ifdef DEBUG
-        { "infinite-loop", no_argument,       &infinite_loop, 1 },
-#endif
+        { "output",        optional_argument, nullptr, 'O' },
         { 0, 0, 0, 0 }
     };
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
@@ -310,6 +316,16 @@ void easy_mode(int argc, char *argv[])
                 break;
 
             case 'O':
+                if (optarg) {
+                    if (*optarg == 's') {
+                        for (Config &config : configs)
+                            config.sep_header = true;
+                    }
+                    else {
+                        output_fail("Unrecognized output argument '{}'", optarg);
+                        quit(EXIT_FAILURE);
+                    }
+                }
                 for (Config &config : configs)
                     config.tab_output = OutputType::FILE;
                 break;
@@ -765,6 +781,7 @@ static inline void help_easy() {
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--preset=s", "-p s", "Load scan preset s");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
+    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
 
     fmt::print("\n");
 
