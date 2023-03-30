@@ -114,14 +114,14 @@ Build the dependencies and generate the Visual Studio project files:
 
 ```bash
 git clone https://github.com/microsoft/vcpkg
-cmake .. -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake" DVCPKG_OVERLAY_TRIPLETS="..\config\vcpkg_triplets" -DVCPKG_TARGET_TRIPLET="custom-triplet"
+cmake .. -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS="..\config\vcpkg_triplets" -DVCPKG_TARGET_TRIPLET="custom-triplet"
 ```
 
 Build and test the program:
 
 ```bash
-cmake --build .
-.\Debug\rsgain.exe
+cmake --build . --config Release
+.\Release\rsgain.exe
 ```
 
 Optionally, generate a zipped install package:
