@@ -49,7 +49,7 @@ jobs:
 
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 36fb23307e10cc6ffcec566c46c4bb3f567c82c6 }
+        with: { committish: 4f9d25a7f299db656c376af402637819ee2caba0 }
 
       - name: Setup Overlays
         run: |
@@ -58,11 +58,20 @@ jobs:
           git clone -b rsgain --depth 1 https://github.com/complexlogic/vcpkg build/overlays
 
       - name: Configure
-        run: cmake -B build -G "${{env.CMAKE_GENERATOR}}" -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets -DVCPKG_OVERLAY_PORTS=build/overlays/ports -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DVCPKG_CMAKE_SYSTEM_NAME=${{matrix.config.name}}
+        run: cmake 
+               -B build 
+               -G "${{env.CMAKE_GENERATOR}}" 
+               -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+               -DVCPKG_OVERLAY_PORTS=build/overlays/ports
+               -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets
+               -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
 
       - name: Build
         run: |
-          cmake --build build --target package --config ${{ env.CMAKE_BUILD_TYPE }}
+          cmake \
+            --build build \
+            --target package \
+            --config ${{ env.CMAKE_BUILD_TYPE }}
           build/${{env.CMAKE_BUILD_TYPE}}/rsgain.exe -v
 
       - name: Upload Package
@@ -101,7 +110,7 @@ jobs:
 
     env:
       CMAKE_BUILD_TYPE: Release
-      VCPKG_COMMITISH: 36fb23307e10cc6ffcec566c46c4bb3f567c82c6
+      VCPKG_COMMITISH: 4f9d25a7f299db656c376af402637819ee2caba0
       VCPKG_TRIPLET: x64-linux
 
     steps:
@@ -125,11 +134,19 @@ jobs:
           cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
 
       - name: Configure
-        run: cmake -B build -D "CMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}} -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr -DPACKAGE=${{matrix.config.package_type}}
+        run: cmake 
+               -B build 
+               -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+               -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
+               -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
+               -DCMAKE_INSTALL_PREFIX=/usr
+               -DPACKAGE=${{matrix.config.package_type}}
 
       - name: Build
         run: | 
-          cmake --build build --target package --config ${{env.CMAKE_BUILD_TYPE}}
+          cmake \
+            --build build \
+            --target package
           build/rsgain -v
 
       - name: Upload Package
@@ -166,9 +183,14 @@ jobs:
           brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config || true
 
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}} -DCMAKE_INSTALL_PREFIX=/usr
+        run: cmake 
+               -B build 
+               -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
+               -DCMAKE_INSTALL_PREFIX=/usr
 
       - name: Build
         run: |
-          cmake --build build --config ${{env.CMAKE_BUILD_TYPE}}
+          cmake \
+            --build build \
+            --config ${{env.CMAKE_BUILD_TYPE}}
           build/rsgain -v
