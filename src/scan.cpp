@@ -345,7 +345,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
                 start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
             len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
-            progress_bar.begin(start, len);
+            if (len > 0)
+                progress_bar.begin(start, len);
         }
     }
     

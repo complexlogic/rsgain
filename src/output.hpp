@@ -87,7 +87,7 @@ class ProgressBar {
         int w_prev;
         int pos_prev;
         int start;
-        int len;
+        int len = 0;
         char *buffer = nullptr;
 
 #ifdef _WIN32

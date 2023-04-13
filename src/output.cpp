@@ -71,7 +71,7 @@ void ProgressBar::begin(int start, int len)
 void ProgressBar::update(int pos)
 {
 	int w, c;
-	if (pos == pos_prev)
+	if (pos == pos_prev || !len)
 		return;
 
 	w = get_console_width();
@@ -90,6 +90,8 @@ void ProgressBar::update(int pos)
 
 	float percent = ((float) pos / (float) len);
 	c = (int) (percent * (float) w);
+	if (c > w)
+		c = w;
 
 	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
