@@ -81,7 +81,9 @@ static FileType determine_filetype(const std::string &extension)
         {".ape",  FileType::APE},
         {".mpc",  FileType::MPC}
     };
-    auto it = map.find(extension);
+	std::string extensionlower = extension;
+	std::transform(extensionlower.begin(), extensionlower.end(), extensionlower.begin(), ::tolower);
+    auto it = map.find(extensionlower);
     return it == map.end() ? FileType::INVALID : it->second;
 }
 
