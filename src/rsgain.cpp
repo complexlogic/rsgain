@@ -44,6 +44,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
 }
+#include <taglib.h>
 #include <ebur128.h>
 #include <fmt/core.h>
 
@@ -53,6 +54,11 @@ extern "C" {
 #include "scan.hpp"
 #include "output.hpp"
 #include "easymode.hpp"
+
+#define PRINT_LIB(lib, version) fmt::print("  " COLOR_YELLOW " {:<14}" COLOR_OFF " {}\n", lib, version)
+#define PRINT_LIB_FFMPEG(name, fn) \
+    ffver = fn(); \
+    PRINT_LIB(name, fmt::format("{}.{}.{}", AV_VERSION_MAJOR(ffver), AV_VERSION_MINOR(ffver), AV_VERSION_MICRO(ffver)))
 
 #ifdef _WIN32
 #include <windows.h>
@@ -370,7 +376,6 @@ static void help_main() {
     fmt::print("Please report any issues to " PROJECT_URL "/issues\n\n");
 }
 
-
 static inline void help_custom() {
     fmt::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
@@ -427,63 +432,35 @@ static inline void help_custom() {
     fmt::print("\n");
 }
 
-
 static void version() {
-    int  ebur128_v_major     = 0;
-    int  ebur128_v_minor     = 0;
-    int  ebur128_v_patch     = 0;
-    unsigned swr_ver         = 0;
-    unsigned lavf_ver        = 0;
-    unsigned lavc_ver        = 0;
-    unsigned lavu_ver        = 0;
-    std::string ebur128_version;
-    std::string swr_version;
-    std::string lavf_version;
-    std::string lavc_version;
-    std::string lavu_version;
-    std::string taglib_version;
-
-    // libebur128 version check
-    ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
-    ebur128_version = fmt::format("{}.{}.{}", ebur128_v_major, ebur128_v_minor, ebur128_v_patch);
-
-    // libavformat version
-    lavf_ver = avformat_version();
-    lavf_version = fmt::format("{}.{}.{}", lavf_ver>>16, lavf_ver>>8&0xff, lavf_ver&0xff);
-
-    // libavcodec version
-    lavc_ver = avcodec_version();
-    lavc_version = fmt::format("{}.{}.{}", lavc_ver>>16, lavc_ver>>8&0xff, lavc_ver&0xff);
-
-    // libavcodec version
-    lavu_ver = avutil_version();
-    lavu_version = fmt::format("{}.{}.{}", lavu_ver>>16, lavu_ver>>8&0xff, lavu_ver&0xff);
-
-    // libswresample version
-    swr_ver = swresample_version();
-    swr_version = fmt::format("{}.{}.{}", swr_ver>>16, swr_ver>>8&0xff, swr_ver&0xff);
-
-    // taglib version
-    taglib_get_version(taglib_version);
-
-    // Print versions
+    int ffver;
+    int ebur128_v_major = 0;
+    int ebur128_v_minor = 0;
+    int ebur128_v_patch = 0;
     fmt::print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION " - using:\n");
-    PRINT_LIB("libebur128", ebur128_version);
-    PRINT_LIB("libavformat", lavf_version);
-    PRINT_LIB("libavcodec", lavc_version);
-    PRINT_LIB("libavutil", lavu_version);
-    PRINT_LIB("libswresample", swr_version);
+
+    // Library versions
+    ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
+    PRINT_LIB("libebur128", fmt::format("{}.{}.{}", ebur128_v_major, ebur128_v_minor, ebur128_v_patch));
+    PRINT_LIB_FFMPEG("libavformat", avformat_version);
+    PRINT_LIB_FFMPEG("libavcodec", avcodec_version);
+    PRINT_LIB_FFMPEG("libavutil", avutil_version);
+    PRINT_LIB_FFMPEG("libswresample", swresample_version);
     fmt::print("\n");
     fmt::print("Built with:\n");
-    PRINT_LIB("taglib", taglib_version);
+    PRINT_LIB("TagLib", fmt::format("{}.{}{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION ? fmt::format(".{}", TAGLIB_PATCH_VERSION) : ""));
     fmt::print("\n");
 
 #if defined(__GNUC__) && !defined(__clang__)
     fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " GCC {}.{}\n", "Compiler:", __GNUC__, __GNUC_MINOR__);
 #endif
 
-#if defined(__clang__)
-    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Clang {}.{}.{}\n", "Compiler:", __clang_major__, __clang_minor__, __clang_patchlevel__);
+#ifdef __clang__
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " "
+#ifdef __apple_build_version__
+    "Apple "
+#endif
+    "Clang {}.{}.{}\n", "Compiler:", __clang_major__, __clang_minor__, __clang_patchlevel__);
 #endif
 
 #ifdef _MSC_VER

@@ -35,25 +35,25 @@
 #include <memory>
 #include <bit>
 
-#include <taglib.h>
-#include <fileref.h>
-#include <textidentificationframe.h>
-#include <mpegfile.h>
-#include <id3v2tag.h>
-#include <apetag.h>
-#include <flacfile.h>
-#include <vorbisfile.h>
-#include <oggflacfile.h>
-#include <speexfile.h>
-#include <xiphcomment.h>
-#include <mp4file.h>
-#include <opusfile.h>
-#include <asffile.h>
-#include <wavfile.h>
-#include <aifffile.h>
-#include <wavpackfile.h>
-#include <apefile.h>
-#include <mpcfile.h>
+#include <taglib/taglib.h>
+#include <taglib/fileref.h>
+#include <taglib/textidentificationframe.h>
+#include <taglib/mpegfile.h>
+#include <taglib/id3v2tag.h>
+#include <taglib/apetag.h>
+#include <taglib/flacfile.h>
+#include <taglib/vorbisfile.h>
+#include <taglib/oggflacfile.h>
+#include <taglib/speexfile.h>
+#include <taglib/xiphcomment.h>
+#include <taglib/mp4file.h>
+#include <taglib/opusfile.h>
+#include <taglib/asffile.h>
+#include <taglib/wavfile.h>
+#include <taglib/aifffile.h>
+#include <taglib/wavpackfile.h>
+#include <taglib/apefile.h>
+#include <taglib/mpcfile.h>
 #include <libavcodec/avcodec.h>
 
 #define CRCPP_USE_CPP11
@@ -64,8 +64,23 @@
 #include "tag.hpp"
 #include "output.hpp"
 
-
 #define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 + TAGLIB_MINOR_VERSION * 100 + TAGLIB_PATCH_VERSION)
+#define FORMAT_GAIN(gain) fmt::format("{:.2f} dB", gain)
+#define FORMAT_PEAK(peak) fmt::format("{:.6f}", peak)
+#define OPUS_HEADER_SIZE 47
+#define OGG_ROW_SIZE 4
+#define OPUS_HEAD_OFFSET 7 * OGG_ROW_SIZE
+#define OGG_CRC_OFFSET 5 * OGG_ROW_SIZE + 2
+#define OPUS_GAIN_OFFSET 11 * OGG_ROW_SIZE
+#define RG_TAGS_UPPERCASE 1
+#define RG_TAGS_LOWERCASE 2
+#define R128_TAGS         4
+
+#define MP4_ATOM_STRING "----:com.apple.iTunes:"
+#define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
+#define tag_error(t) output_error("Couldn't write to: {}", t.path)
+
+using RGTagsArray = std::array<TagLib::String, 7>;
 
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag);
@@ -104,7 +119,7 @@ enum class RGTag {
     MAX_VAL
 };
 
-static const char *RG_STRING_UPPER[] = {
+static const RGTagsArray RG_STRING_UPPER = {{
     "REPLAYGAIN_TRACK_GAIN",
     "REPLAYGAIN_TRACK_PEAK",
     "REPLAYGAIN_TRACK_RANGE",
@@ -112,9 +127,9 @@ static const char *RG_STRING_UPPER[] = {
     "REPLAYGAIN_ALBUM_PEAK",
     "REPLAYGAIN_ALBUM_RANGE",
     "REPLAYGAIN_REFERENCE_LOUDNESS"
-};
+}};
 
-static const char *RG_STRING_LOWER[] = {
+static const RGTagsArray RG_STRING_LOWER = {{
     "replaygain_track_gain",
     "replaygain_track_peak",
     "replaygain_track_range",
@@ -122,11 +137,10 @@ static const char *RG_STRING_LOWER[] = {
     "replaygain_album_peak",
     "replaygain_album_range",
     "replaygain_reference_loudness"
-};
-template<std::size_t N, class T>
-constexpr std::size_t array_size(T(&)[N]) {return N;}
-static_assert((size_t) RGTag::MAX_VAL == array_size(RG_STRING_UPPER));
-static_assert(array_size(RG_STRING_UPPER) == array_size(RG_STRING_LOWER));
+}};
+
+static_assert((size_t) RGTag::MAX_VAL == RG_STRING_UPPER.size());
+static_assert(RG_STRING_UPPER.size() == RG_STRING_LOWER.size());
 
 enum class R128Tag {
     TRACK_GAIN,
@@ -134,11 +148,11 @@ enum class R128Tag {
     MAX_VAL
 };
 
-static const char *R128_STRING[] = {
+static const std::array<TagLib::String, 2> R128_STRING = {{
     "R128_TRACK_GAIN",
     "R128_ALBUM_GAIN"
-};
-static_assert((size_t) R128Tag::MAX_VAL == array_size(R128_STRING));
+}};
+static_assert((size_t) R128Tag::MAX_VAL == R128_STRING.size());
 
 void tag_track(ScanJob::Track &track, const Config &config)
 {
@@ -274,24 +288,24 @@ bool tag_exists(const ScanJob::Track &track)
 template<typename T>
 static bool tag_exists_id3(const ScanJob::Track &track)
 {
-    TagLib::ID3v2::Tag *tag = nullptr;
+    const TagLib::ID3v2::Tag *tag = nullptr;
     T file(track.path.c_str());
     if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
         tag = file.tag();
     else
         tag = file.ID3v2Tag();
     if (tag) {
-        const auto &frames = tag->frameList("TXXX");
-        for (const auto &f : frames) {
-            TagLib::ID3v2::UserTextIdentificationFrame *frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
-            if (!frame)
-                continue;
-            TagLib::StringList string_list = frame->fieldList();
-            if (string_list.size() < 2)
-                continue;
-            TagLib::String desc = frame->description().upper();
-            if (desc == RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)])
-                return true;
+        const auto &map = tag->frameListMap();
+        const auto it = map.find("TXXX");
+        if (it != map.end()) {
+            const auto &frames = it->second;
+            for (const auto &f : frames) {
+                const auto frame = dynamic_cast<const TagLib::ID3v2::UserTextIdentificationFrame*>(f);
+                if (!frame)
+                    continue;
+                if (frame->description().upper() == RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)])
+                    return true;
+            }
         }
     }
     return false;
@@ -301,7 +315,7 @@ template<typename T>
 static bool tag_exists_xiph(const ScanJob::Track &track)
 {
     bool ret = false;
-    TagLib::Ogg::XiphComment *tag = nullptr;
+    const TagLib::Ogg::XiphComment *tag = nullptr;
     T file(track.path.c_str());
     if constexpr(std::is_same_v<T, TagLib::FLAC::File>)
         tag = file.xiphComment();
@@ -322,7 +336,7 @@ static bool tag_exists_mp4(const ScanJob::Track &track)
     static std::vector<TagLib::String> keys;
     if (keys.empty()) {
         keys.resize(2);
-        static const char *tags[] = {
+        const TagLib::String tags[] = {
             RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)],
             RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]
         };
@@ -333,7 +347,7 @@ static bool tag_exists_mp4(const ScanJob::Track &track)
     }
 
     TagLib::MP4::File file(track.path.c_str());
-    TagLib::MP4::Tag *tag = file.tag();
+    const TagLib::MP4::Tag *tag = file.tag();
     if (tag) {
         for (const auto &key : keys) {
             if (tag->contains(key))
@@ -347,7 +361,7 @@ template<typename T>
 static bool tag_exists_ape(const ScanJob::Track &track)
 {
     T file(track.path.c_str());
-    TagLib::APE::Tag *tag = file.APETag();
+    const TagLib::APE::Tag *tag = file.APETag();
     if (tag) {
         const auto &map = tag->itemListMap();
         return map.contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]);
@@ -358,7 +372,7 @@ static bool tag_exists_ape(const ScanJob::Track &track)
 static bool tag_exists_asf(const ScanJob::Track &track)
 {
     TagLib::ASF::File file(track.path.c_str());
-    TagLib::ASF::Tag *tag = file.tag();
+    const TagLib::ASF::Tag *tag = file.tag();
     return tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]) ||
     tag->contains(RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]);
 }
@@ -498,32 +512,35 @@ template<int flags, typename T>
 static void tag_clear_map(T&& clear)
 {
     if constexpr((flags) & RG_TAGS_UPPERCASE) {
-        for (const char *tag : RG_STRING_UPPER)
+        for (const auto &tag : RG_STRING_UPPER)
             clear(tag);
     }
     if constexpr((flags) & RG_TAGS_LOWERCASE) {
-        for (const char *tag : RG_STRING_LOWER)
+        for (const auto &tag : RG_STRING_LOWER)
             clear(tag);
     }
     if constexpr((flags) & R128_TAGS) {
-        for (const char *tag : R128_STRING)
+        for (const auto &tag : R128_STRING)
             clear(tag);
     }
 }
 
 static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
 {
-    TagLib::ID3v2::FrameList frames = tag->frameList("TXXX");
+    const auto &map = tag->frameListMap();
+    const auto it = map.find("TXXX");
+    if (it == map.end())
+        return; 
+    TagLib::ID3v2::FrameList frames = it->second;
     for (auto &f : frames) {
-        TagLib::ID3v2::UserTextIdentificationFrame *frame =
-        dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
+        auto frame = dynamic_cast<TagLib::ID3v2::UserTextIdentificationFrame*>(f);
         if (frame && frame->fieldList().size() >= 2) {
             TagLib::String desc = frame->description().upper();
-            auto rg_tag = std::find_if(std::cbegin(RG_STRING_UPPER),
-                              std::cend(RG_STRING_UPPER),
-                              [&](const auto &tag_type) {return desc == tag_type;}
+            auto rg_tag = std::find_if(RG_STRING_UPPER.begin(),
+                              RG_STRING_UPPER.end(),
+                              [&](const auto &tag_type) { return desc == tag_type; }
                           );
-            if (rg_tag != std::cend(RG_STRING_UPPER))
+            if (rg_tag != RG_STRING_UPPER.end())
                 tag->removeFrame(frame);
         }
     }
@@ -531,11 +548,11 @@ static void tag_clear_id3(TagLib::ID3v2::Tag *tag)
 
 static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, const Config &config)
 {
-    const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+    const RGTagsArray &RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,
         config,
-        [&](RGTag rg_tag, const std::string &value) {
-            TagLib::ID3v2::UserTextIdentificationFrame *frame = new TagLib::ID3v2::UserTextIdentificationFrame;
+        [&](RGTag rg_tag, const TagLib::String &value) {
+            auto frame = new TagLib::ID3v2::UserTextIdentificationFrame();
             frame->setDescription(RG_STRING[static_cast<int>(rg_tag)]);
             frame->setText(value);
             tag->addFrame(frame);
@@ -548,14 +565,14 @@ static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
 {   
     if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
         tag_clear_map<RG_TAGS_UPPERCASE | R128_TAGS>(
-            [&](const char *t) {
+            [&](const TagLib::String &t) {
                 tag->removeFields(t);
             }
         );
     }
     else {
         tag_clear_map<RG_TAGS_UPPERCASE>(
-            [&](const char *t) {
+            [&](const TagLib::String &t) {
                 tag->removeFields(t);
             }
         );
@@ -565,7 +582,7 @@ static void tag_clear_xiph(TagLib::Ogg::XiphComment *tag)
 template<typename T>
 static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &result, const Config &config)
 {
-    static const char **RG_STRING = RG_STRING_UPPER;
+    const RGTagsArray &RG_STRING = RG_STRING_UPPER;
 
     // Opus RFC 7845 tag
     if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_mode == 'r') {
@@ -584,7 +601,7 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
     else {
         write_rg_tags(result,
             config,
-            [&](RGTag rg_tag, const std::string &value) {
+            [&](RGTag rg_tag, const TagLib::String &value) {
                 tag->addField(RG_STRING[static_cast<int>(rg_tag)], value);
             }
         );
@@ -594,7 +611,7 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
 static void tag_clear_mp4(TagLib::MP4::Tag *tag)
 {
     tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
-        [&](const char *t) {
+        [&](const TagLib::String &t) {
             TagLib::String tag_name;
             FORMAT_MP4_TAG(tag_name, t);
             tag->removeItem(tag_name);
@@ -604,21 +621,21 @@ static void tag_clear_mp4(TagLib::MP4::Tag *tag)
 
 static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const Config &config) 
 {
-    const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+    const RGTagsArray &RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,
         config,
-        [&](RGTag rg_tag, const std::string &value) {
+        [&](RGTag rg_tag, const TagLib::String &value) {
             TagLib::String tag_name;
             FORMAT_MP4_TAG(tag_name, RG_STRING[static_cast<int>(rg_tag)]);
-            tag->setItem(tag_name, TagLib::StringList(value));
+            tag->setItem(tag_name, TagLib::MP4::Item(value));
         }
     );
 }
 
 static void tag_clear_apev2(TagLib::APE::Tag *tag)
 {
-    tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
-        [&](const char *t) {
+    tag_clear_map<RG_TAGS_UPPERCASE>(
+        [&](const TagLib::String &t) {
             tag->removeItem(t);
         }
     );
@@ -626,11 +643,11 @@ static void tag_clear_apev2(TagLib::APE::Tag *tag)
 
 static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config)
 {
-    static const char **RG_STRING = RG_STRING_UPPER;
+    const RGTagsArray &RG_STRING = RG_STRING_UPPER;
     write_rg_tags(result,
         config,
-        [&](RGTag rg_tag, const std::string &value) {
-            tag->addValue(RG_STRING[static_cast<int>(rg_tag)], TagLib::String(value));
+        [&](RGTag rg_tag, const TagLib::String &value) {
+            tag->addValue(RG_STRING[static_cast<int>(rg_tag)], value);
         }
     );
 }
@@ -638,7 +655,7 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, con
 static void tag_clear_asf(TagLib::ASF::Tag *tag) 
 {
     tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_LOWERCASE>(
-        [&](const char *t) {
+        [&](const TagLib::String &t) {
             tag->removeItem(t);
         }
     );
@@ -646,11 +663,11 @@ static void tag_clear_asf(TagLib::ASF::Tag *tag)
 
 static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config)
 {
-    const char **RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
+    const RGTagsArray &RG_STRING = config.lowercase ? RG_STRING_LOWER : RG_STRING_UPPER;
     write_rg_tags(result,
         config,
-        [&](RGTag rg_tag, const std::string &value) {
-            tag->setAttribute(RG_STRING[static_cast<int>(rg_tag)], TagLib::String(value));
+        [&](RGTag rg_tag, const TagLib::String &value) {
+            tag->setAttribute(RG_STRING[static_cast<int>(rg_tag)], value);
         }
     );
 }
@@ -743,9 +760,4 @@ static bool set_mpc_packet_rg(const char *path)
         fseek(fp, payload_bytes, SEEK_CUR);
     }
     return false;
-}
-
-void taglib_get_version(std::string &buffer)
-{
-    buffer = fmt::format("{}.{}.{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION);
 }

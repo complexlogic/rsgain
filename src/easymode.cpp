@@ -500,17 +500,27 @@ int format_handler(void *user, const char *section, const char *name, const char
     return 0;
 }
 
-inline bool join_paths(const std::filesystem::path &p)
+bool join_paths(std::filesystem::path &p)
 {
     return true;
 }
-template<typename T, typename... Args>
-inline bool join_paths(std::filesystem::path &p, const T first, const Args&... args)
-{    
+
+template<typename... Args>
+bool join_paths(std::filesystem::path &path, const char *first, const Args&... args)
+{
     if (!first)
         return false;
-    p /= first;
-    return join_paths(p, args...);
+    path /= first;
+    return join_paths(path, args...);
+}
+
+template<typename... Args>
+std::filesystem::path join_paths(const char *first, const Args&... args)
+{    
+    if (!first)
+        return std::filesystem::path();
+    std::filesystem::path path(first);
+    return join_paths(path, args...) ? path : std::filesystem::path();
 }
 
 static void load_preset(const char *preset)
@@ -519,32 +529,29 @@ static void load_preset(const char *preset)
 
     // Find preset file from name
     if (!path.has_extension()) {
-        path.clear();
-
         // Check user directory
 #ifdef _WIN32
         char buffer[MAX_PATH];
         if (GetEnvironmentVariableA("USERPROFILE", buffer, sizeof(buffer)))
-            join_paths(path, buffer, "." EXECUTABLE_TITLE, "presets", preset);
+            path = join_paths(buffer, "." EXECUTABLE_TITLE, "presets", preset);
 #else
 #ifdef __APPLE__
-        join_paths(path, getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset);
+        path = join_paths(getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset);
 #else
-        join_paths(path, getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset);
+        path = join_paths(getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset);
 #endif
 #endif
         path += ".ini";
 
         // Check .exe preset folder on Windows, system directory on Unix
         if (!std::filesystem::exists(path)) {
-            path.clear();
 #ifdef _WIN32
             if (GetModuleFileNameA(nullptr, buffer, sizeof(buffer))) {
                 std::filesystem::path exe = buffer;
-                join_paths(path, exe.parent_path().string().c_str(), "presets", preset);
+                path = join_paths(exe.parent_path().string().c_str(), "presets", preset);
             }
 #else
-            join_paths(path, PRESETS_DIR, preset);
+            path = join_paths(PRESETS_DIR, preset);
 #endif
             path += ".ini";
         }
@@ -656,7 +663,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
     output_ok("Found {:L} {}...", nb_directories, nb_directories > 1 ? "directories" : "directory");
     output_ok("Scanning {} for files...", nb_directories > 1 ? "directories" : "directory");
     ScanJob *job;
-    while(directories.size()) {
+    while(!directories.empty()) {
         if ((job = ScanJob::factory(directories.front())))
             jobs.emplace(job);
         directories.pop();
@@ -691,7 +698,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
 
         // Feed jobs to workers
         std::string current_job;
-        if (jobs.size())
+        if (!jobs.empty())
             current_job = jobs.front()->path;
         while (jobs.size()) {
             cv.wait_for(lock, std::chrono::milliseconds(200));
@@ -699,7 +706,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
                 if (thread->place_job(jobs.front())) {
                     jobs.pop();
                     progress.update(current_job);
-                    if (jobs.size())
+                    if (!jobs.empty())
                         current_job = jobs.front()->path;
                     break;
                 }
@@ -720,7 +727,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
 
     // Single threaded scanning
     else {
-        while (jobs.size()) {
+        while (!jobs.empty()) {
             auto &job = jobs.front();
             job->scan();
             job->update_data(data);

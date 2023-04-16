@@ -38,7 +38,6 @@ if (WIN32)
   find_library(LIBAVUTIL avutil REQUIRED)
   find_library(LIBSWRESAMPLE swresample REQUIRED)
   find_path(TAGLIB_INCLUDE_DIR "taglib/id3v2tag.h" REQUIRED)
-  set(TAGLIB_INCLUDE_DIR ${TAGLIB_INCLUDE_DIR}/taglib)
   find_library(TAGLIB tag REQUIRED)
   find_path(LIBEBUR128_INCLUDE_DIR "ebur128.h" REQUIRED)
   find_library(LIBEBUR128 ebur128 REQUIRED)
@@ -51,7 +50,7 @@ if (WIN32)
   find_package(fdk-aac CONFIG REQUIRED)
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
     find_library(ZLIB zlib REQUIRED)
-	set(STATIC_LIBS ${ZLIB} "ws2_32.lib" "secur32.lib" "mfplat.lib" "mfuuid.lib" "strmiids.lib" "bcrypt.lib")
+	set(STATIC_LIBS ${ZLIB} ws2_32.lib secur32.lib mfplat.lib mfuuid.lib strmiids.lib bcrypt.lib)
   endif ()
 
 # Find dependencies - Linux/Mac
@@ -96,10 +95,10 @@ add_subdirectory(src)
 
 # Installation - Windows
 if (WIN32)
-  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION ".")
-  foreach(item "CHANGELOG" "LICENSE")
+  install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION .)
+  foreach(item CHANGELOG LICENSE)
     configure_file("${PROJECT_SOURCE_DIR}/${item}" "${PROJECT_BINARY_DIR}/${item}.txt")
-    install(FILES "${PROJECT_BINARY_DIR}/${item}.txt" DESTINATION ".")
+    install(FILES "${PROJECT_BINARY_DIR}/${item}.txt" DESTINATION .)
   endforeach ()
 
   # Install presets
@@ -108,16 +107,16 @@ if (WIN32)
 	get_filename_component(preset_name ${preset} NAME)
     configure_file(${preset} ${PROJECT_BINARY_DIR}/presets/${preset_name})
   endforeach ()
-  install(DIRECTORY "${PROJECT_BINARY_DIR}/presets" DESTINATION ".")
+  install(DIRECTORY "${PROJECT_BINARY_DIR}/presets" DESTINATION .)
 
   # Copy the Visual C++ runtime DLLs in case user doesn't have them installed
   set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE)
   include(InstallRequiredSystemLibraries)
-  foreach(required_lib "vcruntime140.dll" "vcruntime140_1.dll" "msvcp140.dll")
+  foreach(required_lib vcruntime140.dll vcruntime140_1.dll msvcp140.dll)
     foreach(system_lib ${CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS})
       string(FIND ${system_lib} ${required_lib} found_lib)
       if (NOT found_lib EQUAL -1)
-        install(FILES ${system_lib} DESTINATION ".")
+        install(FILES ${system_lib} DESTINATION .)
       endif ()
     endforeach ()
   endforeach ()
@@ -166,9 +165,7 @@ elseif (UNIX)
           "${PROJECT_SOURCE_DIR}/config/cmake_uninstall.cmake.in"
           "${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
           IMMEDIATE @ONLY)
-
-      add_custom_target(uninstall
-          COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
+      add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
   endif()
 endif()
 

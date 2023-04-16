@@ -100,7 +100,7 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
             extensions.insert(file_type);
         }
     }
-    if (!tracks.size())
+    if (tracks.empty())
         return nullptr;
     file_type = extensions.size() > 1 ? FileType::DEFAULT : *extensions.begin();
     return new ScanJob(path.string(), std::move(tracks), get_config(file_type));
@@ -118,7 +118,7 @@ ScanJob* ScanJob::factory(char **files, int nb_files, const Config &config)
         else 
             tracks.emplace_back(path.string(), file_type);
     }
-    if (!tracks.size())
+    if (tracks.empty())
         return nullptr;
     return new ScanJob("", std::move(tracks), config);
 }
@@ -438,14 +438,14 @@ void ScanJob::calculate_loudness()
     if (config.clip_mode != 'n') {
         double t_new_peak; // Track peak after application of gain
         double a_new_peak; // Album peak after application of gain
-        double max_peak = pow(10.0, config.max_peak_level / 20.f);
+        double max_peak = pow(10.0, config.max_peak_level / 20.0);
 
         // Track clipping
         for (Track &track : tracks) {
-            if (config.clip_mode == 'a' || (config.clip_mode == 'p' && (track.result.track_gain > 0.f))) {
-                t_new_peak = pow(10.0, track.result.track_gain / 20.f) * track.result.track_peak;
+            if (config.clip_mode == 'a' || (config.clip_mode == 'p' && (track.result.track_gain > 0.0))) {
+                t_new_peak = pow(10.0, track.result.track_gain / 20.0) * track.result.track_peak;
                 if (t_new_peak > max_peak) {
-                    double adjustment = 20.f * log10(t_new_peak / max_peak);
+                    double adjustment = 20.0 * log10(t_new_peak / max_peak);
                     if (config.clip_mode == 'p' && adjustment > track.result.track_gain)
                         adjustment = track.result.track_gain;
                     track.result.track_gain -= adjustment;
@@ -457,10 +457,10 @@ void ScanJob::calculate_loudness()
         // Album clipping
         double album_gain = tracks[0].result.album_gain;
         double album_peak = tracks[0].result.album_peak;
-        if (config.do_album && (config.clip_mode == 'a' || (config.clip_mode == 'p' && album_gain > 0.f))) {
-            a_new_peak = pow(10.0, album_gain / 20.f) * album_peak;
+        if (config.do_album && (config.clip_mode == 'a' || (config.clip_mode == 'p' && album_gain > 0.0))) {
+            a_new_peak = pow(10.0, album_gain / 20.0) * album_peak;
             if (a_new_peak > max_peak) {
-                double adjustment = 20.f * log10(a_new_peak / max_peak);
+                double adjustment = 20.0 * log10(a_new_peak / max_peak);
                 if (config.clip_mode == 'p' && adjustment > album_gain)
                     adjustment = album_gain;
                 for (Track &track : tracks) {

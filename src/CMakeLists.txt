@@ -1,4 +1,10 @@
-set(SOURCE_FILES "rsgain.cpp" "scan.cpp" "output.cpp" "tag.cpp" "easymode.cpp")
+set(SOURCE_FILES 
+  rsgain.cpp
+  scan.cpp
+  output.cpp
+  tag.cpp
+  easymode.cpp
+)
 if (WIN32)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES} "${PROJECT_BINARY_DIR}/rsgain.manifest" "${PROJECT_BINARY_DIR}/versioninfo.rc")
   target_compile_options(${EXECUTABLE_TITLE} PUBLIC "/Zc:preprocessor")
@@ -40,12 +46,8 @@ elseif (UNIX)
     PkgConfig::LIBEBUR128
     PkgConfig::INIH
     PkgConfig::FMT
+    Threads::Threads
   )
-
-  # GCC 10 requires linking directly with pthread for some reason
-  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 11 OR CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    target_link_libraries(${EXECUTABLE_TITLE} Threads::Threads)
-  endif ()
 endif()
 set (EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 
