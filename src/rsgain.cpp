@@ -44,7 +44,7 @@ extern "C" {
 #include <libswresample/swresample.h>
 #include <libavutil/avutil.h>
 }
-#include <taglib.h>
+#include <taglib/taglib.h>
 #include <ebur128.h>
 #include <fmt/core.h>
 
