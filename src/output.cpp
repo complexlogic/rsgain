@@ -85,7 +85,7 @@ void ProgressBar::update(int pos)
 
 	if (w != w_prev) {
 		delete buffer;
-		buffer = new char[w + 3];
+		buffer = new char[(unsigned long) (w + 3)];
 	}
 
 	float percent = ((float) pos / (float) len);
@@ -96,8 +96,8 @@ void ProgressBar::update(int pos)
 	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
 		fmt::print(" {:3.0f}% [", percent * 100.f);
-		memset(buffer, '=', c);
-		memset(buffer + c, ' ', w - c);
+		memset(buffer, '=', (size_t) c);
+		memset(buffer + c, ' ', (size_t) (w - c));
 		buffer[w] = ']';
 		buffer[w + 1] = '\r';
 		buffer[w + 2] = '\0';

@@ -109,12 +109,12 @@ class ProgressBar {
 
 class MTProgress {
     private:
-        int total;
+        size_t total;
         int cur = 0;
 
         int utf8_length(std::string_view string);
     
     public:
-        MTProgress(int total) : total(total) {}
+        MTProgress(size_t total) : total(total) {}
         void update(const std::string &path);
 };

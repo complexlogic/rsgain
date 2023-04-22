@@ -82,6 +82,17 @@
 
 using RGTagsArray = std::array<TagLib::String, 7>;
 
+static bool set_mpc_packet_rg(const char *path);
+static bool tag_mp3(ScanJob::Track &track, const Config &config);
+static bool tag_flac(ScanJob::Track &track, const Config &config);
+template<typename T>
+static bool tag_ogg(ScanJob::Track &track, const Config &config);
+static bool tag_mp4(ScanJob::Track &track, const Config &config);
+template <typename T>
+static bool tag_apev2(ScanJob::Track &track, const Config &config);
+static bool tag_wma(ScanJob::Track &track, const Config &config);
+template<typename T>
+static bool tag_riff(ScanJob::Track &track, const Config &config);
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag);
 template<int flags, typename T>
@@ -321,12 +332,13 @@ static bool tag_exists_xiph(const ScanJob::Track &track)
         tag = file.xiphComment();
     else
         tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
-    if (tag)
+    if (tag) {
         ret = tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]);
         if constexpr(std::is_same_v<T, TagLib::Ogg::Opus::File>) {
             if (!ret)
                 ret = tag->contains(R128_STRING[static_cast<int>(R128Tag::TRACK_GAIN)]);
         }
+    }
     return ret;
 }
 
@@ -553,7 +565,7 @@ static void tag_write_id3(TagLib::ID3v2::Tag *tag, const ScanResult &result, con
         config,
         [&](RGTag rg_tag, const TagLib::String &value) {
             auto frame = new TagLib::ID3v2::UserTextIdentificationFrame();
-            frame->setDescription(RG_STRING[static_cast<int>(rg_tag)]);
+            frame->setDescription(RG_STRING[static_cast<size_t>(rg_tag)]);
             frame->setText(value);
             tag->addFrame(frame);
         }
@@ -602,7 +614,7 @@ static void tag_write_xiph(TagLib::Ogg::XiphComment *tag, const ScanResult &resu
         write_rg_tags(result,
             config,
             [&](RGTag rg_tag, const TagLib::String &value) {
-                tag->addField(RG_STRING[static_cast<int>(rg_tag)], value);
+                tag->addField(RG_STRING[static_cast<size_t>(rg_tag)], value);
             }
         );
     }
@@ -626,7 +638,7 @@ static void tag_write_mp4(TagLib::MP4::Tag *tag, const ScanResult &result, const
         config,
         [&](RGTag rg_tag, const TagLib::String &value) {
             TagLib::String tag_name;
-            FORMAT_MP4_TAG(tag_name, RG_STRING[static_cast<int>(rg_tag)]);
+            FORMAT_MP4_TAG(tag_name, RG_STRING[static_cast<size_t>(rg_tag)]);
             tag->setItem(tag_name, TagLib::MP4::Item(value));
         }
     );
@@ -647,7 +659,7 @@ static void tag_write_apev2(TagLib::APE::Tag *tag, const ScanResult &result, con
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const TagLib::String &value) {
-            tag->addValue(RG_STRING[static_cast<int>(rg_tag)], value);
+            tag->addValue(RG_STRING[static_cast<size_t>(rg_tag)], value);
         }
     );
 }
@@ -667,7 +679,7 @@ static void tag_write_asf(TagLib::ASF::Tag *tag, const ScanResult &result, const
     write_rg_tags(result,
         config,
         [&](RGTag rg_tag, const TagLib::String &value) {
-            tag->setAttribute(RG_STRING[static_cast<int>(rg_tag)], value);
+            tag->setAttribute(RG_STRING[static_cast<size_t>(rg_tag)], value);
         }
     );
 }
@@ -678,7 +690,7 @@ bool set_opus_header_gain(const char *path, int16_t gain)
     char buffer[OPUS_HEADER_SIZE]; // 47 bytes
     uint32_t crc;
     if constexpr(std::endian::native == std::endian::big)
-        gain = ((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
+        gain = static_cast<int16_t>((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
     
     // Read header into memory
     std::unique_ptr<std::FILE, decltype(&fclose)> file(fopen(path, "rb+"), fclose);
@@ -713,7 +725,7 @@ static bool set_mpc_packet_rg(const char *path)
     std::unique_ptr<std::FILE, decltype(&fclose)> file(fp, fclose);
 
     fseek(fp, 0L, SEEK_END);
-    size_t nb_bytes = ftell(fp);
+    size_t nb_bytes = static_cast<size_t>(ftell(fp));
     rewind(fp);
 
     // Validate magic number
@@ -740,7 +752,7 @@ static bool set_mpc_packet_rg(const char *path)
             total_bytes_read += fread(length_buffer + length_bytes, 1, 1, fp);
             length_bytes++;
         } while ((length_buffer[length_bytes - 1] & 0x80) && total_bytes_read < nb_bytes && length_bytes < 4);
-        for (int i = 0; i < length_bytes; i++)
+        for (size_t i = 0; i < length_bytes; i++)
             length += (uint32_t) (0x7F & length_buffer[i]) << (7 * (length_bytes - i - 1));
         payload_bytes = length - (2 + length_bytes);
 
@@ -757,7 +769,7 @@ static bool set_mpc_packet_rg(const char *path)
             return true;
         }
         total_bytes_read += payload_bytes;
-        fseek(fp, payload_bytes, SEEK_CUR);
+        fseek(fp, static_cast<long>(payload_bytes), SEEK_CUR);
     }
     return false;
 }

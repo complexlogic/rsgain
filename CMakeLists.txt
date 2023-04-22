@@ -14,6 +14,14 @@ project(rsgain
 
 set(MAXPROGBARWIDTH "0" CACHE STRING "Maximum width of progress bar")
 option(UCHECKMARKS "Enable use of Unicode checkmarks" ON)
+option(EXTRA_WARNINGS "Enable extra compiler warnings" OFF)
+if (EXTRA_WARNINGS)
+  if (MSVC)
+    add_compile_options(/W4 /WX)
+  else ()
+    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
+  endif ()
+endif ()
 
 set(CMAKE_CXX_STANDARD 20)
 set(EXECUTABLE_TITLE "rsgain")

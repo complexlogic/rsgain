@@ -140,7 +140,7 @@ bool parse_id3v2_version(const char *value, int &version)
 bool parse_max_peak_level(const char *value, double &peak)
 {
     char *rest = nullptr;
-    float max_peak = strtod(value, &rest);
+    double max_peak = strtod(value, &rest);
     if (rest == value || !isfinite(max_peak)) {
         output_error("Invalid max peak level '{}'", value);
         return false;
@@ -154,7 +154,7 @@ bool parse_max_peak_level(const char *value, double &peak)
 static void custom_mode(int argc, char *argv[])
 {
     int rc, i;
-    unsigned nb_files   = 0;
+    unsigned int nb_files   = 0;
     opterr = 0;
 
     const char *short_opts = "+ac:m:tl:O::qs:LSI:o:h?";
@@ -188,6 +188,7 @@ static void custom_mode(int argc, char *argv[])
         .clip_mode = 'n',
         .do_album = false,
         .tab_output = OutputType::NONE,
+        .sep_header = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -265,6 +266,7 @@ static void custom_mode(int argc, char *argv[])
             case 'h':
                 help_custom();
                 quit(EXIT_SUCCESS);
+                break;
 
             case '?':
                 if (optopt)
@@ -275,7 +277,7 @@ static void custom_mode(int argc, char *argv[])
         }
     }
 
-    nb_files = argc - optind;
+    nb_files = (unsigned int) (argc - optind);
     if (!nb_files) {
         output_fail("No files were specified");
         quit(EXIT_FAILURE);
@@ -315,10 +317,12 @@ int main(int argc, char *argv[]) {
             case 'h':
                 help_main();
                 quit(EXIT_SUCCESS);
+                break;
 
             case 'v':
                 version();
                 quit(EXIT_SUCCESS);
+                break;
 
             case '?':
                 if (optopt)
@@ -326,6 +330,7 @@ int main(int argc, char *argv[]) {
                 else
                     output_fail("Unrecognized option '{}'", argv[optind - 1] + 2);
                 quit(EXIT_FAILURE);
+                break;
         }
     }
 
@@ -433,7 +438,7 @@ static inline void help_custom() {
 }
 
 static void version() {
-    int ffver;
+    unsigned int ffver;
     int ebur128_v_major = 0;
     int ebur128_v_minor = 0;
     int ebur128_v_patch = 0;

@@ -28,6 +28,9 @@
 #include "output.hpp"
 #include "scan.hpp"
 
+#define MAX_THREAD_SLEEP 30
+#define HELP_STATS(title, format, ...) fmt::print(COLOR_YELLOW "{:<18} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
+
 extern "C" {
     int format_handler(void *user, const char *section, const char *name, const char *value);
     int global_handler(void *user, const char *section, const char *name, const char *value);
@@ -258,7 +261,7 @@ void easy_mode(int argc, char *argv[])
     int rc, i;
     char *preset = nullptr;
     const char *short_opts = "+hqSl:m:p:O::";
-    int threads = 1;
+    unsigned int threads = 1;
     opterr = 0;
 
     static struct option long_opts[] = {
@@ -289,14 +292,14 @@ void easy_mode(int argc, char *argv[])
             
             case 'm':
                 {
-                    int max_threads = std::thread::hardware_concurrency();
+                    unsigned int max_threads = std::thread::hardware_concurrency();
                     if (!max_threads)
                         max_threads = 1;
                     if (MATCH(optarg, "MAX") || MATCH(optarg, "max")) {
                         threads = max_threads;
                     }
                     else {
-                        threads = atoi(optarg);
+                        threads = (unsigned int) (strtoul(optarg, nullptr, 10));
                         if (threads < 1) {
                             output_fail("Invalid multithread argument '{}'", optarg);
                             quit(EXIT_FAILURE);
@@ -382,7 +385,7 @@ static FileType determine_section_type(const std::string &section)
 }
 
 // Callback for INI parser
-int global_handler(void *user, const char *section, const char *name, const char *value)
+int global_handler([[maybe_unused]] void *user, const char *section, const char *name, const char *value)
 {
     if (strcmp(section, "Global"))
         return 0;
@@ -472,7 +475,7 @@ int global_handler(void *user, const char *section, const char *name, const char
     return 0;
 }
 
-int format_handler(void *user, const char *section, const char *name, const char *value)
+int format_handler([[maybe_unused]] void *user, const char *section, const char *name, const char *value)
 {
     FileType file_type = determine_section_type(section);
     if (file_type == FileType::INVALID)
@@ -500,13 +503,13 @@ int format_handler(void *user, const char *section, const char *name, const char
     return 0;
 }
 
-bool join_paths(std::filesystem::path &p)
+inline bool join_paths([[maybe_unused]] std::filesystem::path &p)
 {
     return true;
 }
 
 template<typename... Args>
-bool join_paths(std::filesystem::path &path, const char *first, const Args&... args)
+inline bool join_paths(std::filesystem::path &path, const char *first, const Args&... args)
 {
     if (!first)
         return false;
@@ -515,7 +518,7 @@ bool join_paths(std::filesystem::path &path, const char *first, const Args&... a
 }
 
 template<typename... Args>
-std::filesystem::path join_paths(const char *first, const Args&... args)
+inline std::filesystem::path join_paths(const char *first, const Args&... args)
 {    
     if (!first)
         return std::filesystem::path();
@@ -628,7 +631,7 @@ bool WorkerThread::wait()
     return true;
 }
 
-void scan_easy(const char *directory, const char *preset, int nb_threads)
+void scan_easy(const char *directory, const char *preset, size_t nb_threads)
 {
     std::filesystem::path path(directory);
     std::queue<std::unique_ptr<ScanJob>> jobs;
@@ -659,7 +662,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
         if (entry.is_directory())
             directories.emplace(entry.path());
     }
-    int nb_directories = directories.size();
+    size_t nb_directories = directories.size();
     output_ok("Found {:L} {}...", nb_directories, nb_directories > 1 ? "directories" : "directory");
     output_ok("Scanning {} for files...", nb_directories > 1 ? "directories" : "directory");
     ScanJob *job;
@@ -668,7 +671,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
             jobs.emplace(job);
         directories.pop();
     }
-    int nb_jobs = jobs.size();
+    size_t nb_jobs = jobs.size();
     if (nb_threads > nb_jobs)
         nb_threads = nb_jobs;
 
@@ -683,7 +686,7 @@ void scan_easy(const char *directory, const char *preset, int nb_threads)
 
         // Spawn worker threads
         output_ok("Scanning with {} threads...", nb_threads);
-        for (int i = 0; i < nb_threads; i++) {
+        for (size_t i = 0; i < nb_threads; i++) {
             progress.update(jobs.front()->path);
             threads.emplace_back(std::make_unique<WorkerThread>(
                 jobs.front(),

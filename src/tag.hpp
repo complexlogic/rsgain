@@ -32,20 +32,9 @@
 
 #include "scan.hpp"
 
-#define GAIN_TO_Q78(gain) (int) std::round(gain * 256.0)
+#define GAIN_TO_Q78(gain) static_cast<int16_t>(std::round(gain * 256.0))
 
 void tag_track(ScanJob::Track &track, const Config &config);
 bool tag_exists(const ScanJob::Track &track);
 bool set_opus_header_gain(const char *path, int16_t gain);
-static bool set_mpc_packet_rg(const char *path);
 
-static bool tag_mp3(ScanJob::Track &track, const Config &config);
-static bool tag_flac(ScanJob::Track &track, const Config &config);
-template<typename T>
-static bool tag_ogg(ScanJob::Track &track, const Config &config);
-static bool tag_mp4(ScanJob::Track &track, const Config &config);
-template <typename T>
-static bool tag_apev2(ScanJob::Track &track, const Config &config);
-static bool tag_wma(ScanJob::Track &track, const Config &config);
-template<typename T>
-static bool tag_riff(ScanJob::Track &track, const Config &config);

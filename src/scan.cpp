@@ -32,6 +32,7 @@
 
 #include <mutex>
 #include <thread>
+#include <vector>
 #include <unordered_set>
 #include <algorithm>
 #include <filesystem>
@@ -106,12 +107,12 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     return new ScanJob(path.string(), std::move(tracks), get_config(file_type));
 }
 
-ScanJob* ScanJob::factory(char **files, int nb_files, const Config &config)
+ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
 {
     FileType file_type;
     std::filesystem::path path;
     std::vector<Track> tracks;
-    for (int i = 0; i < nb_files; i++) {
+    for (size_t i = 0; i < nb_files; i++) {
         path = files[i];
         if ((file_type = determine_filetype(path.extension().string())) == FileType::INVALID)
             output_error("File '{}' is not of a supported type", files[i]);
@@ -136,7 +137,7 @@ bool ScanJob::scan(std::mutex *ffmpeg_mutex)
             std::vector<int> existing;
             for (auto track = tracks.rbegin(); track != tracks.rend(); ++track) {
                 if (tag_exists(*track))
-                    existing.push_back(tracks.rend() - track - 1);
+                    existing.push_back(static_cast<int>(tracks.rend() - track - 1));
             }
             size_t nb_exists = existing.size();
             if (nb_exists) {
@@ -320,7 +321,10 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
-    ebur128 = ebur128_init(nb_channels, codec_ctx->sample_rate, EBUR128_MODE_I | peak_mode);
+    ebur128 = ebur128_init((unsigned int) nb_channels,
+        (unsigned long) codec_ctx->sample_rate,
+        EBUR128_MODE_I | peak_mode
+    );
     if (!ebur128) {
         output_error("Could not initialize libebur128 scanner");
         goto end;
@@ -345,8 +349,10 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             output_progress = false;
         else {
             if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
-                start = format_ctx->streams[stream_id]->start_time * av_q2d(format_ctx->streams[stream_id]->time_base);
-            len  = format_ctx->streams[stream_id]->duration * av_q2d(format_ctx->streams[stream_id]->time_base);
+                start = (int) std::round((double) (format_ctx->streams[stream_id]->start_time) 
+                                         * av_q2d(format_ctx->streams[stream_id]->time_base));
+            len = (int) std::round((double) (format_ctx->streams[stream_id]->duration) 
+                                   * av_q2d(format_ctx->streams[stream_id]->time_base));
             if (len > 0)
                 progress_bar.begin(start, len);
         }
@@ -356,7 +362,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         if (packet->stream_index == stream_id) {
             if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
                 while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
-                    pos = frame->pkt_dts*av_q2d(format_ctx->streams[stream_id]->time_base);
+                    pos = (int) std::round((double) (frame->pkt_dts) 
+                                           * av_q2d(format_ctx->streams[stream_id]->time_base));
 #if OLD_CHANNEL_LAYOUT
                     if (frame->channels == nb_channels) {
 #else
@@ -364,12 +371,14 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 #endif
                         // Convert audio format with libswresample if necessary
                         if (swr) {
-                            size_t out_size = av_samples_get_buffer_size(nullptr, 
-                                                nb_channels, 
-                                                frame->nb_samples, 
-                                                OUTPUT_FORMAT, 
-                                                0
-                                            );
+                            size_t out_size = static_cast<size_t>(
+                                av_samples_get_buffer_size(nullptr, 
+                                    nb_channels, 
+                                    frame->nb_samples, 
+                                    OUTPUT_FORMAT, 
+                                    0
+                                )
+                            );
                             swr_out_data[0] = (uint8_t*) av_malloc(out_size);
                             if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
                                 output_error("Could not convert audio frame");
@@ -377,13 +386,13 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                                 goto end;
                             }
 
-                            ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], frame->nb_samples);
+                            ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], static_cast<size_t>(frame->nb_samples));
                             av_free(swr_out_data[0]);
                         }
 
                         // Audio is already in correct format
                         else
-                            ebur128_add_frames_short(ebur128, (short*) frame->data[0], frame->nb_samples);
+                            ebur128_add_frames_short(ebur128, (short*) frame->data[0], static_cast<size_t>(frame->nb_samples));
 
                         if (output_progress && pos >= 0)
                             progress_bar.update(pos);
@@ -506,7 +515,7 @@ void ScanJob::tag_tracks()
             fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
             fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
             fmt::print(stream, "{}\n", track.tclip ? "Y" : "N");
-            if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+            if (config.do_album && (static_cast<size_t>(&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print(stream, "{}\t", "Album");
                 fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
                 fmt::print(stream, "{:.2f}\t", track.result.album_gain);
@@ -528,7 +537,7 @@ void ScanJob::tag_tracks()
                 track.tclip ? " (adjusted to prevent clipping)" : ""
             );
 
-            if (config.do_album && ((&track - &tracks[0]) == (nb_files - 1))) {
+            if (config.do_album && (static_cast<size_t>(&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print("\nAlbum:\n");
                 fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
                 fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
@@ -597,10 +606,10 @@ bool ScanJob::Track::calculate_loudness(const Config &config)
 void ScanJob::calculate_album_loudness() 
 {
     double album_loudness, album_peak;
-    int nb_states = tracks.size();
+    size_t nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
     for (const Track &track : tracks)
-        states[&track - &tracks[0]] = track.ebur128.get();
+        states[static_cast<size_t>(&track - &tracks[0])] = track.ebur128.get();
 
     if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
         album_loudness = config.target_loudness;
