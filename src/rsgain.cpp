@@ -422,6 +422,8 @@ static inline void help_custom() {
     CMD_CONT("This is non-standard but sometimes needed");
     CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF (default)");
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
+    CMD_HELP("--id3v2-version=keep", "-I keep", "Keep file's existing ID3v2 version, 3 if none exists");
+
 
     fmt::print("\n");
 
