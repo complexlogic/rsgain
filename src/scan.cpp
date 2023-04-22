@@ -137,7 +137,7 @@ bool ScanJob::scan(std::mutex *ffmpeg_mutex)
             std::vector<int> existing;
             for (auto track = tracks.rbegin(); track != tracks.rend(); ++track) {
                 if (tag_exists(*track))
-                    existing.push_back(static_cast<int>(tracks.rend() - track - 1));
+                    existing.push_back((int) (tracks.rend() - track - 1));
             }
             size_t nb_exists = existing.size();
             if (nb_exists) {
@@ -349,9 +349,9 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             output_progress = false;
         else {
             if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
-                start = (int) std::round((double) (format_ctx->streams[stream_id]->start_time) 
+                start = (int) std::round((double) (format_ctx->streams[stream_id]->start_time)
                                          * av_q2d(format_ctx->streams[stream_id]->time_base));
-            len = (int) std::round((double) (format_ctx->streams[stream_id]->duration) 
+            len = (int) std::round((double) (format_ctx->streams[stream_id]->duration)
                                    * av_q2d(format_ctx->streams[stream_id]->time_base));
             if (len > 0)
                 progress_bar.begin(start, len);
@@ -372,10 +372,10 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                         // Convert audio format with libswresample if necessary
                         if (swr) {
                             size_t out_size = static_cast<size_t>(
-                                av_samples_get_buffer_size(nullptr, 
-                                    nb_channels, 
-                                    frame->nb_samples, 
-                                    OUTPUT_FORMAT, 
+                                av_samples_get_buffer_size(nullptr,
+                                    nb_channels,
+                                    frame->nb_samples,
+                                    OUTPUT_FORMAT,
                                     0
                                 )
                             );
@@ -515,7 +515,7 @@ void ScanJob::tag_tracks()
             fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
             fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
             fmt::print(stream, "{}\n", track.tclip ? "Y" : "N");
-            if (config.do_album && (static_cast<size_t>(&track - &tracks[0]) == (nb_files - 1))) {
+            if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print(stream, "{}\t", "Album");
                 fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
                 fmt::print(stream, "{:.2f}\t", track.result.album_gain);
@@ -537,7 +537,7 @@ void ScanJob::tag_tracks()
                 track.tclip ? " (adjusted to prevent clipping)" : ""
             );
 
-            if (config.do_album && (static_cast<size_t>(&track - &tracks[0]) == (nb_files - 1))) {
+            if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print("\nAlbum:\n");
                 fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
                 fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
@@ -609,7 +609,7 @@ void ScanJob::calculate_album_loudness()
     size_t nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
     for (const Track &track : tracks)
-        states[static_cast<size_t>(&track - &tracks[0])] = track.ebur128.get();
+        states[(size_t) (&track - &tracks[0])] = track.ebur128.get();
 
     if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
         album_loudness = config.target_loudness;

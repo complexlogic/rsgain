@@ -404,16 +404,19 @@ static bool tag_mp3(ScanJob::Track &track, const Config &config)
 {
     TagLib::MPEG::File file(track.path.c_str());
     TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
+    unsigned int id3v2version = config.id3v2version;
+    if (id3v2version == ID3V2_KEEP)
+        id3v2version = tag->isEmpty() ? 3: tag->header()->majorVersion();
     tag_clear_id3(tag);
     if (config.tag_mode == 'i')
         tag_write_id3(tag, track.result, config);
 
 #if TAGLIB_VERSION < 11200
-    return file.save(TagLib::MPEG::File::ID3v2, false, config.id3v2version);
+    return file.save(TagLib::MPEG::File::ID3v2, false, id3v2version);
 #else
     return file.save(TagLib::MPEG::File::ID3v2, 
         TagLib::File::StripTags::StripNone,
-        config.id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
+        id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
     );
 #endif
 }
@@ -503,17 +506,20 @@ static bool tag_riff(ScanJob::Track &track, const Config &config)
         tag = file.ID3v2Tag();
     else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
         tag = file.tag();
+    unsigned int id3v2version = config.id3v2version;
+    if (id3v2version == ID3V2_KEEP)
+        id3v2version = tag->isEmpty() ? 3: tag->header()->majorVersion();
     tag_clear_id3(tag);
     if (config.tag_mode == 'i')
         tag_write_id3(tag, track.result, config);
 
     if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
 #if TAGLIB_VERSION < 11200
-        return file.save(T::AllTags, false, config.id3v2version);
+        return file.save(T::AllTags, false, id3v2version);
 #else
         return file.save(T::AllTags,
             TagLib::File::StripTags::StripNone,
-            config.id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
+            id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
         );
 #endif
     else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>) 

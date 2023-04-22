@@ -126,15 +126,21 @@ bool parse_mode(const char *name, const char *valid_modes, const char *value, ch
     return false;
 }
 
-bool parse_id3v2_version(const char *value, int &version)
+bool parse_id3v2_version(const char *value, unsigned int &version)
 {
-    int id3v2version = atoi(value);
-    if (!(id3v2version == 3) && !(id3v2version == 4)) {
-        output_error("Invalid ID3v2 version '{}'; only 3 and 4 are supported.", value);
-        return false;
+    if (MATCH(value, "keep")) {
+        version = ID3V2_KEEP;
+        return true;
     }
-    version = id3v2version;
-    return true;
+    else {
+        unsigned int id3v2version = (unsigned int) strtoul(value, nullptr, 10);
+        if (!(id3v2version == 3) && !(id3v2version == 4)) {
+            output_error("Invalid ID3v2 version '{}'; only 'keep', '3', and '4' are supported.", value);
+            return false;
+        }
+        version = id3v2version;
+        return true;
+    }
 }
 
 bool parse_max_peak_level(const char *value, double &peak)

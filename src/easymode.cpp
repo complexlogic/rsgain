@@ -455,7 +455,7 @@ int global_handler([[maybe_unused]] void *user, const char *section, const char 
             quit(EXIT_FAILURE);
     }
     else if (MATCH(name, "ID3v2Version")) {
-        int id3v2version;
+        unsigned int id3v2version;
         if (parse_id3v2_version(value, id3v2version)) {
             for (Config &config : configs)
                 config.id3v2version = id3v2version;

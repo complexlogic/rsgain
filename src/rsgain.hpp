@@ -11,6 +11,7 @@
 #define MIN_TARGET_LOUDNESS -30
 
 #define RG_TARGET_LOUDNESS -18.0
+#define ID3V2_KEEP 0
 
 enum class OutputType{
 	NONE,
@@ -29,7 +30,7 @@ struct Config {
 	OutputType tab_output;
 	bool sep_header;
 	bool lowercase;
-	int id3v2version;
+	unsigned int id3v2version;
 	char opus_mode;
 };
 
@@ -41,5 +42,5 @@ bool parse_mode(const char *name, const char *valid_modes, const char *value, ch
 #define parse_clip_mode(value, mode) parse_mode("clip", "npa", value, mode)
 #define parse_opus_mode(value, mode) parse_mode("Opus", "drta", value, mode)
 bool parse_target_loudness(const char *value, double &target_loudness);
-bool parse_id3v2_version(const char *value, int &version);
+bool parse_id3v2_version(const char *value, unsigned int &version);
 bool parse_max_peak_level(const char *value, double &peak);
