@@ -52,14 +52,14 @@ jobs:
         with: { committish: 4f9d25a7f299db656c376af402637819ee2caba0 }
 
       - name: Setup Overlays
-        run: |
-          mkdir build
-          mkdir build/overlays
-          git clone -b rsgain --depth 1 https://github.com/complexlogic/vcpkg build/overlays
+        uses: actions/checkout@v3
+        with:
+          repository: complexlogic/vcpkg
+          ref: refs/heads/rsgain
+          path: build/overlays
 
       - name: Configure
-        run: cmake 
-               -B build 
+        run: cmake -S . -B build 
                -G "${{env.CMAKE_GENERATOR}}" 
                -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
                -DVCPKG_OVERLAY_PORTS=build/overlays/ports
@@ -101,7 +101,7 @@ jobs:
             package_ext: .deb
 
           - name: Fedora
-            docker_image: fedora:36
+            docker_image: fedora:38
             package_type: RPM
             package_ext: .rpm
 
@@ -134,8 +134,7 @@ jobs:
           cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
 
       - name: Configure
-        run: cmake 
-               -B build 
+        run: cmake -S . -B build 
                -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
                -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
                -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
@@ -183,8 +182,7 @@ jobs:
           brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config || true
 
       - name: Configure
-        run: cmake 
-               -B build 
+        run: cmake -S . -B build 
                -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
                -DCMAKE_INSTALL_PREFIX=/usr
 

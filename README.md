@@ -80,7 +80,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 
 #### Fedora
 
-A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 36 and later:
+A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 38.
 
 ```bash
 sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.2.1/rsgain-3.2.1-1.x86_64.rpm
