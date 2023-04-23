@@ -1,4 +1,4 @@
-Unreleased
+v3.3 (2023-04-23)
 - New -I mode 'keep' detects the file's existing ID3v2 version, and preserves it
   - Less disruptive to files, less prone to data loss as TagLib sometimes discards frames when converting between ID3v2 versions.
   - Will be made the default mode in a future release
