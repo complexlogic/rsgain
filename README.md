@@ -31,7 +31,11 @@ Download the ZIP file from the link below and extract its contents to a folder o
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
-It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. In the Windows taskbar search, type "env", then select "Edit the system environment variables". In the resulting window, click the "Environment variables" button. In the next window under "System variables", select "Path", then press Edit. Add the folder that you extracted `rsgain.exe` to in the previous step.
+It is recommended to add the directory to your `Path` system environment variable so you can invoke the program with the `rsgain` command instead of the path to its .exe file. 
+1. Use Windows key + R to bring up the run box, then type `sysdm.cpl` and press enter
+2. In the resulting window in the "Advanced" tab, click the "Environment variables" button. 
+3. In the next window under "System variables", select "Path", then press "Edit".
+4. Add the folder that you extracted `rsgain.exe` to.
 
 #### Scoop
 
@@ -65,8 +69,6 @@ An amd64 .deb package is provided on the [release page](https://github.com/compl
 wget https://github.com/complexlogic/rsgain/releases/download/v3.2.1/rsgain_3.2.1_amd64.deb
 sudo apt install ./rsgain_3.2.1_amd64.deb
 ```
-
-This package contains a statically linked taglib version 1.12, which is needed to avoid a very critical bug that corrupted Ogg files in 1.11, which is the current version in the Debian/Ubuntu repos. It is strongly recommended for Debian/Ubuntu users to install this package instead of build from source.
 
 #### Arch/Manjaro
 
@@ -127,7 +129,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 | Wavpack                              | .wv                         |
 | Windows Media Audio (WMA)            | .wma                        |
 
-1. *Support for HE-AAC and xHE-AAC are available via the Fraunhofer AAC library. On Windows, the statically-linked FFmpeg already includes support, so no further action is required. On Unix platforms, you will need to check if your build of FFmpeg was complied with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
+1. *Support for HE-AAC and xHE-AAC are available via the Fraunhofer AAC library. On Windows, the statically-linked FFmpeg already includes support, so no further action is required. On Unix platforms, you will need to check if your build of FFmpeg was compiled with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
 2. *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
 
 ## Usage
@@ -138,7 +140,7 @@ Legacy ReplayGain tagging utilities such as mp3gain did not support recursive di
 
 rsgain's Easy Mode *is* that wrapper script; the functionality is built-in to the program. In Easy Mode, the user points the program to their library and it will be recursively scanned with all recommended settings enabled by default.
 
-The legacy-style interface has been retained as "Custom Mode" for users that require a higher level of control.
+The legacy-style interface has been retained as "Custom Mode" for users that require a higher level of control. Custom Mode is mostly used for scripting.
 
 ### Easy Mode
 
@@ -177,7 +179,11 @@ This feature merely checks for the *existence* of the tags, and does not verify 
 
 #### Logging
 
-You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application such as Microsoft Excel or LibreOffice Calc.
+You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application.
+
+##### Microsoft Excel
+
+Microsoft Excel doesn't recognize the tab delimiter in CSV files by default. To enable Excel compatibility, rsgain has an option `-Os` which will add a `sep` header to the CSV file. This is a non-standard Microsoft extension which will enable the outputted CSV files to open in Excel.
 
 #### Scan Presets
 
@@ -197,12 +203,16 @@ A preset file is an INI-formatted configuration file that contains sections encl
 
 It should be noted that the format-specific configurations will only be applied if *all* files in the directory have the same file type. The Global settings will always be applied to files in directories that have multiple file types in them, regardless of the individual file type
 
-A preset is specified with the `-p` option, followed by the path to a preset file *or* a preset name. A preset name is the filename of a preset without the directory or .ini file extension; rsgain will search the default preset location(s) for the file based on your platform:
+A preset is specified with the `-p` option, followed by the path to a preset file *or* a preset name. A preset name is the filename of a preset without the directory or .ini file extension; rsgain will search the default preset locations for the file based on your platform:
+- In the user's home directory (you will need to create this directory if it doesn't already exist):
+  - Windows: `%USERPROFILE%\.rsgain\presets` (typically `C:\Users\<your username>\.rsgain\presets`)
+  - macOS: `~/Library/rsgain/presets`
+  - Linux: `~/.config/rsgain/presets`
+- System location:
+  - Windows: the folder `presets` in the same folder that contains `rsgain.exe`
+  - macOS/Linux:`<install prefix>/share/rsgain/presets`
 
-- On Windows, the folder `presets` in the same folder that contains `rsgain.exe`
-- On Unix platforms, rsgain will search first in the user home directory: `~/Library/rsgain/presets` on Mac and `~/.config/rsgain/presets` on Linux (you need to create these directories if they don't already exist). If the requested preset name is not found in the home directory, rsgain will search `<install prefix>/share/rsgain/presets`
-
-For example, rsgain ships with a preset `ebur128.ini`, which will scan files based on the EBU R 128 recommendations. You can invoke this preset with `-p ebur128`. rsgain also ships with a preset `default.ini`, which is pre-populated with all of the default settings. This preset is not intended to be used directly, but rather to serve as a base for users to create their own presets. As such, it is not recommended to overwrite it. Instead, save a copy when using it as a base.
+For example, rsgain ships with a preset `ebur128.ini`, which will scan files based on the EBU R 128 recommendations. You can invoke this preset with `-p ebur128`. rsgain also ships with a preset `default.ini`, which is pre-populated with all of the default settings. This preset is not intended to be used directly, but rather to serve as a base for users to create their own presets. It is not recommended for users to overwrite it. Instead, save a copy when using it as a base.
 
 The settings in a preset file are applied in an "overrides" fashion. In other words, any settings or formats you're not interested in can be deleted from the preset and the defaults will be used instead.
 
@@ -241,7 +251,7 @@ This will skip over all files *except* Opus, so you don't waste time scanning fi
 
 ### Custom Mode
 
-Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and other legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. If you want recursive directory-based scanning, you will need to write a wrapper script.
+Custom Mode provides a more complex command line syntax that is similar in nature to mp3gain, loudgain, and other legacy ReplayGain scanners. Only the most basic settings are enabled by default. Unlike Easy Mode, Custom Mode works with files, not directories. Custom Mode is typically used for scripting.
 
 Custom Mode is invoked with `rsgain custom` followed by options and a list of files to scan. For example, scan and tag a short list of MP3 files with album tags enabled:
 
@@ -259,7 +269,7 @@ To install the plugin, navigate to the Options menu in Picard. Select "Plugins" 
 
 You need to set the path to rsgain in the plugin settings. This field is pre-populated with the `rsgain` command. On Unix platforms, programs are typically installed into a directory that's already in your `PATH`, so no further action is necessary in that case. On Windows, you will need to either manually add the folder containing rsgain to your `Path` as per the installation instructions, or use the exact path to `rsgain.exe` in the plugin settings.
 
-To use the plugin, add files to Picard and associate them with a release (so the files are in the right window). The plugin can scan albums or individual tracks. Select one or more albums of tracks, then right click and select "Plugins->Calculate ReplayGain" from the context menu. This calculates the ReplayGain information for the selected items, but does not tag the files. The new tags are available for viewing in the metadata window at the bottom. Click the save button to write the new tags to file.
+To use the plugin, add files to Picard and associate them with a release (so the files are in the right window). The plugin can scan albums or individual tracks. Select one or more albums or tracks, then right click and select "Plugins->Calculate ReplayGain" from the context menu. This calculates the ReplayGain information for the selected items, but does not tag the files. The new tags are available for viewing in the metadata window at the bottom. Click the save button to write the new tags to file.
 
 ## Design Philosophy
 
@@ -297,7 +307,7 @@ The table below gives a brief summary of the target loudness levels used by vari
 | --------------- | ------------------------------------------ |
 | -14 LUFS        | Spotify, YouTube Music, Amazon Prime Music |
 | -16 LUFS        | Apple Music                                |
-| -18 LUFS        | ReplayGain                                 |
+| -18 LUFS        | ReplayGain 2.0                             |
 | -23 LUFS        | European Broadcasting Union (EBU)          |
 
 ### Sample Peak vs. True Peak
@@ -350,7 +360,7 @@ To handle the complexity, rsgain has a Opus Mode setting with a 4 choice charact
 
 Note the the `r` mode does not set the target loudness to -23 LUFS as specified in RFC 7845. You will need to use the separate target loudness setting to do so.
 
-Since rsgain is a *ReplayGain* scanner, the `d` mode is the default, even though the ReplayGain standard conflicts with RFC 7845. In my opinion, the authors of RFC 7845 totally overstepped their authority by specifying a format-specific loudness normalization method. Particularly egregious is the specification of a target loudness level. There is no one-size-fits-all solution for target loudness. The best value depends on the dynamic range of your music, which tends to vary by genre. Moreover, most people do not have a music library comprised entirely of a single audio format, so format-specific loudness normalization methods are inappropriate. Having Opus files play back 5 dB quieter than all other file types is ludicrous and defeats the purpose of applying ReplayGain.
+Since rsgain is a *ReplayGain* scanner, the `d` mode is the default, even though the ReplayGain standard conflicts with RFC 7845. In my opinion, the authors of RFC 7845 totally overstepped their authority by specifying a format-specific loudness normalization method. Particularly egregious is the specification of a target loudness level. There is no one-size-fits-all solution for target loudness. The best value depends on the dynamic range of your music, which tends to vary by genre. Moreover, most people do not have a music library comprised entirely of a single audio format, so format-specific loudness normalization methods are inappropriate. Having Opus files play back 5 dB quieter than all other file types defeats the purpose of applying ReplayGain.
 
 If you do wish to write tags that are fully compliant to RFC 7845 instead of ReplayGain, use a [scan preset](#scan-presets) as follows:
 

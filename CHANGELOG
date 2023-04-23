@@ -1,6 +1,14 @@
 Unreleased
-- Added -O 's' option to write sep header to CSV output for Microsoft Excel compatibility
-- Windows: Search for Easy Mode presets in a default user directory similar to macOS and Linux
+- New -I mode 'keep' detects the file's existing ID3v2 version, and preserves it
+  - Less disruptive to files, less prone to data loss as TagLib sometimes discards frames when converting between ID3v2 versions.
+  - Will be made the default mode in a future release
+- Handle file extensions case insensitively when determining file type
+- When removing ReplayGain tags from ID3 formats, also remove legacy RVAD and RVA2 ("Relative Volume Adjustment") frames which conflict with ReplayGain
+- Fix segfault caused by unusual file durations
+- Added -O 's' mode to write sep header to CSV output for Microsoft Excel compatibility.
+  - Mode argument for -O is optional to maintain backwards compatibility
+- Windows: Search for Easy Mode presets in a default user directory similar to the macOS and Linux versions
+- Windows: Upgrade to FFmpeg 6
 
 v3.2.1 (2023-02-26)
 - Fix minor bug with Easy Mode statistics output
