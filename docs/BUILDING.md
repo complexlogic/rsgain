@@ -2,7 +2,7 @@
 
 rsgain builds natively on Unix and Windows, and features a cross-platform CMake build system. The following external dependencies are required:
 
-- libebur128
+- [libebur128](https://github.com/jiixyj/libebur128) or [ebur128](https://github.com/sdroege/ebur128)
 - taglib
 - FFmpeg, specifically the libraries:
     + libavformat
@@ -53,7 +53,7 @@ brew install libebur128 taglib ffmpeg fmt inih
 ### FreeBSD (Packages)
 
 ```bash
-pkg install libebur128 taglib libfmt inih ffmpeg
+pkg install ebur128 taglib libfmt inih ffmpeg
 ```
 
 ### Building
