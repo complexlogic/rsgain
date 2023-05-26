@@ -438,6 +438,8 @@ void ScanJob::calculate_loudness()
         else
             ++track;
     }
+    if (tracks.empty())
+        return;
 
     // Album loudness calculations
     if (config.do_album)
@@ -483,6 +485,8 @@ void ScanJob::calculate_loudness()
 
 void ScanJob::tag_tracks()
 {
+    if (tracks.empty())
+        return;
     std::FILE *stream = nullptr;
     if (config.tab_output != OutputType::NONE) {
         if (config.tab_output == OutputType::FILE) {
