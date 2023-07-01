@@ -1,4 +1,4 @@
-FROM debian
+FROM debian:bullseye
 
 ARG VERSION=3.3 \
     ARCH=amd64
