@@ -52,6 +52,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -68,6 +69,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -84,6 +86,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -100,6 +103,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -116,6 +120,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -132,6 +137,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -148,6 +154,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -164,6 +171,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -180,6 +188,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -196,6 +205,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -212,6 +222,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -228,6 +239,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -244,6 +256,7 @@ static Config configs[] = {
         .do_album = true,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -320,13 +333,10 @@ void easy_mode(int argc, char *argv[])
 
             case 'O':
                 if (optarg) {
-                    if (*optarg == 's') {
-                        for (Config &config : configs)
-                            config.sep_header = true;
-                    }
-                    else {
-                        output_fail("Unrecognized output argument '{}'", optarg);
-                        quit(EXIT_FAILURE);
+                    const auto& [sep_header, sort_alphanum] = parse_output_mode(optarg);
+                    for (Config &config : configs) {
+                        config.sep_header = sep_header;
+                        config.sort_alphanum = sort_alphanum;
                     }
                 }
                 for (Config &config : configs)
@@ -792,6 +802,7 @@ static inline void help_easy() {
     CMD_HELP("--preset=s", "-p s", "Load scan preset s");
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
+    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order.\n");
 
     fmt::print("\n");
 

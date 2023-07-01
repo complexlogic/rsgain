@@ -29,6 +29,7 @@ struct Config {
 	bool do_album;
 	OutputType tab_output;
 	bool sep_header;
+	bool sort_alphanum;
 	bool lowercase;
 	unsigned int id3v2version;
 	char opus_mode;
@@ -44,3 +45,4 @@ bool parse_mode(const char *name, const char *valid_modes, const char *value, ch
 bool parse_target_loudness(const char *value, double &target_loudness);
 bool parse_id3v2_version(const char *value, unsigned int &version);
 bool parse_max_peak_level(const char *value, double &peak);
+std::pair<bool, bool> parse_output_mode(const std::string_view arg);

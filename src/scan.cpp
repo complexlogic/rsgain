@@ -506,6 +506,8 @@ void ScanJob::tag_tracks()
     // Tag the files
     bool tab_output = config.tab_output != OutputType::NONE && stream != nullptr;
     bool human_output = !multithread && !quiet && config.tag_mode != 'd';
+    if (config.sort_alphanum)
+        std::sort(tracks.begin(), tracks.end(), [](const auto &a, const auto &b){ return a.path < b.path; });
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
             tag_track(track, config);

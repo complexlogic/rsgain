@@ -156,6 +156,20 @@ bool parse_max_peak_level(const char *value, double &peak)
     return true;
 }
 
+std::pair<bool, bool> parse_output_mode(const std::string_view arg)
+{
+    std::pair<bool, bool> ret(false, false);
+    for (char c : arg) {
+        if (c == 's')
+            ret.first = true;
+        else if (c == 'a')
+            ret.second = true;
+        else
+            output_fail("Unrecognized output argument '{}'", c);
+    }
+    return ret;
+}
+
 // Parse Custom Mode command line arguments
 static void custom_mode(int argc, char *argv[])
 {
@@ -195,6 +209,7 @@ static void custom_mode(int argc, char *argv[])
         .do_album = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
+        .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
         .opus_mode = 'd'
@@ -235,12 +250,9 @@ static void custom_mode(int argc, char *argv[])
             case 'O':
                 config.tab_output = OutputType::STDOUT;
                 if (optarg) {
-                    if (*optarg == 's')
-                        config.sep_header = true;
-                    else {
-                        output_fail("Unrecognized output argument '{}'", optarg);
-                        quit(EXIT_FAILURE);
-                    }
+                    const auto& [sep_header, sort_alphanum] = parse_output_mode(optarg);
+                    config.sep_header = sep_header;
+                    config.sort_alphanum = sort_alphanum;
                 }
                 quiet = 1;
                 break;
@@ -424,7 +436,6 @@ static inline void help_custom() {
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
     CMD_HELP("--id3v2-version=keep", "-I keep", "Keep file's existing ID3v2 version, 3 if none exists");
 
-
     fmt::print("\n");
 
     CMD_HELP("--opus-mode=d", "-o d", "Write standard ReplayGain tags, clear header output gain (default)");
@@ -436,6 +447,7 @@ static inline void help_custom() {
 
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to stdout");
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
+    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order.\n");
 
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
