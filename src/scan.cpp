@@ -515,18 +515,18 @@ void ScanJob::tag_tracks()
         if (tab_output) {
             // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
             fmt::print(stream, "{}\t", std::filesystem::path(track.path).filename().string());
-            fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
+            track.result.track_loudness == -HUGE_VAL ? fmt::print(stream, "-∞\t") : fmt::print(stream, "{:.2f}\t", track.result.track_loudness);
             fmt::print(stream, "{:.2f}\t", track.result.track_gain);
             fmt::print(stream, "{:.6f}\t", track.result.track_peak);
-            fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
+            track.result.track_peak == 0.0 ? fmt::print(stream, "-∞\t") : fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
             fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
             fmt::print(stream, "{}\n", track.tclip ? "Y" : "N");
             if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print(stream, "{}\t", "Album");
-                fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
+                track.result.album_loudness == -HUGE_VAL ? fmt::print(stream, "-∞\t") : fmt::print(stream, "{:.2f}\t", track.result.album_loudness);
                 fmt::print(stream, "{:.2f}\t", track.result.album_gain);
                 fmt::print(stream, "{:.6f}\t", track.result.album_peak);
-                fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
+                track.result.album_peak == 0.0 ? fmt::print(stream, "-∞\t") : fmt::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
                 fmt::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
                 fmt::print(stream, "{}\n", track.aclip ? "Y" : "N");
             }
@@ -535,8 +535,11 @@ void ScanJob::tag_tracks()
         // Human-readable output
         if (human_output) {
             fmt::print("\nTrack: {}\n", track.path);
-            fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.track_loudness);
-            fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.track_peak, 20.0 * log10(track.result.track_peak));
+            fmt::print("  Loudness: {} LUFS\n", track.result.track_loudness == -HUGE_VAL ? "   -∞" : fmt::format("{:8.2f}", track.result.track_loudness));
+            fmt::print("  Peak:     {:8.6f} ({} dB)\n",
+                track.result.track_peak,
+                track.result.track_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", track.result.track_peak, 20.0 * log10(track.result.track_peak))
+            );
             fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                 track.result.track_gain,
                 track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
@@ -545,8 +548,11 @@ void ScanJob::tag_tracks()
 
             if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
                 fmt::print("\nAlbum:\n");
-                fmt::print("  Loudness: {:8.2f} LUFS\n", track.result.album_loudness);
-                fmt::print("  Peak:     {:8.6f} ({:.2f} dB)\n", track.result.album_peak, 20.0 * log10(track.result.album_peak));
+                fmt::print("  Loudness: {} LUFS\n", track.result.album_loudness == -HUGE_VAL ? "   -∞" : fmt::format("{:8.2f}", track.result.album_loudness));
+                fmt::print("  Peak:     {:8.6f} ({} dB)\n",
+                    track.result.album_peak,
+                    track.result.album_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", track.result.album_peak, 20.0 * log10(track.result.album_peak))
+                );
                 fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                     track.result.album_gain,
                     track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
@@ -588,24 +594,29 @@ void ScanJob::update_data(ScanData &data)
 
 bool ScanJob::Track::calculate_loudness(const Config &config) 
 {
-    unsigned channel = 0;
+    unsigned int channel = 0;
     double track_loudness, track_peak;
 
     if (ebur128_loudness_global(ebur128.get(), &track_loudness) != EBUR128_SUCCESS)
         track_loudness = config.target_loudness;
 
-    if (track_loudness == -HUGE_VAL) // Don't bother tagging silent tracks
-        return false;
+    if (track_loudness == -HUGE_VAL) { // Edge case for completely silent tracks
+        result.track_gain = 0.0;
+        result.track_peak = 0.0;
+        result.track_loudness = -HUGE_VAL;
+    }
 
-    std::vector<double> peaks(ebur128->channels);
-    int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
-    for (double &pk : peaks)
-        get_peak(ebur128.get(), channel++, &pk);
-    track_peak = *std::max_element(peaks.begin(), peaks.end());
+    else {
+        std::vector<double> peaks(ebur128->channels);
+        int (*get_peak)(ebur128_state*, unsigned int, double*) = config.true_peak ? ebur128_true_peak : ebur128_sample_peak;
+        for (double &pk : peaks)
+            get_peak(ebur128.get(), channel++, &pk);
+        track_peak = *std::max_element(peaks.begin(), peaks.end());
 
-    result.track_gain           = config.target_loudness - track_loudness;
-    result.track_peak           = track_peak;
-    result.track_loudness       = track_loudness;
+        result.track_gain           = config.target_loudness - track_loudness;
+        result.track_peak           = track_peak;
+        result.track_loudness       = track_loudness;
+    }
     return true;
 }
 
@@ -615,9 +626,10 @@ void ScanJob::calculate_album_loudness()
     size_t nb_states = tracks.size();
     std::vector<ebur128_state*> states(nb_states);
     for (const Track &track : tracks)
-        states[(size_t) (&track - &tracks[0])] = track.ebur128.get();
+        if (track.result.track_loudness != -HUGE_VAL)
+            states.emplace_back(track.ebur128.get());
 
-    if (ebur128_loudness_global_multiple(states.data(), nb_states, &album_loudness) != EBUR128_SUCCESS)
+    if (ebur128_loudness_global_multiple(states.data(), states.size(), &album_loudness) != EBUR128_SUCCESS)
         album_loudness = config.target_loudness;
 
     album_peak = std::max_element(tracks.begin(),

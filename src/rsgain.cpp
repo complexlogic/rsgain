@@ -164,8 +164,10 @@ std::pair<bool, bool> parse_output_mode(const std::string_view arg)
             ret.first = true;
         else if (c == 'a')
             ret.second = true;
-        else
+        else {
             output_fail("Unrecognized output argument '{}'", c);
+            quit(EXIT_FAILURE);
+        }
     }
     return ret;
 }
