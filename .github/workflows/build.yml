@@ -49,7 +49,7 @@ jobs:
 
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 4a3c366f2d0d0eaf034bfa649124768df7cfe813 }
+        with: { committish: 51de327421f4bd99b828a97b4e4adde54db032a6 }
 
       - name: Setup Overlays
         uses: actions/checkout@v3
@@ -110,7 +110,7 @@ jobs:
 
     env:
       CMAKE_BUILD_TYPE: Release
-      VCPKG_COMMITISH: 4a3c366f2d0d0eaf034bfa649124768df7cfe813
+      VCPKG_COMMITISH: 51de327421f4bd99b828a97b4e4adde54db032a6
       VCPKG_TRIPLET: x64-linux
 
     steps:
