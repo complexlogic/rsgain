@@ -125,6 +125,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 | Musepack (MPC)²                      | .mpc                        |
 | Ogg (Vorbis, Speex, FLAC)            | .ogg, .oga, .spx            |
 | Opus                                 | .opus                       |
+| Tom's lossless Audio Kompressor      | .tak                        |
 | Waveform Audio File Format (WAV)     | .wav                        |
 | Wavpack                              | .wv                         |
 | Windows Media Audio (WMA)            | .wma                        |
