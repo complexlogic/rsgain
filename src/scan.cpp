@@ -80,6 +80,7 @@ static FileType determine_filetype(const std::string &extension)
         {".snd",  FileType::AIFF},
         {".wv",   FileType::WAVPACK},
         {".ape",  FileType::APE},
+        {".tak", FileType::APE},
         {".mpc",  FileType::MPC}
     };
 	std::string extensionlower = extension;
