@@ -237,8 +237,9 @@ void tag_track(ScanJob::Track &track, const Config &config)
             if (!tag_apev2<TagLib::WavPack::File>(track, config))
                 tag_error(track);
             break;
-
+            
         case FileType::APE:
+        case FileType::TAK:
             if (!tag_apev2<TagLib::APE::File>(track, config))
                 tag_error(track);
             break;
