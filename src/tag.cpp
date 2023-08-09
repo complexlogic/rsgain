@@ -284,8 +284,9 @@ bool tag_exists(const ScanJob::Track &track)
 
         case FileType::WAVPACK:
             return tag_exists_ape<TagLib::WavPack::File>(track);
-
+            
         case FileType::APE:
+        case FileType::TAK:
             return tag_exists_ape<TagLib::APE::File>(track);
 
         case FileType::MPC:
