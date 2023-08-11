@@ -381,7 +381,7 @@ static void help_main() {
     fmt::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
     fmt::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2),\n");
     fmt::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
-    fmt::print("  WAV (.wav), and AIFF (.aiff, .aif, .snd).\n");
+    fmt::print("  WAV (.wav), AIFF (.aiff, .aif, .snd), and TAK (.tak).\n");
 
     fmt::print("\n");
     fmt::print(COLOR_RED "Options:\n" COLOR_OFF);

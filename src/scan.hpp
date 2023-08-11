@@ -21,6 +21,7 @@ enum class FileType {
     AIFF,
     WAVPACK,
     APE,
+	TAK,
 	MPC
 };
 

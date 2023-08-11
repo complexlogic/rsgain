@@ -245,6 +245,23 @@ static Config configs[] = {
         .opus_mode = 'd'
     },
 
+    // TAK config
+    {
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.0,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .tab_output = OutputType::NONE,
+        .sep_header = false,
+        .sort_alphanum = false,
+        .lowercase = false,
+        .id3v2version = 3,
+        .opus_mode = 'd'
+    },
+    
     // Musepack config
     {
         .tag_mode = 'i',
@@ -388,6 +405,7 @@ static FileType determine_section_type(const std::string &section)
         {"AIFF",     FileType::AIFF},
         {"Wavpack",  FileType::WAVPACK},
         {"APE",      FileType::APE},
+        {"TAK",      FileType::TAK},
         {"Musepack", FileType::MPC}
     };
     auto it = map.find(section);
