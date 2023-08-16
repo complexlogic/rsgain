@@ -96,7 +96,7 @@ jobs:
       matrix:
         config:
           - name: Debian
-            docker_image: debian:bullseye
+            docker_image: debian:bookworm
             package_type: DEB
             package_ext: .deb
 
