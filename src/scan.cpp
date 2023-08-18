@@ -105,7 +105,10 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     if (tracks.empty())
         return nullptr;
     file_type = extensions.size() > 1 ? FileType::DEFAULT : *extensions.begin();
-    return new ScanJob(path.string(), std::move(tracks), get_config(file_type));
+    const Config &config = get_config(file_type);
+    if (config.tag_mode == 'n')
+        return nullptr;
+    return new ScanJob(path.string(), std::move(tracks), config);
 }
 
 ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
