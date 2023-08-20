@@ -63,9 +63,6 @@ void ProgressBar::begin(int start, int len)
 {
 	this->start = start;
 	this->len = len;
-	w_prev = -1;
-	c_prev = -1;
-	pos_prev = -1;
 }
 
 void ProgressBar::update(int pos)
@@ -85,10 +82,10 @@ void ProgressBar::update(int pos)
 
 	if (w != w_prev) {
 		delete buffer;
-		buffer = new char[(unsigned long) (w + 3)];
+		buffer = new char[(size_t) (w + 3)];
 	}
 
-	float percent = ((float) pos / (float) len);
+	float percent = (float) pos / (float) len;
 	c = (int) (percent * (float) w);
 	if (c > w)
 		c = w;

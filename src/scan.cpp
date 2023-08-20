@@ -80,7 +80,7 @@ static FileType determine_filetype(const std::string &extension)
         {".snd",  FileType::AIFF},
         {".wv",   FileType::WAVPACK},
         {".ape",  FileType::APE},
-        {".tak", FileType::TAK},
+        {".tak",  FileType::TAK},
         {".mpc",  FileType::MPC}
     };
 	std::string extensionlower = extension;
@@ -108,7 +108,7 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     const Config &config = get_config(file_type);
     if (config.tag_mode == 'n')
         return nullptr;
-    return new ScanJob(path.string(), std::move(tracks), config);
+    return new ScanJob(path.string(), tracks, config);
 }
 
 ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
@@ -125,7 +125,7 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     }
     if (tracks.empty())
         return nullptr;
-    return new ScanJob("", std::move(tracks), config);
+    return new ScanJob("", tracks, config);
 }
 
 void free_ebur128(ebur128_state *ebur128_state)
@@ -175,11 +175,11 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 {
     ProgressBar progress_bar;
     int rc, stream_id = -1;
-    int start = 0, len = 0, pos = 0;
     uint8_t *swr_out_data[1];
     bool ret = false;
     bool repeat = false;
     int peak_mode;
+    double time_base;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     std::unique_lock<std::mutex> *lk = nullptr;
     ebur128_state *ebur128 = nullptr;
@@ -194,6 +194,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     AVFrame *frame = nullptr;
     SwrContext *swr = nullptr;
     AVFormatContext *format_ctx = nullptr;
+    const AVStream *stream = nullptr;
 
     // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
     // gain with no way to disable. To get the actual loudness of the audio signal,
@@ -208,7 +209,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     if (lk)
         lk->lock();
-    rc = avformat_open_input(&format_ctx, path.c_str(), nullptr, nullptr);
+    rc = avformat_open_input(&format_ctx, fmt::format("file:{}", path).c_str(), nullptr, nullptr);
     if (rc < 0) {
         output_fferror(rc, "Could not open input");
         goto end;
@@ -230,6 +231,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         output_error("Could not find audio stream");
         goto end;
     }
+    stream = format_ctx->streams[stream_id];
+    time_base = av_q2d(stream->time_base);
         
     // Initialize the decoder
     do {
@@ -238,7 +241,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             output_error("Could not allocate audio codec context");
             goto end;
         }
-        avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_id]->codecpar);
+        avcodec_parameters_to_context(codec_ctx, stream->codecpar);
         rc = avcodec_open2(codec_ctx, codec, nullptr);
         if (rc < 0) {
             if (!repeat) {
@@ -326,7 +329,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
     ebur128 = ebur128_init((unsigned int) nb_channels,
-        (unsigned long) codec_ctx->sample_rate,
+        (size_t) codec_ctx->sample_rate,
         EBUR128_MODE_I | peak_mode
     );
     if (!ebur128) {
@@ -349,16 +352,13 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     }
 
     if (output_progress) { 
-        if (format_ctx->streams[stream_id]->duration == AV_NOPTS_VALUE)
+        if (stream->duration == AV_NOPTS_VALUE)
             output_progress = false;
         else {
-            if (format_ctx->streams[stream_id]->start_time != AV_NOPTS_VALUE)
-                start = (int) std::round((double) (format_ctx->streams[stream_id]->start_time)
-                                         * av_q2d(format_ctx->streams[stream_id]->time_base));
-            len = (int) std::round((double) (format_ctx->streams[stream_id]->duration)
-                                   * av_q2d(format_ctx->streams[stream_id]->time_base));
-            if (len > 0)
-                progress_bar.begin(start, len);
+            int start = 0;
+            if (stream->start_time != AV_NOPTS_VALUE)
+                start = (int) std::round((double) stream->start_time * time_base);
+            progress_bar.begin(start, (int) std::round((double) stream->duration * time_base));
         }
     }
     
@@ -366,8 +366,6 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         if (packet->stream_index == stream_id) {
             if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
                 while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
-                    pos = (int) std::round((double) (frame->pkt_dts) 
-                                           * av_q2d(format_ctx->streams[stream_id]->time_base));
 #if OLD_CHANNEL_LAYOUT
                     if (frame->channels == nb_channels) {
 #else
@@ -398,8 +396,11 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                         else
                             ebur128_add_frames_short(ebur128, (short*) frame->data[0], static_cast<size_t>(frame->nb_samples));
 
-                        if (output_progress && pos >= 0)
-                            progress_bar.update(pos);
+                        if (output_progress) {
+                            int pos = (int) std::round((double) frame->pts * time_base);
+                            if (pos >= 0)
+                                progress_bar.update(pos);
+                        }
                     }
                     av_frame_unref(frame);
                 }
@@ -433,17 +434,12 @@ end:
 
 void ScanJob::calculate_loudness()
 {
-    // Track loudness calculations
-    for (auto track = tracks.begin(); track != tracks.end();) {
-        if (!track->calculate_loudness(config)) {
-            tracks.erase(track);
-            nb_files--;
-        }
-        else
-            ++track;
-    }
     if (tracks.empty())
         return;
+
+    // Track loudness calculations
+    for (Track &track : tracks)
+        track.calculate_loudness(config);
 
     // Album loudness calculations
     if (config.do_album)
@@ -596,7 +592,7 @@ void ScanJob::update_data(ScanData &data)
     }
 }
 
-bool ScanJob::Track::calculate_loudness(const Config &config) 
+void ScanJob::Track::calculate_loudness(const Config &config)
 {
     unsigned int channel = 0;
     double track_loudness, track_peak;
@@ -604,7 +600,8 @@ bool ScanJob::Track::calculate_loudness(const Config &config)
     if (ebur128_loudness_global(ebur128.get(), &track_loudness) != EBUR128_SUCCESS)
         track_loudness = config.target_loudness;
 
-    if (track_loudness == -HUGE_VAL) { // Edge case for completely silent tracks
+    // Edge case for completely silent tracks
+    if (track_loudness == -HUGE_VAL) {
         result.track_gain = 0.0;
         result.track_peak = 0.0;
         result.track_loudness = -HUGE_VAL;
@@ -617,11 +614,10 @@ bool ScanJob::Track::calculate_loudness(const Config &config)
             get_peak(ebur128.get(), channel++, &pk);
         track_peak = *std::max_element(peaks.begin(), peaks.end());
 
-        result.track_gain           = config.target_loudness - track_loudness;
-        result.track_peak           = track_peak;
-        result.track_loudness       = track_loudness;
+        result.track_gain = config.target_loudness - track_loudness;
+        result.track_peak = track_peak;
+        result.track_loudness = track_loudness;
     }
-    return true;
 }
 
 void ScanJob::calculate_album_loudness() 
@@ -638,7 +634,7 @@ void ScanJob::calculate_album_loudness()
 
     album_peak = std::max_element(tracks.begin(),
                      tracks.end(),
-                     [](const auto &a, const auto &b) {return a.result.track_peak < b.result.track_peak;}
+                     [](const auto &a, const auto &b) { return a.result.track_peak < b.result.track_peak; }
                  )->result.track_peak;
     
     double album_gain = config.target_loudness - album_loudness;

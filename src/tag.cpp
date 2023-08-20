@@ -105,8 +105,8 @@ template<typename T>
 static void tag_write(TagLib::Ogg::XiphComment *tag, const ScanResult &result, const Config &config);
 static void tag_clear(TagLib::MP4::Tag *tag);
 static void tag_write(TagLib::MP4::Tag *tag, const ScanResult &result, const Config &config);
-static void tag_clearv2(TagLib::APE::Tag *tag);
-static void tag_writev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config);
+static void tag_clear(TagLib::APE::Tag *tag);
+static void tag_write(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config);
 static void tag_clear(TagLib::ASF::Tag *tag);
 static void tag_write(TagLib::ASF::Tag *tag, const ScanResult &result, const Config &config);
 
@@ -475,9 +475,9 @@ static bool tag_apev2(ScanJob::Track &track, const Config &config)
 {
     T file(track.path.c_str());
     TagLib::APE::Tag *tag = file.APETag(true);
-    tag_clearv2(tag);
+    tag_clear(tag);
     if (config.tag_mode == 'i')
-        tag_writev2(tag, track.result, config);
+        tag_write(tag, track.result, config);
     if constexpr(!std::is_same_v<T, TagLib::MPC::File>)
         return file.save();
     else {
@@ -663,7 +663,7 @@ static void tag_write(TagLib::MP4::Tag *tag, const ScanResult &result, const Con
     );
 }
 
-static void tag_clearv2(TagLib::APE::Tag *tag)
+static void tag_clear(TagLib::APE::Tag *tag)
 {
     tag_clear_map<RG_TAGS_UPPERCASE>(
         [&](const TagLib::String &t) {
@@ -672,7 +672,7 @@ static void tag_clearv2(TagLib::APE::Tag *tag)
     );
 }
 
-static void tag_writev2(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config)
+static void tag_write(TagLib::APE::Tag *tag, const ScanResult &result, const Config &config)
 {
     const RGTagsArray &RG_STRING = RG_STRING_UPPER;
     write_rg_tags(result,
@@ -712,7 +712,7 @@ bool set_opus_header_gain(const char *path, int16_t gain)
         gain = static_cast<int16_t>((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
     
     // Read header into memory
-    std::unique_ptr<std::FILE, decltype(&fclose)> file(fopen(path, "rb+"), fclose);
+    std::unique_ptr<std::FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
     size_t read = fread(buffer, 1, sizeof(buffer), file.get());
     
     // Make sure we have a valid Ogg/Opus header
@@ -741,7 +741,7 @@ static bool set_mpc_packet_rg(const char *path)
     std::FILE *fp = fopen(path, "rb+");
     if (fp == nullptr)
         return false;
-    std::unique_ptr<std::FILE, decltype(&fclose)> file(fp, fclose);
+    std::unique_ptr<std::FILE, int (*)(FILE*)> file(fp, fclose);
 
     fseek(fp, 0L, SEEK_END);
     size_t nb_bytes = static_cast<size_t>(ftell(fp));

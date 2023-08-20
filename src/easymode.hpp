@@ -35,5 +35,5 @@ class WorkerThread {
 };
 
 void easy_mode(int argc, char *argv[]);
-void scan_easy(const char *directory, const char *preset, size_t nb_threads);
+void scan_easy(const std::filesystem::path &path, const std::filesystem::path &preset, size_t nb_threads);
 const Config& get_config(FileType type);

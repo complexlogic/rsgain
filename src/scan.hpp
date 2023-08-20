@@ -61,7 +61,7 @@ class ScanJob {
 
 			Track(const std::string &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
 			bool scan(const Config &config, std::mutex *ffmpeg_mutex);
-			bool calculate_loudness(const Config &config);
+			void calculate_loudness(const Config &config);
 		};
 
 		std::string path;
@@ -72,7 +72,7 @@ class ScanJob {
 		size_t clipping_adjustments = 0;
 		size_t skipped = 0;
 
-		ScanJob(const std::string &path, std::vector<Track> &&tracks, const Config &config) : path(path), nb_files(tracks.size()), config(config), tracks(std::move(tracks)) {}
+		ScanJob(const std::string &path, std::vector<Track> &tracks, const Config &config) : path(path), nb_files(tracks.size()), config(config), tracks(std::move(tracks)) {}
 		static ScanJob* factory(char **files, size_t nb_files, const Config &config);
 		static ScanJob* factory(const std::filesystem::path &path);
 		bool scan(std::mutex *ffmpeg_mutex = nullptr);

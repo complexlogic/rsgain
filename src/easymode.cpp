@@ -374,7 +374,7 @@ void easy_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
 
-    scan_easy(argv[optind], preset, threads);
+    scan_easy(argv[optind], preset ? preset : std::filesystem::path(), threads);
 }
 
 static bool convert_bool(const char *value, bool &setting)
@@ -531,65 +531,64 @@ int format_handler([[maybe_unused]] void *user, const char *section, const char 
     return 0;
 }
 
-inline bool join_paths([[maybe_unused]] std::filesystem::path &p)
+inline bool join_path([[maybe_unused]] const std::filesystem::path &p)
 {
     return true;
 }
 
 template<typename... Args>
-inline bool join_paths(std::filesystem::path &path, const char *first, const Args&... args)
+inline bool join_path(std::filesystem::path &path, const std::filesystem::path &first, const Args&... args)
 {
-    if (!first)
-        return false;
     path /= first;
-    return join_paths(path, args...);
+    return join_path(path, args...);
 }
 
 template<typename... Args>
-inline std::filesystem::path join_paths(const char *first, const Args&... args)
+inline std::filesystem::path join_paths(const std::filesystem::path &first, const Args&... args)
 {    
-    if (!first)
-        return std::filesystem::path();
     std::filesystem::path path(first);
-    return join_paths(path, args...) ? path : std::filesystem::path();
+    return join_path(path, args...) ? path : std::filesystem::path();
 }
 
-static void load_preset(const char *preset)
+static void load_preset(const std::filesystem::path &preset)
 {
     std::filesystem::path path(preset);
 
     // Find preset file from name
     if (!path.has_extension()) {
+        std::filesystem::path preset_basename(std::move(path));
+        preset_basename += ".ini";
+
         // Check user directory
 #ifdef _WIN32
         char buffer[MAX_PATH];
         if (GetEnvironmentVariableA("USERPROFILE", buffer, sizeof(buffer)))
-            path = join_paths(buffer, "." EXECUTABLE_TITLE, "presets", preset);
+            path = join_paths(buffer, "." EXECUTABLE_TITLE, "presets", preset_basename);
 #else
+        const char* const home = getenv("HOME");
+        if (home)
 #ifdef __APPLE__
-        path = join_paths(getenv("HOME"), "Library", EXECUTABLE_TITLE, "presets", preset);
+            path = join_paths(home, "Library", EXECUTABLE_TITLE, "presets", preset_basename);
 #else
-        path = join_paths(getenv("HOME"), ".config", EXECUTABLE_TITLE, "presets", preset);
+            path = join_paths(home, ".config", EXECUTABLE_TITLE, "presets", preset_basename);
 #endif
 #endif
-        path += ".ini";
 
         // Check .exe preset folder on Windows, system directory on Unix
         if (!std::filesystem::exists(path)) {
 #ifdef _WIN32
             if (GetModuleFileNameA(nullptr, buffer, sizeof(buffer))) {
-                std::filesystem::path exe = buffer;
-                path = join_paths(exe.parent_path().string().c_str(), "presets", preset);
+                std::filesystem::path exe(buffer);
+                path = join_paths(exe.parent_path(), "presets", preset_basename);
             }
 #else
-            path = join_paths(PRESETS_DIR, preset);
+            path = join_paths(PRESETS_DIR, preset_basename);
 #endif
-            path += ".ini";
         }
     }
 
     if (!std::filesystem::exists(path)) {
-        output_error("Could not locate preset '{}'", preset);
+        output_error("Could not locate preset '{}'", preset.string());
         quit(EXIT_FAILURE);
     }
 
@@ -600,7 +599,7 @@ static void load_preset(const char *preset)
         quit(EXIT_FAILURE);
     }
 
-    output_ok("Applying preset '{}'...", preset);
+    output_ok("Applying preset '{}'...", preset.string());
     ini_parse_file(file, global_handler, nullptr);
     rewind(file);
     ini_parse_file(file, format_handler, nullptr);
@@ -659,24 +658,23 @@ bool WorkerThread::wait()
     return true;
 }
 
-void scan_easy(const char *directory, const char *preset, size_t nb_threads)
+void scan_easy(const std::filesystem::path &path, const std::filesystem::path &preset, size_t nb_threads)
 {
-    std::filesystem::path path(directory);
     std::queue<std::unique_ptr<ScanJob>> jobs;
     ScanData data;
 
     // Verify directory exists and is valid
     if (!std::filesystem::exists(path)) {
-        output_fail("Directory '{}' does not exist", directory);
+        output_fail("Directory '{}' does not exist", path.string());
         quit(EXIT_FAILURE);
     }
     else if (!std::filesystem::is_directory(path)) {
-        output_fail("'{}' is not a valid directory", directory);
+        output_fail("'{}' is not a valid directory", path.string());
         quit(EXIT_FAILURE);
     }
 
     // Load scan preset
-    if (preset)
+    if (!preset.empty())
         load_preset(preset);
 
     // Record start time
@@ -731,7 +729,7 @@ void scan_easy(const char *directory, const char *preset, size_t nb_threads)
         std::string current_job;
         if (!jobs.empty())
             current_job = jobs.front()->path;
-        while (jobs.size()) {
+        while (!jobs.empty()) {
             cv.wait_for(lock, std::chrono::milliseconds(200));
             for (auto &thread : threads) {
                 if (thread->place_job(jobs.front())) {
@@ -749,7 +747,7 @@ void scan_easy(const char *directory, const char *preset, size_t nb_threads)
         while (1) {
             for (auto thread = threads.begin(); thread != threads.end();)
                 thread = (*thread)->wait() ? threads.erase(thread) : thread + 1;
-            if (!threads.size())
+            if (threads.empty())
                 break;
             cv.wait_for(lock, std::chrono::milliseconds(200));
         }
@@ -793,9 +791,9 @@ void scan_easy(const char *directory, const char *preset, size_t nb_threads)
     fmt::print("\n");
 
     // Inform user of errors
-    if (data.error_directories.size()) {
+    if (!data.error_directories.empty()) {
         fmt::print(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
-        for (std::string &s : data.error_directories)
+        for (const std::string &s : data.error_directories)
             fmt::print("{}\n", s);
         fmt::print("\n");
     }
@@ -818,9 +816,12 @@ static inline void help_easy() {
     CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--preset=s", "-p s", "Load scan preset s");
+
+    fmt::print("\n");
+
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
-    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
-    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order.\n");
+    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
+    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order");
 
     fmt::print("\n");
 

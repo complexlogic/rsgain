@@ -321,8 +321,8 @@ int main(int argc, char *argv[]) {
     
     const char *short_opts = "+hv?";
     static struct option long_opts[] = {
-        { "help",         no_argument,       nullptr, 'h' },
-        { "version",      no_argument,       nullptr, 'v' },
+        { "help",    no_argument, nullptr, 'h' },
+        { "version", no_argument, nullptr, 'v' },
         { 0, 0, 0, 0 }
     };
     std::locale::global(std::locale(""));
@@ -448,8 +448,8 @@ static inline void help_custom() {
     fmt::print("\n");
 
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to stdout");
-    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility).\n");
-    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order.\n");
+    CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
+    CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order");
 
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
