@@ -73,6 +73,7 @@ static FileType determine_filetype(const std::string &extension)
         {".spx",  FileType::OGG},
         {".opus", FileType::OPUS},
         {".m4a",  FileType::M4A},
+	{".mp4",  FileType::M4A},
         {".wma",  FileType::WMA},
         {".wav",  FileType::WAV},
         {".aiff", FileType::AIFF},
