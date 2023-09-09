@@ -113,8 +113,7 @@ cd build
 Build the dependencies and generate the Visual Studio project files:
 
 ```bash
-git clone https://github.com/microsoft/vcpkg
-cmake .. -DCMAKE_TOOLCHAIN_FILE=".\vcpkg\scripts\buildsystems\vcpkg.cmake" -DVCPKG_OVERLAY_TRIPLETS="..\config\vcpkg_triplets" -DVCPKG_TARGET_TRIPLET="custom-triplet"
+cmake .. -DVCPKG=ON
 ```
 
 Build and test the program:

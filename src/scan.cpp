@@ -73,7 +73,7 @@ static FileType determine_filetype(const std::string &extension)
         {".spx",  FileType::OGG},
         {".opus", FileType::OPUS},
         {".m4a",  FileType::M4A},
-	{".mp4",  FileType::M4A},
+	    {".mp4",  FileType::M4A},
         {".wma",  FileType::WMA},
         {".wav",  FileType::WAV},
         {".aiff", FileType::AIFF},
@@ -126,7 +126,7 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     }
     if (tracks.empty())
         return nullptr;
-    return new ScanJob("", tracks, config);
+    return new ScanJob(tracks, config);
 }
 
 void free_ebur128(ebur128_state *ebur128_state)

@@ -73,6 +73,7 @@ class ScanJob {
 		size_t skipped = 0;
 
 		ScanJob(const std::string &path, std::vector<Track> &tracks, const Config &config) : path(path), nb_files(tracks.size()), config(config), tracks(std::move(tracks)) {}
+		ScanJob(std::vector<Track> &tracks, const Config &config) : nb_files(tracks.size()), config(config), tracks(std::move(tracks)) {}
 		static ScanJob* factory(char **files, size_t nb_files, const Config &config);
 		static ScanJob* factory(const std::filesystem::path &path);
 		bool scan(std::mutex *ffmpeg_mutex = nullptr);

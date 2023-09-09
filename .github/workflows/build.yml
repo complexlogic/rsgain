@@ -29,6 +29,9 @@ permissions:
   security-events: none
   statuses: read
 
+env:
+  VCPKG_COMMITTISH: 962e5e39f8a25f42522f51fffc574e05a3efd26b
+
 jobs:
   build_windows:
     name: Windows
@@ -49,7 +52,8 @@ jobs:
 
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
-        with: { committish: 51de327421f4bd99b828a97b4e4adde54db032a6 }
+        with:
+          committish: ${{env.VCPKG_COMMITTISH}}
 
       - name: Setup Overlays
         uses: actions/checkout@v3
@@ -120,7 +124,7 @@ jobs:
       - name: "Install dependencies"
         run: |
           if [[ "${{matrix.config.name}}" == "Debian" ]]; then
-            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libinih-dev
+            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libtag1-dev libinih-dev
           fi
           if [[ "${{matrix.config.name}}" == "Fedora" ]]; then
             dnf install -y curl zip unzip tar git make pkg-config gcc-c++ fedora-packager rpmdevtools cmake libavcodec-free-devel libavformat-free-devel libswresample-free-devel libavutil-free-devel libebur128-devel taglib-devel inih-devel
@@ -129,7 +133,7 @@ jobs:
       - name: Setup vcpkg
         uses: friendlyanon/setup-vcpkg@v1
         with:
-          committish: ${{env.VCPKG_COMMITISH}}
+          committish: ${{env.VCPKG_COMMITTISH}}
           cache-key: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
           cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
 

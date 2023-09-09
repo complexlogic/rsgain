@@ -5,6 +5,11 @@
 # This file is released under the 2 clause BSD license, see COPYING
 
 cmake_minimum_required(VERSION 3.13)
+option(VCPKG "Build dependencies with vcpkg" OFF)
+if (VCPKG)
+  include("${CMAKE_SOURCE_DIR}/config/vcpkg.cmake")
+endif ()
+
 project(rsgain
   VERSION 3.3
   DESCRIPTION "ReplayGain 2.0 loudness normalizer"
@@ -38,6 +43,27 @@ if (WIN32)
   set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${EXECUTABLE_TITLE})
 endif ()
 
+# Embed Git information
+find_package(Git QUIET)
+if (Git_FOUND)
+  execute_process(COMMAND "${GIT_EXECUTABLE}" describe --long --tags
+    WORKING_DIRECTORY "${PROJECT_SOURCE_DIR}"
+    OUTPUT_VARIABLE GIT_OUTPUT
+    RESULT_VARIABLE GIT_RESULT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+  )
+  if (GIT_RESULT EQUAL 0)
+    string(REPLACE "-" ";" GIT_LIST "${GIT_OUTPUT}")
+    list(GET GIT_LIST 1 COMMITS_SINCE_TAG)
+    if (NOT COMMITS_SINCE_TAG STREQUAL "0")
+      list(GET GIT_LIST 2 COMMIT_HASH)
+      string(REPLACE "g" "" COMMIT_HASH "${COMMIT_HASH}")
+      add_compile_definitions(COMMITS_SINCE_TAG=\"${COMMITS_SINCE_TAG}\")
+      add_compile_definitions(COMMIT_HASH=\"${COMMIT_HASH}\")
+    endif ()
+  endif ()
+endif ()
+
 # Find dependencies - Windows
 if (WIN32)
   find_path(FFMPEG_INCLUDE_DIR "libavformat/avformat.h" REQUIRED)
@@ -63,10 +89,6 @@ if (WIN32)
 
 # Find dependencies - Linux/Mac
 elseif (UNIX)
-  if (APPLE)
-    link_directories(/usr/local/lib) # Fix linking on 10.14+. See https://stackoverflow.com/questions/54068035
-  endif (APPLE)
-
   find_package(PkgConfig MODULE REQUIRED)
   set(THREADS_PREFER_PTHREAD_FLAG ON)
   find_package(Threads REQUIRED)
@@ -143,8 +165,10 @@ elseif (UNIX)
   # Build Debian packages
   if (PACKAGE STREQUAL "DEB")
     set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
-    set(CPACK_DEBIAN_PACKAGE_VERSION ${CMAKE_PROJECT_VERSION})
-    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libavcodec59 (>= 5.1), libavutil57 (>= 5.1), libswresample4  (>= 5.1), libavformat59 (>= 5.1), libebur128-1 (>=1.2.4), libinih1, libc6 (>=2.29), libstdc++6 (>=10.2), zlib1g")
+    if (COMMITS_SINCE_TAG AND COMMIT_HASH)
+      set(CPACK_DEBIAN_PACKAGE_VERSION "${PROJECT_VERSION}-r${COMMITS_SINCE_TAG}-${COMMIT_HASH}")
+    endif ()
+    set(CPACK_DEBIAN_PACKAGE_DEPENDS "libavcodec59 (>= 5.1), libavutil57 (>= 5.1), libswresample4  (>= 5.1), libavformat59 (>= 5.1), libebur128-1 (>=1.2.4), libtag1v5, libinih1, libc6 (>=2.29), libstdc++6 (>=10.2), zlib1g")
     set(CPACK_DEBIAN_PACKAGE_MAINTAINER "complexlogic")
     set(CPACK_DEBIAN_PACKAGE_SECTION "utils")
     set(CPACK_DEBIAN_ARCHIVE_TYPE "gnutar")
@@ -154,10 +178,13 @@ elseif (UNIX)
   # Build Fedora packages
   elseif (PACKAGE STREQUAL "RPM")
     set(CPACK_RPM_FILE_NAME "RPM-DEFAULT")
+    if (COMMITS_SINCE_TAG AND COMMIT_HASH)
+      set(CPACK_RPM_PACKAGE_VERSION "${PROJECT_VERSION}-r${COMMITS_SINCE_TAG}-${COMMIT_HASH}")
+    endif ()
     set(CPACK_RPM_PACKAGE_LICENSE "BSD")
     set(CPACK_RPM_PACKAGE_GROUP "Applications/Multimedia")
     set(CPACK_RPM_PACKAGE_AUTOREQPROV 0)
-    set(CPACK_RPM_PACKAGE_REQUIRES "libavcodec-free >= 6, libavformat-free >= 6, libswresample-free >= 6, libavutil-free >= 6, libebur128, zlib, inih")
+    set(CPACK_RPM_PACKAGE_REQUIRES "libavcodec-free >= 6, libavformat-free >= 6, libswresample-free >= 6, libavutil-free >= 6, libebur128, taglib, zlib, inih")
   endif ()
   if (PACKAGE)
     set(CPACK_PACKAGE_DESCRIPTION_SUMMARY ${PROJECT_DESCRIPTION})
@@ -167,14 +194,11 @@ elseif (UNIX)
     include(CPack)
   endif ()
 
-  # Provide 'uninstall' target
-  if(NOT TARGET uninstall)
-      configure_file(
-          "${PROJECT_SOURCE_DIR}/config/cmake_uninstall.cmake.in"
-          "${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
-          IMMEDIATE @ONLY)
-      add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
-  endif()
+  configure_file(
+      "${PROJECT_SOURCE_DIR}/config/cmake_uninstall.cmake.in"
+      "${PROJECT_BINARY_DIR}/cmake_uninstall.cmake"
+      IMMEDIATE @ONLY)
+  add_custom_target(uninstall COMMAND ${CMAKE_COMMAND} -P ${PROJECT_BINARY_DIR}/cmake_uninstall.cmake)
 endif()
 
 configure_file("${PROJECT_SOURCE_DIR}/config/config.h.in" "${PROJECT_BINARY_DIR}/config.h")

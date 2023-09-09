@@ -1,9 +1,14 @@
 set(SOURCE_FILES 
   rsgain.cpp
+  rsgain.hpp
   scan.cpp
+  scan.hpp
   output.cpp
+  output.hpp
   tag.cpp
+  tag.hpp
   easymode.cpp
+  easymode.hpp
 )
 if (WIN32)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES} "${PROJECT_BINARY_DIR}/rsgain.manifest" "${PROJECT_BINARY_DIR}/versioninfo.rc")
@@ -31,6 +36,7 @@ if (WIN32)
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
     target_link_libraries(${EXECUTABLE_TITLE} ${STATIC_LIBS})
   endif ()
+  add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 
 elseif (UNIX)
   add_executable(${EXECUTABLE_TITLE} ${SOURCE_FILES})
@@ -50,7 +56,8 @@ elseif (UNIX)
   )
 endif()
 set (EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
-
+string(TIMESTAMP BUILD_DATE "%Y-%m-%d")
+add_compile_definitions("BUILD_DATE=\"${BUILD_DATE}\"")
 if (MAXPROGBARWIDTH GREATER_EQUAL 20)
   target_compile_definitions(${EXECUTABLE_TITLE} PUBLIC "MAXPROGBARWIDTH=${MAXPROGBARWIDTH}")
 endif ()

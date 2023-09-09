@@ -464,7 +464,12 @@ static void version() {
     int ebur128_v_major = 0;
     int ebur128_v_minor = 0;
     int ebur128_v_patch = 0;
-    fmt::print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION " - using:\n");
+    fmt::print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION
+#if defined COMMITS_SINCE_TAG && defined COMMIT_HASH
+                "-r" COMMITS_SINCE_TAG "-" COMMIT_HASH
+#endif
+                " - using:\n"
+    );
 
     // Library versions
     ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
@@ -494,5 +499,5 @@ static void version() {
     fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Microsoft C/C++ {:.2f}\n", "Compiler:", (float) _MSC_VER / 100.0f);
 #endif
 
-    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " " __DATE__ "\n", "Build Date:");
+    fmt::print(COLOR_YELLOW "{:<17}" COLOR_OFF " " BUILD_DATE "\n", "Build Date:");
 }
