@@ -214,7 +214,8 @@ static void custom_mode(int argc, char *argv[])
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {

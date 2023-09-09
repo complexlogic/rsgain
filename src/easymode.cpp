@@ -55,7 +55,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // MP2 config
@@ -72,7 +73,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // MP3 config
@@ -89,7 +91,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // FLAC config
@@ -106,7 +109,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // OGG config
@@ -123,7 +127,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // OPUS config
@@ -140,7 +145,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // M4A config
@@ -157,7 +163,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // WMA config
@@ -174,7 +181,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // WAV config
@@ -191,7 +199,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // AIFF config
@@ -208,7 +217,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // Wavpack config
@@ -225,7 +235,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // APE config
@@ -242,7 +253,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
 
     // TAK config
@@ -259,7 +271,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     },
     
     // Musepack config
@@ -276,7 +289,8 @@ static Config configs[] = {
         .sort_alphanum = false,
         .lowercase = false,
         .id3v2version = 3,
-        .opus_mode = 'd'
+        .opus_mode = 'd',
+        .skip_mp4 = false
     }
 };
 
@@ -528,6 +542,8 @@ int format_handler([[maybe_unused]] void *user, const char *section, const char 
         convert_bool(value, configs[static_cast<int>(file_type)].true_peak);
     else if (MATCH(name, "OpusMode"))
         parse_opus_mode(value, configs[static_cast<int>(file_type)].opus_mode);
+    else if (file_type == FileType::M4A && MATCH(name, "SkipMP4"))
+        convert_bool(value, configs[static_cast<int>(file_type)].skip_mp4);
     return 0;
 }
 
