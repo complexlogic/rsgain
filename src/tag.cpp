@@ -451,7 +451,7 @@ static bool tag_ogg(ScanJob::Track &track, const Config &config) {
 
     bool ret = file.save();
     if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.tag_mode == 's' || 
-    config.opus_mode == 'd' || config.opus_mode == 'r' || !ret)
+    !(config.opus_mode == 't' || config.opus_mode == 'a') || !ret)
         return ret;
 
     int16_t gain = config.opus_mode == 'a' && config.do_album ? 
@@ -616,7 +616,7 @@ static void tag_write(TagLib::Ogg::XiphComment *tag, const ScanResult &result, c
     const RGTagsArray &RG_STRING = RG_STRING_UPPER;
 
     // Opus RFC 7845 tag
-    if (std::is_same_v<T, TagLib::Ogg::Opus::File> && config.opus_mode == 'r') {
+    if (std::is_same_v<T, TagLib::Ogg::Opus::File> && (config.opus_mode == 'r' || config.opus_mode == 's')) {
         tag->addField(R128_STRING[static_cast<int>(R128Tag::TRACK_GAIN)], 
             fmt::format("{}", GAIN_TO_Q78(result.track_gain))
         );

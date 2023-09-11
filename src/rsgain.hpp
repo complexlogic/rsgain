@@ -42,7 +42,7 @@ bool parse_mode(const char *name, const char *valid_modes, const char *value, ch
 #define parse_tag_mode_easy(value, mode) parse_mode("tag", "disn", value, mode)
 #define parse_tag_mode_custom(value, mode) parse_mode("tag", "dis", value, mode)
 #define parse_clip_mode(value, mode) parse_mode("clip", "npa", value, mode)
-#define parse_opus_mode(value, mode) parse_mode("Opus", "drta", value, mode)
+#define parse_opus_mode(value, mode) parse_mode("Opus", "drtas", value, mode)
 bool parse_target_loudness(const char *value, double &target_loudness);
 bool parse_id3v2_version(const char *value, unsigned int &version);
 bool parse_max_peak_level(const char *value, double &peak);

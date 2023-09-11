@@ -443,6 +443,7 @@ static inline void help_custom() {
 
     CMD_HELP("--opus-mode=d", "-o d", "Write standard ReplayGain tags, clear header output gain (default)");
     CMD_HELP("--opus-mode=r", "-o r", "Write R128_*_GAIN tags, clear header output gain");
+    CMD_HELP("--opus-mode=s", "-o s", "Same as 'r', plus override target loudness to -23 LUFS");
     CMD_HELP("--opus-mode=t", "-o t", "Write track gain to header output gain");
     CMD_HELP("--opus-mode=a", "-o a", "Write album gain to header output gain");
 

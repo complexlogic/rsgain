@@ -110,7 +110,7 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     const Config &config = get_config(file_type);
     if (config.tag_mode == 'n')
         return nullptr;
-    return new ScanJob(path.string(), tracks, config);
+    return new ScanJob(path.string(), tracks, config, file_type);
 }
 
 ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
@@ -118,16 +118,19 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     FileType file_type;
     std::filesystem::path path;
     std::vector<Track> tracks;
+    std::unordered_set<FileType> types;
     for (size_t i = 0; i < nb_files; i++) {
         path = files[i];
         if ((file_type = determine_filetype(path.extension().string())) == FileType::INVALID)
             output_error("File '{}' is not of a supported type", files[i]);
-        else 
+        else {
             tracks.emplace_back(path.string(), file_type);
+            types.insert(file_type);
+        }
     }
     if (tracks.empty())
         return nullptr;
-    return new ScanJob(tracks, config);
+    return new ScanJob(tracks, config, types.size() > 1 ? FileType::DEFAULT : *types.begin());
 }
 
 void free_ebur128(ebur128_state *ebur128_state)
@@ -540,11 +543,11 @@ void ScanJob::tag_tracks()
             fmt::print("  Loudness: {} LUFS\n", track.result.track_loudness == -HUGE_VAL ? "   -∞" : fmt::format("{:8.2f}", track.result.track_loudness));
             fmt::print("  Peak:     {:8.6f} ({} dB)\n",
                 track.result.track_peak,
-                track.result.track_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", track.result.track_peak, 20.0 * log10(track.result.track_peak))
+                track.result.track_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", 20.0 * log10(track.result.track_peak))
             );
             fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                 track.result.track_gain,
-                track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
+                track.type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? fmt::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
                 track.tclip ? " (adjusted to prevent clipping)" : ""
             );
 
@@ -553,11 +556,11 @@ void ScanJob::tag_tracks()
                 fmt::print("  Loudness: {} LUFS\n", track.result.album_loudness == -HUGE_VAL ? "   -∞" : fmt::format("{:8.2f}", track.result.album_loudness));
                 fmt::print("  Peak:     {:8.6f} ({} dB)\n",
                     track.result.album_peak,
-                    track.result.album_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", track.result.album_peak, 20.0 * log10(track.result.album_peak))
+                    track.result.album_peak == 0.0 ? "-∞" : fmt::format("{:.2f}", 20.0 * log10(track.result.album_peak))
                 );
                 fmt::print("  Gain:     {:8.2f} dB {}{}\n", 
                     track.result.album_gain,
-                    track.type == FileType::OPUS && config.opus_mode != 'd' ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
+                    type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? fmt::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
                     track.aclip ? " (adjusted to prevent clipping)" : ""
                 );
             }
@@ -616,7 +619,8 @@ void ScanJob::Track::calculate_loudness(const Config &config)
             get_peak(ebur128.get(), channel++, &pk);
         track_peak = *std::max_element(peaks.begin(), peaks.end());
 
-        result.track_gain = config.target_loudness - track_loudness;
+        result.track_gain = (type == FileType::OPUS && config.opus_mode == 's' ? -23.0 : config.target_loudness)
+                             - track_loudness;
         result.track_peak = track_peak;
         result.track_loudness = track_loudness;
     }
@@ -639,7 +643,8 @@ void ScanJob::calculate_album_loudness()
                      [](const auto &a, const auto &b) { return a.result.track_peak < b.result.track_peak; }
                  )->result.track_peak;
     
-    double album_gain = config.target_loudness - album_loudness;
+    double album_gain = (type == FileType::OPUS && config.opus_mode == 's' ? -23.0 : config.target_loudness)
+                         - album_loudness;
     for (Track &track : tracks) {
         track.result.album_gain = album_gain;
         track.result.album_peak = album_peak;
