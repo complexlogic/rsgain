@@ -27,7 +27,7 @@ Binary packages are available for some platforms on the [Release Page](https://g
 ### Windows
 
 Download the ZIP file from the link below and extract its contents to a folder of your choice:
-- [rsgain v3.3 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.3/rsgain-3.3-win64.zip)
+- [rsgain v3.4 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain-3.4-win64.zip)
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
@@ -66,8 +66,8 @@ pkg install rsgain
 An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bookworm and Ubuntu 23.04.
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.3/rsgain_3.3-1_amd64.deb
-sudo apt install ./rsgain_3.3-1_amd64.deb
+wget https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain_3.4_amd64.deb
+sudo apt install ./rsgain_3.4_amd64.deb
 ```
 
 #### Arch/Manjaro
@@ -85,7 +85,7 @@ There is also a PKGBUILD script based on the latest release source tarball locat
 A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 38.
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.3/rsgain-3.3-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain-3.4-1.x86_64.rpm
 ```
 
 #### Others
@@ -112,7 +112,7 @@ The docker log to `stdout` updates too slowly for the scan progress bar. If you 
 
 ## Supported file formats
 
-rsgain supports all popular file formats. See the below table for compatibility. It should be noted that rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table in order to be recognized as valid.
+rsgain supports all popular file formats. See the below table for compatibility. rsgain sorts files internally based on file extension, so it is required that your audio files match one of the extensions in the second column of the table in order to be recognized as valid.
 
 | Format                               | Supported File Extension(s) |
 | ------------------------------------ | --------------------------- |
@@ -186,6 +186,12 @@ You can use the `-O` option to enable scan logs. The program will save a tab-del
 
 Microsoft Excel doesn't recognize the tab delimiter in CSV files by default. To enable Excel compatibility, rsgain has an option `-Os` which will add a `sep` header to the CSV file. This is a non-standard Microsoft extension which will enable the outputted CSV files to open in Excel.
 
+##### Sorting
+
+If you want the output sorted alphanumerically by filename, use the 'a' option, e.g. `-Oa`.
+
+The options can be chained. For example, if you want both Excel compatibility and alphanumeric sorting, you can pass `-Oas`.
+
 #### Scan Presets
 
 Easy Mode scans files with the following settings by default:
@@ -195,7 +201,7 @@ Easy Mode scans files with the following settings by default:
 - Sample peak calculations for peak tags
 - Clipping protection enabled for positive gain values only (0 dB max peak)
 - Standard uppercase tags for all formats
-- ID3v2.3 tags for ID3 formats
+- Preserve the existing ID3v2 tag version for ID3 formats (e.g. MP3)
 - Standard ReplayGain tags for Opus files
 
 These settings are recommended for maximum compatibility with modern players. However, if you need one or more of the settings changed, you can use a preset file.
@@ -323,7 +329,7 @@ In the case of a digital audio recording, true peak from the original analog sig
 
 The ReplayGain specification does not explicitly specify whether the peak should be calculated using the sample peak or true peak method, leaving the decision to the implementation. Comparing popular ReplayGain scanners, r128gain always uses sample peak, while loudgain always uses true peak. Conversely, rsgain allows the user to choose between the sample peak and true peak methods. The default is sample peak.
 
-It should be noted that using true peak instead of sample peak comes at a significant performance cost. Scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans; the oversampling interpolation process used to calculate the true peak is very computationally intensive.
+Using true peak instead of sample peak comes at a significant performance cost. Scans using true peak will typically be 2-4x longer than otherwise equivalent sample peak scans; the oversampling interpolation process used to calculate the true peak is very computationally intensive.
 
 ### Clipping Protection
 
@@ -352,23 +358,23 @@ Opus files are governed by [RFC 7845](https://datatracker.ietf.org/doc/html/rfc7
 
 Additionally, there is also an "output gain" field in the header, which contains another volume adjustment that needs to be taken into account.
 
-To handle the complexity, rsgain has a Opus Mode setting with a 4 choice character option that determines how Opus files should be tagged:
+To handle the complexity, rsgain has a Opus Mode setting with a 5 choice character option that determines how Opus files should be tagged:
 
 - `d`: Write standard ReplayGain tags, set header output gain to 0
 - `r`: Write R128_*_GAIN tags, set header output gain to 0
+- `s`: Same as 'r' above, plus the target loudness is forced to -23 LUFS for Opus files only
 - `t`: Write track gain to header output gain
 - `a`: Write album gain to header output gain
 
-Note the the `r` mode does not set the target loudness to -23 LUFS as specified in RFC 7845. You will need to use the separate target loudness setting to do so.
-
 Since rsgain is a *ReplayGain* scanner, the `d` mode is the default, even though the ReplayGain standard conflicts with RFC 7845. In my opinion, the authors of RFC 7845 totally overstepped their authority by specifying a format-specific loudness normalization method. Particularly egregious is the specification of a target loudness level. There is no one-size-fits-all solution for target loudness. The best value depends on the dynamic range of your music, which tends to vary by genre. Moreover, most people do not have a music library comprised entirely of a single audio format, so format-specific loudness normalization methods are inappropriate. Having Opus files play back 5 dB quieter than all other file types defeats the purpose of applying ReplayGain.
 
-If you do wish to write tags that are fully compliant to RFC 7845 instead of ReplayGain, use a [scan preset](#scan-presets) as follows:
+Some players will automatically add a +5 dB pregain to Opus files to attempt to compensate for the difference in target loudness between the RFC 7845 normalization method and ReplayGain. foobar2000 and a few others are among those that do this. You'll need to research how your chosen player(s) handle Opus files, and adjust your settings in rsgain accordingly. 
+
+If you wish to write tags that are fully compliant to RFC 7845 instead of ReplayGain 2.0, you can use the `-o` 's' option. For example, as an Easy Mode preset
 
 ```ini
 [Opus]
-OpusMode=r
-TargetLoudness=-23
+OpusMode=s
 ```
 
 ### Tag casing
@@ -381,7 +387,7 @@ If you do encounter a player that doesn't recognize the uppercase tags, my advic
 
 rsgain uses UTF-8 for Unicode, while Windows has historically used a subset of UTF-16. However, Microsoft added full UTF-8 support in [Windows 10 version 1903](https://docs.microsoft.com/en-us/windows/apps/design/globalizing/use-utf8-code-page). Therefore, it is strongly recommended to run rsgain on Windows 10 or later to ensure compatibility with all filenames. You can still run rsgain on Windows Vista through 8.1 if you don't need Unicode support, i.e. you don't have any filenames with non-ANSI characters.
 
-Another caveat with Windows is the performance of the scan progress bar. Console output on Windows is notoriously slow compared to Unix platforms. Unfortunately, the progress bar can be a bottleneck, particularly with the default sample peak calculations. I have optimized the progress bar as much as possible, it can't be optimized any further without increasing the update interval, which is undesirable. I have decided to leave it as-is, under the rationale that the performance in the single-threaded mode is less important than in [multithreaded](#multithreaded-scanning), which is unaffected by this issue since the progress bar is disabled. If you do need to tag a large number of files using the single-threaded Easy Mode or Custom Mode, pass the `-q` option to disable the progress bar, which will eliminate the bottleneck.
+Another caveat with Windows is the performance of the scan progress bar. Console output on Windows is notoriously slow compared to Unix platforms. Unfortunately, the progress bar can be a bottleneck, particularly with the default sample peak calculations. I have decided to leave it as-is, under the rationale that the performance in the single-threaded mode is less important than in [multithreaded](#multithreaded-scanning), which is unaffected by this issue since the progress bar is disabled. If you do need to tag a large number of files using the single-threaded Easy Mode or Custom Mode, pass the `-q` option to disable the progress bar, which will eliminate the bottleneck.
 
 ## License
 

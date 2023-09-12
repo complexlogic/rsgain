@@ -1,3 +1,15 @@
+v3.4 (2023-09-11)
+- Added support for Tom's lossless Audio Kompressor (TAK) format
+- Added -O option 'a' which sorts the output by filename alphanumerically
+- Added Custom Mode -o option 's' which forces Opus files to normalize to -23 LUFS regardless of the target loudness setting
+- Support files with .mp4 file extension
+  - Introduce Easy Mode preset option "SkipMP4" which allows users to opt out of the new behavior
+- When scanning completely silent tracks, the program now writes "0.00 dB" and "0.000000" as gain and peak tags, respectively. Previously, the program would completely skip over these files without writing any tags to them
+  - Silent tracks are not included in album gain calculations to keep results consistent with previous versions
+- -I 'keep' mode now default in both Custom Mode and Easy Mode
+- Fix TagMode 'n' option (regression from v3.2)
+
+
 v3.3 (2023-04-23)
 - New -I mode 'keep' detects the file's existing ID3v2 version, and preserves it
   - Less disruptive to files, less prone to data loss as TagLib sometimes discards frames when converting between ID3v2 versions.
