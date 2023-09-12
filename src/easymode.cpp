@@ -54,7 +54,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -72,7 +72,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -90,7 +90,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -108,7 +108,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -126,7 +126,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -144,7 +144,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -162,7 +162,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -180,7 +180,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -198,7 +198,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -216,7 +216,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -234,7 +234,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -252,7 +252,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -270,7 +270,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     },
@@ -288,7 +288,7 @@ static Config configs[] = {
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     }

@@ -213,7 +213,7 @@ static void custom_mode(int argc, char *argv[])
         .sep_header = false,
         .sort_alphanum = false,
         .lowercase = false,
-        .id3v2version = 3,
+        .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false
     };
@@ -435,9 +435,9 @@ static inline void help_custom() {
 
     CMD_HELP("--lowercase", "-L", "Write lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
-    CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF (default)");
+    CMD_HELP("--id3v2-version=keep", "-I keep", "Keep file's existing ID3v2 version, 3 if none exists (default)");
+    CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
-    CMD_HELP("--id3v2-version=keep", "-I keep", "Keep file's existing ID3v2 version, 3 if none exists");
 
     fmt::print("\n");
 
