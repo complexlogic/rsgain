@@ -49,7 +49,18 @@
 
 #include <string>
 #include <string_view>
+
+#ifdef USE_STD_FORMAT
+#include <format>
+#include <print>
+#define format std::format
+#define print std::print
+#else
 #include <fmt/core.h>
+#include <fmt/chrono.h>
+#define format fmt::format
+#define print fmt::print
+#endif
 
 #define COLOR_GREEN	"[1;32m"
 #define COLOR_YELLOW	"[1;33m"
@@ -76,10 +87,10 @@
 #define FAIL_PREFIX "[" COLOR_RED FAIL_CHAR COLOR_OFF "] "
 
 extern int quiet;
-#define output_ok(format, ...)    if (!quiet) fmt::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_warn(format, ...)  if (!quiet) fmt::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_error(format, ...) fmt::print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_fail(format, ...)  fmt::print(stderr, FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_ok(format, ...)    if (!quiet) print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_warn(format, ...)  if (!quiet) print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...)  print(stderr, FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
 class ProgressBar {
     private:

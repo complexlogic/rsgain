@@ -3,20 +3,26 @@
 rsgain builds natively on Unix and Windows, and features a cross-platform CMake build system. The following external dependencies are required:
 
 - [libebur128](https://github.com/jiixyj/libebur128) or [ebur128](https://github.com/sdroege/ebur128)
-- taglib
+- TagLib
 - FFmpeg, specifically the libraries:
     + libavformat
     + libavcodec
     + libswresample
     + libavutil
-- fmt
 - inih
+- Unix only: fmt (see [below](#fmt-library))
 
-The source code is written in C++20, and as such requires a relatively modern compiler to build:
+The Windows version uses C++23, and the Unix versions use either C++20 or C++23 depending on the compiler. As such, it requires a relatively modern compiler to build:
 
-- On Windows, use Visual Studio 2022
+- On Windows, Visual Studio 2022 17.7 or later is required
 - On Linux, use GCC 10 or later
 - On macOS, the latest available Xcode for your machine should work
+
+### fmt library
+
+The features that rsgain uses from the fmt library have been integrated into the C++20 and C++23 standards, specifically the `<format>` and `<print>` headers. Currently, neither GCC nor Clang have full support those features, so the fmt libary is required. When they gain support, the fmt dependency will be dropped in favor of the C++ standard library.
+
+The features have been incorporated into Microsoft's C++ standard library implementation, so the fmt library is no longer required for the Windows version.
 
 ## Unix
 

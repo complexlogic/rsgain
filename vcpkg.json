@@ -19,7 +19,6 @@
       "platform": "windows",
       "features": ["he-aac"]
     },
-    "fmt",
     {
       "name": "inih",
       "platform": "windows"
@@ -28,5 +27,12 @@
       "name": "getopt",
       "platform": "windows"
     }
-  ]
+  ],
+  "features": {
+	  "external-fmt": {
+		  "description": "Use the fmtlib library for formatting",
+		  "dependencies": ["fmt"]
+	  }
+  
+  }
 }

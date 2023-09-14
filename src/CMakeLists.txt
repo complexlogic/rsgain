@@ -28,7 +28,6 @@ if (WIN32)
     ${LIBSWRESAMPLE}
     ${TAGLIB}
     ${LIBEBUR128}
-    ${FMT}
     ${GETOPT}
     ${INIH}
     FDK-AAC::fdk-aac
@@ -51,9 +50,11 @@ elseif (UNIX)
     PkgConfig::TAGLIB
     PkgConfig::LIBEBUR128
     PkgConfig::INIH
-    PkgConfig::FMT
     Threads::Threads
   )
+  if (NOT USE_STD_FORMAT)
+    target_link_libraries(${EXECUTABLE_TITLE} PkgConfig::FMT)
+  endif ()
 endif()
 set (EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 string(TIMESTAMP BUILD_DATE "%Y-%m-%d")

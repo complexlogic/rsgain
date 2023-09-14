@@ -6,7 +6,6 @@
 #include <mutex>
 #include <filesystem>
 #include <condition_variable>
-#include <fmt/core.h>
 #include "scan.hpp"
 
 class WorkerThread {
