@@ -1,0 +1,178 @@
+.TH "rsgain" "1" "October 2023" "" ""
+.
+.SH "NAME"
+\fBrsgain\fR \- ReplayGain 2\.0 loudness normalizer
+.
+.SH "SYNOPSIS"
+rsgain [OPTIONS] <command> \.\.\.
+.
+.SH "DESCRIPTION"
+\fBrsgain\fR (really simple gain) is a ReplayGain 2\.0 command-line utility\.
+.P
+It applies loudness metadata tags to audio and video files while leaving the audio stream untouched\.
+.P
+A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback\.
+.P
+\fBrsgain\fR supports writing tags to the following file types:
+.br
+  \- AIFF (\.aiff, \.aif, \.snd)
+  \- APE (\.ape)
+  \- FLAC (\.flac)
+  \- MP2 (\.mp2)
+  \- MP3 (\.mp3)
+  \- MP4 (\.m4a)
+  \- Musepack (\.mpc)
+  \- Ogg (\.ogg, \.oga, \.spx)
+  \- Opus (\.opus)
+  \- TAK (\.tak)
+  \- WAV (\.wav)
+  \- WavPack (\.wv)
+  \- WMA (\.wma)\.
+.
+.SS "OPTIONS AND COMMANDS"
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show help\.
+.TP
+\fB\-v\fR, \fB\-\-version\fR
+Show version number\.
+.TP
+\fBeasy\fR
+Easy Mode:
+.br
+Recursively scan a directory with recommended settings\.
+.TP
+\fBcustom\fR
+Custom Mode:
+.br
+Scan individual files with custom settings\.
+.P
+Run \fBrsgain easy \-\-help\fR or \fBrsgain custom \-\-help\fR for more information\.
+.
+.SH "EASY MODE"
+Usage: rsgain easy [OPTIONS] DIRECTORY
+.P
+Easy Mode recursively scans a directory using the recommended settings for each file type\.
+.P
+Easy Mode assumes that you have your music library organized with each album in its own folder\.
+.
+.SS "OPTIONS"
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show help\.
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Don't print scanning status messages\.
+.TP
+\fB\-S\fR, \fB\-\-skip\-existing\fR
+Don't scan files with existing ReplayGain information\.
+.TP
+\fB\-m n\fR, \fB\-\-multithread=n\fR
+Scan files with \fBn\fR parallel threads\.
+.TP
+\fB\-p s\fR, \fB\-\-preset=s\fR
+Load scan preset \fBs\fR\.
+.TP
+\fB\-O\fR, \fB\-\-output\fR
+Output tab\-delimited scan data to CSV file per directory\.
+.TP
+\fB\-O s\fR, \fB\-\-output=s\fR
+Output with sep header (needed for Microsoft Excel compatibility)\.
+.TP
+\fB\-O a\fR, \fB\-\-output=a\fR
+Output with files sorted in alphanumeric order\.
+.
+.SH "CUSTOM MODE"
+Usage: rsgain custom [OPTIONS] FILES\.\.\.
+.P
+Custom Mode allows the user to specify the options to scan files with\.
+.P
+The list of files to scan must be listed explicitly after the options\.
+.
+.SS "OPTIONS"
+.TP
+\fB\-h\fR, \fB\-\-help\fR
+Show help\.
+.TP
+\fB\-a\fR, \fB\-\-album\fR
+Calculate album gain and peak\.
+.TP
+\fB\-S\fR, \fB\-\-skip\-existing\fR
+Don't scan files with existing ReplayGain information\.
+.TP
+\fB\-s s\fR, \fB\-\-tagmode=s\fR
+Scan files but don't write ReplayGain tags (default)\.
+.TP
+\fB\-s d\fR, \fB\-\-tagmode=d\fR
+Delete ReplayGain tags from files\.
+.TP
+\fB\-s i\fR, \fB\-\-tagmode=i\fR
+Scan and write ReplayGain 2\.0 tags to files\.
+.TP
+\fB-l n\fR, \fB\-\-loudness=n\fR
+Use \fBn\fR LUFS as target loudness (-30 ≤ n ≤ -5)\.
+.TP
+\fB\-c n\fR, \fB\-\-clip-mode=n\fR
+No clipping protection (default)\.
+.TP
+\fB\-c p\fR, \fB\-\-clip\-mode=p\fR
+Clipping protection enabled for positive\-gain values only\.
+.TP
+\fB\-c a\fR, \fB\-\-clip\-mode=a\fR
+Clipping protection always enabled\.
+.TP
+\fB\-m n\fR, \fB\-\-max\-peak=n\fR
+Use max peak level \fBn\fR dB for clipping protection\.
+.TP
+\fB\-t\fR, \fB\-\-true\-peak\fR
+Use true peak for peak calculations\.
+.TP
+\fB\-L\fR, \fB\-\-lowercase\fR
+Write lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)\.
+.br
+This is non\-standard but sometimes needed\.
+.TP
+\fB\-I keep\fR, \fB\-\-id3v2\-version=keep\fR
+Keep file's existing ID3v2 version, 3 if none exists (default)\.
+.TP
+\fB\-I 3\fR, \fB\-\-id3v2\-version=3\fR
+Write ID3v2\.3 tags to MP2/MP3/WAV/AIFF\.
+.TP
+\fB\-I 4\fR, \fB\-\-id3v2\-version=4\fR
+Write ID3v2\.4 tags to MP2/MP3/WAV/AIFF\.
+.TP
+\fB\-o d\fR, \fB\-\-opus\-mode=d\fR
+Write standard ReplayGain tags, clear header output gain (default)\.
+.TP
+\fB\-o r\fR, \fB\-\-opus\-mode=r\fR
+Write R128_*_GAIN tags, clear header output gain\.
+.TP
+\fB\-o s\fR, \fB\-\-opus\-mode=s\fR
+Same as 'r', plus override target loudness to \-23 LUFS\.
+.TP
+\fB\-o t\fR, \fB\-\-opus\-mode=t\fR
+Write track gain to header output gain\.
+.TP
+\fB\-o a\fR, \fB\-\-opus\-mode=a\fR
+Write album gain to header output gain\.
+.TP
+\fB\-O\fR, \fB\-\-output\fR
+Output tab\-delimited scan data to stdout\.
+.TP
+\fB\-O s\fR, \fB\-\-output=s\fR
+Output with sep header (needed for Microsoft Excel compatibility)\.
+.TP
+\fB\-O a\fR, \fB\-\-output=a\fR
+Output with files sorted in alphanumeric order\.
+.TP
+\fB\-q\fR, \fB\-\-quiet\fR
+Don't print scanning status messages\.
+.
+.SH "BUGS"
+\fBrsgain\fR is maintained on GitHub. Please report all bugs to the issue tracker at https://github\.com/complexlogic/rsgain/issues\.
+.
+.SH "COPYRIGHT"
+Copyright (C) 2023 Hugh McMaster
+.
+.P
+\fBrsgain\fR is released under the BSD\-2\-Clause licence\.
