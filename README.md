@@ -229,7 +229,7 @@ Each setting key in a presets file corresponds to a command line option in Custo
 | -------------- | ---------- | ------------------ |
 | TagMode        | Character  | -s                 |
 | TargetLoudness | Integer    | -l                 |
-| AlbumGain      | Boolean    | -a                 |
+| Album          | Boolean    | -a                 |
 | ClipMode       | Character  | -c                 |
 | TruePeak       | Boolean    | -t                 |
 | Lowercase      | Boolean    | -L                 |
