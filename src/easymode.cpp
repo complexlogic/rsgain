@@ -833,7 +833,7 @@ static inline void help_easy() {
 
     print("\n");
 
-    CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
+    CMD_HELP("--output", "-O",  "Output tab-delimited scan data to TSV file per directory");
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
     CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order");
 

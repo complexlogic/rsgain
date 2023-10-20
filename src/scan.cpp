@@ -495,7 +495,7 @@ void ScanJob::tag_tracks()
     std::FILE *stream = nullptr;
     if (config.tab_output != OutputType::NONE) {
         if (config.tab_output == OutputType::FILE) {
-            std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.csv";
+            std::filesystem::path output_file = std::filesystem::path(path) / "replaygain.tsv";
             stream = fopen(output_file.string().c_str(), "wb");
         }
         else

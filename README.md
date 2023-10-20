@@ -180,11 +180,11 @@ This feature merely checks for the *existence* of the tags, and does not verify 
 
 #### Logging
 
-You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.csv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application.
+You can use the `-O` option to enable scan logs. The program will save a tab-delimited file titled `replaygain.tsv` with the scan results for every directory it scans. The log files can be viewed in a spreadsheet application.
 
 ##### Microsoft Excel
 
-Microsoft Excel doesn't recognize the tab delimiter in CSV files by default. To enable Excel compatibility, rsgain has an option `-Os` which will add a `sep` header to the CSV file. This is a non-standard Microsoft extension which will enable the outputted CSV files to open in Excel.
+Some versions of Microsoft Excel may fail to recognize the tab delimiter in TSV files by default. To enable Excel compatibility, rsgain has an option `-Os` which will add a `sep` header to the TSV file. This is a non-standard Microsoft extension which will enable the outputted TSV files to open in Excel.
 
 ##### Sorting
 
