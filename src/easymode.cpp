@@ -512,6 +512,15 @@ int global_handler([[maybe_unused]] void *user, const char *section, const char 
         else
             quit(EXIT_FAILURE);
     }
+    else if (MATCH(name, "PreserveMtimes")) {
+        bool preserve_mtimes;
+        if (convert_bool(value, preserve_mtimes)) {
+            for (Config &config : configs)
+                config.preserve_mtimes = preserve_mtimes;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
     return 0;
 }
 
@@ -542,6 +551,8 @@ int format_handler([[maybe_unused]] void *user, const char *section, const char 
         parse_opus_mode(value, configs[static_cast<int>(file_type)].opus_mode);
     else if (file_type == FileType::M4A && MATCH(name, "SkipMP4"))
         convert_bool(value, configs[static_cast<int>(file_type)].skip_mp4);
+    else if (MATCH(name, "PreserveMtimes"))
+        convert_bool(value, configs[static_cast<int>(file_type)].preserve_mtimes);
     return 0;
 }
 
@@ -727,7 +738,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
         // Spawn worker threads
         output_ok("Scanning with {} threads...", nb_threads);
         for (size_t i = 0; i < nb_threads; i++) {
-            progress.update(jobs.front()->path);
+            progress.update(jobs.front()->path.string());
             threads.emplace_back(std::make_unique<WorkerThread>(
                 jobs.front(),
                 mutex,
@@ -742,7 +753,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
         // Feed jobs to workers
         std::string current_job;
         if (!jobs.empty())
-            current_job = jobs.front()->path;
+            current_job = jobs.front()->path.string();
         while (!jobs.empty()) {
             cv.wait_for(lock, std::chrono::milliseconds(200));
             for (auto &thread : threads) {
@@ -750,7 +761,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
                     jobs.pop();
                     progress.update(current_job);
                     if (!jobs.empty())
-                        current_job = jobs.front()->path;
+                        current_job = jobs.front()->path.string();
                     break;
                 }
             }

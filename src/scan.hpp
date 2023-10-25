@@ -50,7 +50,7 @@ struct ScanData {
 class ScanJob {
 	public:
 		struct Track {
-			std::string path;
+			std::filesystem::path path;
 			FileType type;
 			std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
 			std::string container;
@@ -59,12 +59,12 @@ class ScanJob {
 			bool tclip = false;
 			bool aclip = false;
 
-			Track(const std::string &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
+			Track(const std::filesystem::path &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
 			bool scan(const Config &config, std::mutex *ffmpeg_mutex);
 			void calculate_loudness(const Config &config);
 		};
 
-		std::string path;
+		std::filesystem::path path;
 		size_t nb_files;
 		const Config &config;
 		FileType type;
@@ -72,7 +72,7 @@ class ScanJob {
 		size_t clipping_adjustments = 0;
 		size_t skipped = 0;
 
-		ScanJob(const std::string &path, std::vector<Track> &tracks, const Config &config, FileType &type) : path(path), nb_files(tracks.size()), config(config), type(type), tracks(std::move(tracks)) {}
+		ScanJob(const std::filesystem::path &path, std::vector<Track> &tracks, const Config &config, FileType &type) : path(path), nb_files(tracks.size()), config(config), type(type), tracks(std::move(tracks)) {}
 		ScanJob(std::vector<Track> &tracks, const Config &config, FileType type) : nb_files(tracks.size()), config(config), type(type), tracks(std::move(tracks)) {}
 		static ScanJob* factory(char **files, size_t nb_files, const Config &config);
 		static ScanJob* factory(const std::filesystem::path &path);

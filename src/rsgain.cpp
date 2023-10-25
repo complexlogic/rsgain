@@ -178,25 +178,26 @@ static void custom_mode(int argc, char *argv[])
     unsigned int nb_files   = 0;
     opterr = 0;
 
-    const char *short_opts = "+ac:m:tl:O::qs:LSI:o:h?";
+    const char *short_opts = "+ac:m:tl:O::qps:LSI:o:h?";
     static struct option long_opts[] = {
-        { "album",         no_argument,       nullptr, 'a' },
-        { "skip-existing", no_argument,       nullptr, 'S' },
+        { "album",           no_argument,       nullptr, 'a' },
+        { "skip-existing",   no_argument,       nullptr, 'S' },
 
-        { "clip-mode",     required_argument, nullptr, 'c' },
-        { "max-peak",      required_argument, nullptr, 'm' },
-        { "true-peak",     no_argument,       nullptr, 't' },
+        { "clip-mode",       required_argument, nullptr, 'c' },
+        { "max-peak",        required_argument, nullptr, 'm' },
+        { "true-peak",       no_argument,       nullptr, 't' },
 
-        { "loudness",      required_argument, nullptr, 'l' },
+        { "loudness",        required_argument, nullptr, 'l' },
 
-        { "output",        optional_argument, nullptr, 'O' },
-        { "quiet",         no_argument,       nullptr, 'q' },
+        { "output",          optional_argument, nullptr, 'O' },
+        { "quiet",           no_argument,       nullptr, 'q' },
+        { "preserve-mtimes", no_argument,       nullptr, 'p' },
 
-        { "tagmode",       required_argument, nullptr, 's' },
-        { "lowercase",     no_argument,       nullptr, 'L' },
-        { "id3v2-version", required_argument, nullptr, 'I' },
-        { "opus-mode",     required_argument, nullptr, 'o' },
-        { "help",          no_argument,       nullptr, 'h' },
+        { "tagmode",         required_argument, nullptr, 's' },
+        { "lowercase",       no_argument,       nullptr, 'L' },
+        { "id3v2-version",   required_argument, nullptr, 'I' },
+        { "opus-mode",       required_argument, nullptr, 'o' },
+        { "help",            no_argument,       nullptr, 'h' },
         { 0, 0, 0, 0 }
     };
 
@@ -214,7 +215,8 @@ static void custom_mode(int argc, char *argv[])
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
@@ -261,6 +263,10 @@ static void custom_mode(int argc, char *argv[])
 
             case 'q':
                 quiet = 1;
+                break;
+
+            case 'p':
+                config.preserve_mtimes = true;
                 break;
 
             case 's': {
@@ -452,6 +458,7 @@ static inline void help_custom() {
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
     CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order");
 
+    CMD_HELP("--preserve-mtimes", "-p", "Preserve file mtimes");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
     print("\n");

@@ -34,6 +34,7 @@ struct Config {
 	unsigned int id3v2version;
 	char opus_mode;
 	bool skip_mp4;
+	bool preserve_mtimes;
 };
 
 
