@@ -412,6 +412,8 @@ static bool tag_mp3(ScanJob::Track &track, const Config &config)
 {
     TagLib::MPEG::File file(track.path.string().c_str());
     TagLib::ID3v2::Tag *tag = file.ID3v2Tag(true);
+    if (!tag)
+        return false;
     unsigned int id3v2version = config.id3v2version;
     if (id3v2version == ID3V2_KEEP)
         id3v2version = tag->isEmpty() ? 3: tag->header()->majorVersion();
@@ -433,6 +435,8 @@ static bool tag_flac(ScanJob::Track &track, const Config &config)
 {
     TagLib::FLAC::File file(track.path.string().c_str());
     TagLib::Ogg::XiphComment *tag = file.xiphComment(true);
+    if (!tag)
+        return false;
     tag_clear<TagLib::FLAC::File>(tag);
     if (config.tag_mode == 'i')
         tag_write<TagLib::FLAC::File>(tag, track.result, config);
@@ -443,13 +447,12 @@ template<typename T>
 static bool tag_ogg(ScanJob::Track &track, const Config &config) {
     T file(track.path.string().c_str());
     TagLib::Ogg::XiphComment *tag = nullptr;
-    if constexpr(std::is_same_v<T, TagLib::FileRef>) {
+    if constexpr(std::is_same_v<T, TagLib::FileRef>)
         tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
-        if (!tag)
-            return false;
-    }
     else
         tag = file.tag();
+    if (!tag)
+        return false;
     tag_clear<T>(tag);
     if (config.tag_mode == 'i' && (!std::is_same_v<T, TagLib::Ogg::Opus::File> || 
     (config.opus_mode != 't' && config.opus_mode != 'a')))
@@ -469,6 +472,8 @@ static bool tag_mp4(ScanJob::Track &track, const Config &config)
 {
     TagLib::MP4::File file(track.path.string().c_str());
     TagLib::MP4::Tag *tag = file.tag();
+    if (!tag)
+        return false;
     tag_clear(tag);
     if (config.tag_mode == 'i')
         tag_write(tag, track.result, config);
@@ -481,6 +486,8 @@ static bool tag_apev2(ScanJob::Track &track, const Config &config)
 {
     T file(track.path.string().c_str());
     TagLib::APE::Tag *tag = file.APETag(true);
+    if (!tag)
+        return false;
     tag_clear(tag);
     if (config.tag_mode == 'i')
         tag_write(tag, track.result, config);
@@ -498,6 +505,8 @@ static bool tag_wma(ScanJob::Track &track, const Config &config)
 {
     TagLib::ASF::File file(track.path.string().c_str());
     TagLib::ASF::Tag *tag = file.tag();
+    if (!tag)
+        return false;
     tag_clear(tag);
     if (config.tag_mode == 'i')
         tag_write(tag, track.result, config);
@@ -509,11 +518,13 @@ template<typename T>
 static bool tag_riff(ScanJob::Track &track, const Config &config)
 {
     T file(track.path.string().c_str());
-    TagLib::ID3v2::Tag *tag;
+    TagLib::ID3v2::Tag *tag = nullptr;
     if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
         tag = file.ID3v2Tag();
     else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>)
         tag = file.tag();
+    if (!tag)
+        return false;
     unsigned int id3v2version = config.id3v2version;
     if (id3v2version == ID3V2_KEEP)
         id3v2version = tag->isEmpty() ? 3: tag->header()->majorVersion();
