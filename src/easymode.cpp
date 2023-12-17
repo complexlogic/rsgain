@@ -586,7 +586,7 @@ static void load_preset(const std::filesystem::path &preset)
 
         // Check user directory
 #ifdef _WIN32
-        char buffer[MAX_PATH];
+        char buffer[1024];
         if (GetEnvironmentVariableA("USERPROFILE", buffer, sizeof(buffer)))
             path = join_paths(buffer, "." EXECUTABLE_TITLE, "presets", preset_basename);
 #else
