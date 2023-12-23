@@ -55,6 +55,12 @@ elseif (UNIX)
   if (NOT USE_STD_FORMAT)
     target_link_libraries(${EXECUTABLE_TITLE} PkgConfig::FMT)
   endif ()
+  if (STRIP)
+    add_custom_command(TARGET ${EXECUTABLE_TITLE}
+      POST_BUILD
+      COMMAND "${STRIP}" "${PROJECT_BINARY_DIR}/${EXECUTABLE_TITLE}"
+    )
+  endif ()
 endif()
 set (EXECUTABLE_OUTPUT_PATH "${PROJECT_BINARY_DIR}")
 string(TIMESTAMP BUILD_DATE "%Y-%m-%d")

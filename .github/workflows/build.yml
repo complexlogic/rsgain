@@ -29,7 +29,7 @@ defaults:
     shell: bash
 
 env:
-  VCPKG_COMMITTISH: 962e5e39f8a25f42522f51fffc574e05a3efd26b
+  VCPKG_COMMITTISH: c8696863d371ab7f46e213d8f5ca923c4aef2a00
 
 jobs:
   build_windows:
@@ -97,6 +97,7 @@ jobs:
         run: cmake -S . -B build 
                -G "${{env.CMAKE_GENERATOR}}"
                -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+               -DVCPKG_MANIFEST_FEATURES="ffmpeg;libebur128;inih;"
                -DVCPKG_OVERLAY_PORTS=build/overlays/ports
                -DVCPKG_OVERLAY_TRIPLETS=config/vcpkg_triplets
                -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
@@ -134,11 +135,19 @@ jobs:
             docker_image: debian:bookworm
             package_type: DEB
             package_ext: .deb
+            vcpkg_features: fmt;
 
           - name: Fedora
             docker_image: fedora:38
             package_type: RPM
             package_ext: .rpm
+            vcpkg_features: fmt;
+
+          - name: Static
+            docker_image: debian:bullseye
+            package_type: TXZ
+            package_ext: .tar.xz
+            vcpkg_features: fmt;ffmpeg;libebur128;inih;
 
     container:
       image: ${{matrix.config.docker_image}}
@@ -157,10 +166,13 @@ jobs:
       - name: "Install dependencies"
         run: |
           if [[ "${{matrix.config.name}}" == "Debian" ]]; then
-            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libinih-dev
+            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libinih-dev binutils
           fi
           if [[ "${{matrix.config.name}}" == "Fedora" ]]; then
             dnf install -y curl zip unzip tar git make pkg-config gcc-c++ fedora-packager rpmdevtools cmake libavcodec-free-devel libavformat-free-devel libswresample-free-devel libavutil-free-devel libebur128-devel inih-devel
+          fi
+          if [[ "${{matrix.config.name}}" == "Static" ]]; then
+            apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config python3 nasm binutils
           fi
 
       - name: Setup vcpkg
@@ -170,14 +182,23 @@ jobs:
           cache-key: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
           cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
 
+      - name: Setup Overlays
+        uses: actions/checkout@v3
+        with:
+          repository: complexlogic/vcpkg
+          ref: refs/heads/rsgain
+          path: build/overlays
+
       - name: Configure
         run: cmake -S . -B build 
                -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
                -DVCPKG_TARGET_TRIPLET=${{env.VCPKG_TRIPLET}}
-               -DVCPKG_MANIFEST_FEATURES="external-fmt;"
+               -DVCPKG_MANIFEST_FEATURES="${{matrix.config.vcpkg_features}}"
+               -DVCPKG_OVERLAY_PORTS=build/overlays/ports
                -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
                -DCMAKE_INSTALL_PREFIX=/usr
                -DPACKAGE=${{matrix.config.package_type}}
+               -DSTRIP_BINARY=ON
 
       - name: Build
         run: | 
@@ -206,6 +227,15 @@ jobs:
       packages: write
     strategy:
       fail-fast: false
+      matrix:
+        config:
+          - name: Intel
+            OSX_ARCH: x86_64
+            VCPKG_TRIPLET: x64-osx
+
+          - name: Apple Silicon
+            OSX_ARCH: arm64
+            VCPKG_TRIPLET: arm64-osx
 
     env:
       CMAKE_BUILD_TYPE: Release
@@ -216,19 +246,54 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: "Install dependencies"
-        run: |
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          brew install libebur128 taglib ffmpeg fmt inih cmake pkg-config || true
+      - name: Install Dependencies
+        run: brew install nasm automake autoconf-archive ninja
+
+      - name: Setup vcpkg
+        uses: friendlyanon/setup-vcpkg@v1
+        with:
+          committish: ${{env.VCPKG_COMMITTISH}}
+          cache-key: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
+          cache-restore-keys: vcpkg-${{matrix.config.name}}-${{env.VCPKG_COMMITISH}}
+
+      - name: Setup Overlays
+        uses: actions/checkout@v3
+        with:
+          repository: complexlogic/vcpkg
+          ref: refs/heads/rsgain
+          path: build/overlays
 
       - name: Configure
         run: cmake -S . -B build 
-               -DCMAKE_BUILD_TYPE=${{env.CMAKE_BUILD_TYPE}}
-               -DCMAKE_INSTALL_PREFIX=/usr
+               -DCMAKE_BUILD_TYPE=Release
+               -DCMAKE_OSX_ARCHITECTURES=${{matrix.config.OSX_ARCH}}
+               -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+               -DVCPKG_OVERLAY_PORTS=build/overlays/ports
+               -DVCPKG_TARGET_TRIPLET=${{matrix.config.VCPKG_TRIPLET}}
+               -DVCPKG_MANIFEST_FEATURES="fmt;ffmpeg;libebur128;inih;"
+               -DSTRIP_BINARY=ON
+               -DPACKAGE=ZIP
+               -DCPACK_SYSTEM_NAME="macOS-${{matrix.config.OSX_ARCH}}"
 
       - name: Build
         run: |
           cmake \
             --build build \
-            --config ${{env.CMAKE_BUILD_TYPE}}
-          build/rsgain -v
+            --target package
+  
+      - name: Test
+        if: ${{matrix.config.OSX_ARCH == 'x86_64'}}
+        run: build/rsgain -v
+
+      - name: Upload Package
+        uses: actions/upload-artifact@v3
+        with:
+          name: macOS ${{matrix.config.name}} build
+          path: build/*.zip
+
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: build/*.zip
+          token: ${{secrets.ACTIONS_SECRET}}

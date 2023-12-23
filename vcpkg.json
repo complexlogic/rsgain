@@ -1,35 +1,37 @@
 {
   "dependencies": [
-    {
-      "name": "libebur128",
-      "platform": "windows"
-    },
     "taglib",
-    {
-      "name": "ffmpeg",
-      "platform": "windows",
-      "default-features": false,
-      "features": ["avcodec", "avformat", "swresample", "fdk-aac"]
-    },
-    {
-      "name": "fdk-aac",
-      "platform": "windows",
-      "features": ["he-aac"]
-    },
-    {
-      "name": "inih",
-      "platform": "windows"
-    },
     {
       "name": "getopt",
       "platform": "windows"
     }
   ],
   "features": {
-	  "external-fmt": {
+	  "fmt": {
 		  "description": "Use the fmtlib library for formatting",
 		  "dependencies": ["fmt"]
+	  },
+    "ffmpeg": {
+      "description":  "Build FFmpeg",
+      "dependencies": [
+        {
+          "name": "ffmpeg",
+          "default-features": false,
+          "features": ["avcodec", "avformat", "swresample", "fdk-aac"]
+        },
+        {
+          "name": "fdk-aac",
+          "features": ["he-aac"]
+        }
+      ]
+    },
+	  "libebur128": {
+		  "description": "Build libebur128",
+		  "dependencies": ["libebur128"]
+	  },
+	  "inih": {
+		  "description": "Build inih",
+		  "dependencies": ["inih"]
 	  }
-  
   }
 }
