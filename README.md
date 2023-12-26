@@ -88,6 +88,23 @@ A package is available on the [release page](https://github.com/complexlogic/rsg
 sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain-3.4-1.x86_64.rpm
 ```
 
+#### Nix/NixOS
+
+`rsgain` is in [nixpkgs](https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/rs/rsgain/package.nix). Some options:
+
+- Run it without installing:
+  ```sh
+  nix run nixpkgs#rsgain
+  ```
+- Install it in your Nix environment:
+  ```sh
+  nix-env -f '<nixpkgs>' -iA rsgain
+  ```
+- Add it to your NixOS configuration:
+  ```nix
+  environment.systemPackages = with pkgs; [ rsgain ];
+  ```
+
 #### Others
 
 Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
