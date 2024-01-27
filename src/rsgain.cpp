@@ -45,6 +45,10 @@ extern "C" {
 #include <libavutil/avutil.h>
 }
 #include <taglib/taglib.h>
+#define HAS_TAGLIB2 TAGLIB_MAJOR_VERSION > 1
+#if HAS_TAGLIB2
+#include <taglib/tversionnumber.h>
+#endif
 #include <ebur128.h>
 
 #include "rsgain.hpp"
@@ -486,9 +490,14 @@ static void version() {
     PRINT_LIB_FFMPEG("libavcodec", avcodec_version);
     PRINT_LIB_FFMPEG("libavutil", avutil_version);
     PRINT_LIB_FFMPEG("libswresample", swresample_version);
+#if HAS_TAGLIB2
+    TagLib::VersionNumber tver = TagLib::runtimeVersion();
+    PRINT_LIB("TagLib", format("{}.{}{}", tver.majorVersion(), tver.minorVersion(), tver.patchVersion() ? format(".{}", tver.patchVersion()) : ""));
+#else
     print("\n");
     print("Built with:\n");
     PRINT_LIB("TagLib", format("{}.{}{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION ? format(".{}", TAGLIB_PATCH_VERSION) : ""));
+#endif
     print("\n");
 
 #if defined(__GNUC__) && !defined(__clang__)
