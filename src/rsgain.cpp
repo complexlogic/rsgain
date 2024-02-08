@@ -315,7 +315,7 @@ static void custom_mode(int argc, char *argv[])
 
     std::unique_ptr<ScanJob> job(ScanJob::factory(argv + optind, nb_files, config));
     if (!job) {
-        output_fail("No valid files were specified");
+        output_fail("File list is not valid");
         quit(EXIT_FAILURE);
     }
     job->scan();

@@ -121,8 +121,14 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     std::unordered_set<FileType> types;
     for (size_t i = 0; i < nb_files; i++) {
         path = files[i];
-        if ((file_type = determine_filetype(path.extension().string())) == FileType::INVALID)
+        if (!std::filesystem::exists(path)) {
+            output_error("File '{}' does not exist", path.string());
+            return nullptr;
+        }
+        else if ((file_type = determine_filetype(path.extension().string())) == FileType::INVALID) {
             output_error("File '{}' is not of a supported type", files[i]);
+            return nullptr;
+        }
         else {
             tracks.emplace_back(path, file_type);
             types.insert(file_type);
