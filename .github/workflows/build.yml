@@ -165,7 +165,7 @@ jobs:
                -DCMAKE_INSTALL_PREFIX=/usr
                -DPACKAGE=${{matrix.config.package_type}}
                -DSTRIP_BINARY=ON
-               -DINSTALL_MANPAGE=${{matrix.config.name == 'Static' && 'OFF' || 'ON'}}
+               -DINSTALL_MANPAGE=${{matrix.config.name == 'Debian' && 'ON' || 'OFF'}}
 
       - name: Build
         run: | 

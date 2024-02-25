@@ -56,8 +56,8 @@ scoop install extras/rsgain
 ### macOS
 
 Separate builds are available for Apple Silicon and Intel based Macs. Both require macOS 12 (Monterey) or later. Download and extract the correct version according to your hardware:
-- [rsgain v3.5 portable ZIP (Apple Silicon)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-macOS-arm64.zip)
-- [rsgain v3.5 portable ZIP (Intel)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-macOS-x86_64.zip)
+- [rsgain v3.5 portable ZIP (Apple Silicon)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-macOS-arm64.zip)
+- [rsgain v3.5 portable ZIP (Intel)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-macOS-x86_64.zip)
 
 These builds are not digitally signed, and the macOS Gatekeeper will most likely block execution. To work around this, you can remove the quarantine bit using the command below:
 
@@ -121,7 +121,7 @@ sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.5/r
 #### Static Build
 
 An x86_64 static build is available that should run on recent releases of most GNU-based Linux distros (any distro shipping GCC 10 or later). Download the archive below and extract it to a directory of your choice:
-- [rsgain v3.5 portable TAR (x86_64)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-Linux.tar.xz)
+- [rsgain v3.5 portable TAR (x86_64)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-Linux.tar.xz)
 
 ### FreeBSD
 
