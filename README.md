@@ -4,6 +4,12 @@
 
 1. [About](#about)
 2. [Installation](#installation)
+    - [Windows](#windows)
+    - [macOS](#macos)
+    - [Linux](#linux)
+    - [FreeBSD](#freebsd)
+    - [Android](#android)
+    - [Docker](#docker)
 3. [Supported File Formats](#supported-file-formats)
 4. [Usage](#usage)
     - [Easy Mode](#easy-mode)
@@ -14,7 +20,7 @@
 
 ## About
 
-**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, Linux, and BSD. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
+**rsgain** (**r**eally **s**imple **gain**) is a ReplayGain 2.0 command line utility for Windows, macOS, Linux, BSD, and Android. rsgain applies loudness metadata tags to your files, while leaving the audio stream untouched. A ReplayGain-compatible player will dynamically adjust the volume of your tagged files during playback.
 
 rsgain is designed with a "batteries included" philosophy, allowing a user to scan their entire music library without requiring external scripts or other tools. It aims to strike the perfect balance between power and simplicity by providing multiple user interfaces. See [Usage](#usage) for more information.
 
@@ -22,12 +28,12 @@ rsgain is the backend for the [MusicBrainz Picard](https://picard.musicbrainz.or
 
 ## Installation
 
-Binary packages are available for some platforms on the [Release Page](https://github.com/complexlogic/rsgain/releases). You can also build the program yourself, see [BUILDING](docs/BUILDING.md).
+Binary packages are available on the [Release Page](https://github.com/complexlogic/rsgain/releases) for Windows, macOS, and some Linux distributions. You can also build the program yourself, see [BUILDING](docs/BUILDING.md).
 
 ### Windows
 
 Download the ZIP file from the link below and extract its contents to a folder of your choice:
-- [rsgain v3.4 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain-3.4-win64.zip)
+- [rsgain v3.5 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-win64.zip)
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
@@ -39,53 +45,60 @@ It is recommended to add the directory to your `Path` system environment variabl
 
 #### Scoop
 
-rsgain can also be installed from [several community Scoop buckets](https://scoop.sh/#/apps?q=rsgain&s=0&d=1&o=false). This installation method enables you to receive automatic upgrades to future versions, unlike the manual installation method described above.
+rsgain is available in the [Scoop](https://scoop.sh/) extras bucket. Installing via Scoop enables you to receive automatic upgrades to future versions, unlike the manual installation method described above.
+
+First, make sure you have enabled the extras bucket. Then, install using the command below:
+
+```powershell
+scoop install extras/rsgain
+```
 
 ### macOS
 
-There is a Homebrew formula available for macOS users. Make sure you have the latest available Xcode installed, as well as Homebrew. Then, execute the following command:
+Separate builds are available for Apple Silicon and Intel based Macs. Both require macOS 12 (Monterey) or later. Download and extract the correct version according to your hardware:
+- [rsgain v3.5 portable ZIP (Apple Silicon)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-macOS-arm64.zip)
+- [rsgain v3.5 portable ZIP (Intel)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-macOS-x86_64.zip)
+
+These builds are not digitally signed, and the macOS Gatekeeper will most likely block execution. To work around this, you can remove the quarantine bit using the command below:
 
 ```bash
-brew install complexlogic/tap/rsgain
+xattr -d com.apple.quarantine /path/to/rsgain`
 ```
 
-### FreeBSD
-
-Available via ports tree or using packages (2023Q1 and later) as listed below:
-
-```bash
-cd /usr/ports/audio/rsgain && make install clean
-
-pkg install rsgain
-```
+Substitute `/path/to/rsgain` with the actual path on your system.
 
 ### Linux
 
 #### Debian/Ubuntu
 
-An amd64 .deb package is provided on the [release page](https://github.com/complexlogic/rsgain/releases/latest). It is installable on Debian Bookworm and Ubuntu 23.04.
+rsgain is available as an official Debian package starting in Debian 13 (Trixie) and Ubuntu 24.04 (noble). Install via `apt`:
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain_3.4-1_amd64.deb
-sudo apt install ./rsgain_3.4-1_amd64.deb
+sudo apt install rsgain
 ```
+
+There is also a .deb package for Debian Bookworm available on the [release page](https://github.com/complexlogic/rsgain/releases/latest). Use the following commands to install:
+
+```bash
+wget https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain_3.5-1_amd64.deb
+sudo apt install ./rsgain_3.5-1_amd64.deb
+```
+The above package won't work on recent Ubuntu releases due to an FFmpeg ABI break.
 
 #### Arch/Manjaro
 
-There is an AUR package [rsgain-git](https://aur.archlinux.org/packages/rsgain-git) based on the current `master` (which is relatively stable). You can install it with an AUR helper such as yay:
+rsgain is available in the AUR via the packages [rsgain](https://aur.archlinux.org/packages/rsgain) and [rgsain-git](https://aur.archlinux.org/packages/rsgain-git). You can install with an AUR helper such as `yay`:
 
 ```bash
-yay -S rsgain-git
+yay -S rsgain
 ```
-
-There is also a PKGBUILD script based on the latest release source tarball located in the `config` directory of the repo.
 
 #### Fedora
 
-A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 38.
+A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 39.
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.4/rsgain-3.4-1.x86_64.rpm
+sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-1.x86_64.rpm
 ```
 
 #### Nix/NixOS
@@ -105,9 +118,28 @@ sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.4/r
   environment.systemPackages = with pkgs; [ rsgain ];
   ```
 
-#### Others
+#### Static Build
 
-Users of other distros will need to build from source. See [BUILDING](docs/BUILDING.md).
+An x86_64 static build is available that should run on recent releases of most GNU-based Linux distros (any distro shipping GCC 10 or later). Download the archive below and extract it to a directory of your choice:
+- [rsgain v3.5 portable TAR (x86_64)](https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.4-Linux.tar.xz)
+
+### FreeBSD
+
+Available via ports tree or using packages (2023Q1 and later) as listed below:
+
+```bash
+cd /usr/ports/audio/rsgain && make install clean
+
+pkg install rsgain
+```
+
+### Android
+
+rsgain can be installed on Android devices via the [Termux](https://termux.dev/en/) terminal emulator package manager:
+
+```bash
+pkg install rsgain
+```
 
 ### Docker
 
@@ -147,7 +179,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 | Wavpack                              | .wv                         |
 | Windows Media Audio (WMA)            | .wma                        |
 
-1. *Support for HE-AAC and xHE-AAC are available via the Fraunhofer AAC library. On Windows, the statically-linked FFmpeg already includes support, so no further action is required. On Unix platforms, you will need to check if your build of FFmpeg was compiled with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
+1. *Support for HE-AAC and xHE-AAC are available via the Fraunhofer FDK AAC library. For the static builds, the included FFmpeg was compiled with support, so no further action is required. For the dynamic builds, you will need to check if your build of FFmpeg was compiled with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
 2. *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
 
 ## Usage
@@ -253,6 +285,7 @@ Each setting key in a presets file corresponds to a command line option in Custo
 | ID3v2Version   | Integer    | -I                 |
 | MaxPeakLevel   | Decimal    | -m                 |
 | OpusMode       | Character  | -o                 |
+| PreserveMtimes | Booelan    | -p                 |
 
 See [Custom Mode](#custom-mode) for more information.
 

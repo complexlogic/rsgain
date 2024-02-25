@@ -105,7 +105,7 @@ jobs:
             vcpkg_features: fmt;
 
           - name: Fedora
-            docker_image: fedora:38
+            docker_image: fedora:39
             package_type: RPM
             package_ext: .rpm
             vcpkg_features: fmt;

@@ -1,3 +1,12 @@
+v3.5 (2024-02-25)
+- Add -p option to preserve file modification times
+- In Custom Mode, immediately fail if any file in the list does not exist or is of unsupported type
+- Fix segfault that occurs when attempting to tag corrupted MP4 files
+- Provide static builds for macOS and Linux
+- Unix: Include optional manpage with installation
+- Windows: Support long paths
+- Static builds: Upgrade to TagLib 2
+
 v3.4 (2023-09-11)
 - Added support for Tom's lossless Audio Kompressor (TAK) format
 - Added -O option 'a' which sorts the output by filename alphanumerically
