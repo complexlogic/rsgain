@@ -27,9 +27,8 @@ permissions:
 defaults:
   run:
     shell: bash
-
 env:
-  VCPKG_COMMITTISH: c8696863d371ab7f46e213d8f5ca923c4aef2a00
+  VCPKG_COMMITTISH: 37c3e63a1306562f7f59c4c3c8892ddd50fdf992
 
 jobs:
   build_windows:
@@ -37,44 +36,12 @@ jobs:
     runs-on: windows-2022
     strategy:
       fail-fast: false
-
     env:
       CMAKE_BUILD_TYPE: Release
       CMAKE_GENERATOR: Visual Studio 17 2022
       VCPKG_TRIPLET: custom-triplet
 
     steps:
-      - name: Remove Old VS version (Hack)
-        shell: pwsh
-        run: |
-          Set-Location "C:\Program Files (x86)\Microsoft Visual Studio\Installer\"
-          $InstallPath = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-          $componentsToRemove= @(
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ARM"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ARM.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ARM64"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ARM64.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.x86.x64"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.x86.x64.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL.ARM"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL.ARM.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL.ARM64"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.ATL.ARM64.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC.ARM"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC.ARM.Spectre"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC.ARM64"
-            "Microsoft.VisualStudio.Component.VC.14.35.17.5.MFC.ARM64.Spectre"
-          )
-          [string]$workloadArgs = $componentsToRemove | ForEach-Object {" --remove " +  $_}
-          $Arguments = ('/c', "vs_installer.exe", 'modify', '--installPath', "`"$InstallPath`"",$workloadArgs, '--quiet', '--norestart', '--nocache')
-          # should be run twice
-          $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
-          $process = Start-Process -FilePath cmd.exe -ArgumentList $Arguments -Wait -PassThru -WindowStyle Hidden
-
       - name: Checkout Git repository
         uses: actions/checkout@v3
         with:

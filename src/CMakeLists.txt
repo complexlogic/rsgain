@@ -65,7 +65,7 @@ elseif (UNIX)
     add_custom_command(TARGET ${EXECUTABLE_TITLE}
       POST_BUILD
       COMMAND "${CMAKE_COMMAND}" -E copy "${PROJECT_SOURCE_DIR}/docs/${EXECUTABLE_TITLE}.1" "${PROJECT_BINARY_DIR}"
-      COMMAND "${GZIP}" "${PROJECT_BINARY_DIR}/${EXECUTABLE_TITLE}.1"
+      COMMAND "${GZIP}" -f "${PROJECT_BINARY_DIR}/${EXECUTABLE_TITLE}.1"
     )
   endif ()
 endif()

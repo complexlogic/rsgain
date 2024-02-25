@@ -20,7 +20,7 @@ project(rsgain
 set(MAXPROGBARWIDTH "0" CACHE STRING "Maximum width of progress bar")
 option(UCHECKMARKS "Enable use of Unicode checkmarks" ON)
 option(EXTRA_WARNINGS "Enable extra compiler warnings" OFF)
-option(INSTALL_MANPAGE "Install man page" OFF)
+option(INSTALL_MANPAGE "Install man page (requires gzip)" OFF)
 if (EXTRA_WARNINGS)
   if (MSVC)
     add_compile_options(/W4 /WX)
