@@ -150,7 +150,7 @@ add_subdirectory(src)
 # Installation - Windows
 if (WIN32)
   install(DIRECTORY ${PROJECT_BINARY_DIR}/$<CONFIG>/ DESTINATION .)
-  foreach(item CHANGELOG LICENSE)
+  foreach(item CHANGELOG LICENSE LICENSE-CRCpp)
     configure_file("${PROJECT_SOURCE_DIR}/${item}" "${PROJECT_BINARY_DIR}/${item}.txt")
     install(FILES "${PROJECT_BINARY_DIR}/${item}.txt" DESTINATION .)
   endforeach ()
