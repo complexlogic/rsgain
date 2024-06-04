@@ -95,10 +95,10 @@ yay -S rsgain
 
 #### Fedora
 
-A package is available on the [release page](https://github.com/complexlogic/rsgain/releases/latest) that is compatible with Fedora 39.
+rsgain is packaged in Fedora's repositories. You can use `dnf` to install:
 
 ```bash
-sudo dnf install https://github.com/complexlogic/rsgain/releases/download/v3.5/rsgain-3.5-1.x86_64.rpm
+sudo dnf install rsgain
 ```
 
 #### Nix/NixOS
