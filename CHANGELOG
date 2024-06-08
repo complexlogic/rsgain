@@ -1,3 +1,7 @@
+v3.5.1 (2024-06-08)
+- Fix header gain calculation for multichannel Opus files
+- Static builds: Upgrade to FFmpeg 7
+
 v3.5 (2024-02-25)
 - Add -p option to preserve file modification times
 - In Custom Mode, immediately fail if any file in the list does not exist or is of unsupported type
