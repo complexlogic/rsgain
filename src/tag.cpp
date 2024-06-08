@@ -71,6 +71,7 @@
 #define OGG_ROW_SIZE 4
 #define OPUS_HEAD_OFFSET 7 * OGG_ROW_SIZE
 #define OGG_CRC_OFFSET 5 * OGG_ROW_SIZE + 2
+#define OGG_SEGMENT_TABLE_OFFSET 27
 #define OPUS_GAIN_OFFSET 11 * OGG_ROW_SIZE
 #define RG_TAGS_UPPERCASE 1
 #define RG_TAGS_LOWERCASE 2
@@ -723,28 +724,53 @@ static void tag_write(TagLib::ASF::Tag *tag, const ScanResult &result, const Con
 static_assert(-1 == ~0); // 2's complement for signed integers
 bool set_opus_header_gain(const char *path, int16_t gain)
 {   
-    char buffer[OPUS_HEADER_SIZE]; // 47 bytes
     uint32_t crc;
     if constexpr(std::endian::native == std::endian::big)
         gain = static_cast<int16_t>((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
     
-    // Read header into memory
     std::unique_ptr<std::FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
-    size_t read = fread(buffer, 1, sizeof(buffer), file.get());
+    char buffer[8];
+    size_t page_size = 0;
+    size_t opus_header_size = 0;
+
+    // Check for OggS header
+    if (fseek(file.get(), 0, SEEK_SET)
+        || fread(buffer, 1, 4, file.get()) != 4
+        || strncmp(buffer, "OggS", 4))
+        return false;
     
-    // Make sure we have a valid Ogg/Opus header
-    if (read != sizeof(buffer) || strncmp(buffer, "OggS", 4)  ||
-    strncmp(buffer + OPUS_HEAD_OFFSET, "OpusHead", 8))  
+    // Check for OpusHead header
+    if (fseek(file.get(), OPUS_HEAD_OFFSET, SEEK_SET)
+        || fread(buffer, 1, 8, file.get()) != 8
+        || strncmp(buffer, "OpusHead", 8))
+        return false;
+
+    // Read the size of the Opus header
+    if (fseek(file.get(), OGG_SEGMENT_TABLE_OFFSET, SEEK_SET)
+        || fread((void*) &opus_header_size, 1, 1, file.get()) != 1)
+        return false;
+    page_size = OPUS_HEAD_OFFSET + opus_header_size;
+
+    // To verify the page size, make sure the next Ogg page is where we expect it
+    if (fseek(file.get(), page_size, SEEK_SET)
+        || fread(buffer, 1, 4, file.get()) != 4
+        || strncmp(buffer, "OggS", 4))
+        return false;
+
+    // Read the entire Ogg page into memory
+    auto page = std::make_unique<char[]>(page_size);
+    if (fseek(file.get(), 0, SEEK_SET)
+        || fread(page.get(), 1, page_size, file.get()) != page_size)
         return false;
 
     // Clear CRC, set gain
-    memset(buffer + OGG_CRC_OFFSET, 0, sizeof(crc));
-    memcpy(buffer + OPUS_GAIN_OFFSET, &gain, sizeof(gain));
-    
+    memset(page.get() + OGG_CRC_OFFSET, 0, sizeof(crc));
+    memcpy(page.get() + OPUS_GAIN_OFFSET, &gain, sizeof(gain));
+
     // Calculate new CRC
     static const CRC::Table<uint32_t, 32> table({0x04C11DB7, 0, 0, false, false});
-    crc = CRC::Calculate(buffer, sizeof(buffer), table);
-    
+    crc = CRC::Calculate(page.get(), page_size, table);
+
     // Write new CRC and gain to file
     fseek(file.get(), OGG_CRC_OFFSET, SEEK_SET);
     fwrite(&crc, sizeof(crc), 1, file.get());
