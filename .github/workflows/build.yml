@@ -28,7 +28,7 @@ defaults:
   run:
     shell: bash
 env:
-  VCPKG_COMMITTISH: 37c3e63a1306562f7f59c4c3c8892ddd50fdf992
+  VCPKG_COMMITTISH: 01f602195983451bc83e72f4214af2cbc495aa94
 
 jobs:
   build_windows:
