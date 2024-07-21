@@ -58,10 +58,10 @@ extern "C" {
 #include "output.hpp"
 #include "easymode.hpp"
 
-#define PRINT_LIB(lib, version) print("  " COLOR_YELLOW " {:<14}" COLOR_OFF " {}\n", lib, version)
+#define PRINT_LIB(lib, version) rsgain::print("  " COLOR_YELLOW " {:<14}" COLOR_OFF " {}\n", lib, version)
 #define PRINT_LIB_FFMPEG(name, fn) \
     ffver = fn(); \
-    PRINT_LIB(name, format("{}.{}.{}", AV_VERSION_MAJOR(ffver), AV_VERSION_MINOR(ffver), AV_VERSION_MICRO(ffver)))
+    PRINT_LIB(name, rsgain::format("{}.{}.{}", AV_VERSION_MAJOR(ffver), AV_VERSION_MINOR(ffver), AV_VERSION_MICRO(ffver)))
 
 #ifdef _WIN32
 #include <windows.h>
@@ -386,53 +386,53 @@ int main(int argc, char *argv[]) {
 }
 
 static void help_main() {
-    print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    rsgain::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
-    print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2),\n");
-    print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
-    print("  WAV (.wav), AIFF (.aiff, .aif, .snd), and TAK (.tak).\n");
+    rsgain::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
+    rsgain::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2),\n");
+    rsgain::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
+    rsgain::print("  WAV (.wav), AIFF (.aiff, .aif, .snd), and TAK (.tak).\n");
 
-    print("\n");
-    print(COLOR_RED "Options:\n" COLOR_OFF);
+    rsgain::print("\n");
+    rsgain::print(COLOR_RED "Options:\n" COLOR_OFF);
 
     CMD_HELP("--help",     "-h", "Show this help");
     CMD_HELP("--version",  "-v", "Show version number");
     
-    print("\n");
-    print(COLOR_RED "Commands:\n" COLOR_OFF);
+    rsgain::print("\n");
+    rsgain::print(COLOR_RED "Commands:\n" COLOR_OFF);
 
     CMD_CMD("easy",     "Easy Mode:   Recursively scan a directory with recommended settings");
     CMD_CMD("custom",   "Custom Mode: Scan individual files with custom settings");
-    print("\n");
-    print("Run '{} easy --help' or '{} custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
+    rsgain::print("\n");
+    rsgain::print("Run '{} easy --help' or '{} custom --help' for more information.", EXECUTABLE_TITLE, EXECUTABLE_TITLE);
 
-    print("\n\n");
-    print("Please report any issues to " PROJECT_URL "/issues\n\n");
+    rsgain::print("\n\n");
+    rsgain::print("Please report any issues to " PROJECT_URL "/issues\n\n");
 }
 
 static inline void help_custom() {
-    print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    rsgain::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} custom [OPTIONS] FILES...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    print("  Custom Mode allows the user to specify the options to scan the files with. The\n");
-    print("  list of files to scan must be listed explicitly after the options.\n");
-    print("\n");
+    rsgain::print("  Custom Mode allows the user to specify the options to scan the files with. The\n");
+    rsgain::print("  list of files to scan must be listed explicitly after the options.\n");
+    rsgain::print("\n");
     
-    print(COLOR_RED "Options:\n" COLOR_OFF);
+    rsgain::print(COLOR_RED "Options:\n" COLOR_OFF);
     CMD_HELP("--help",     "-h", "Show this help");
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--album",  "-a", "Calculate album gain and peak");
     CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--tagmode=s", "-s s", "Scan files but don't write ReplayGain tags (default)");
     CMD_HELP("--tagmode=d", "-s d",  "Delete ReplayGain tags from files");
     CMD_HELP("--tagmode=i", "-s i",  "Scan and write ReplayGain 2.0 tags to files");
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--loudness=n",  "-l n",  "Use n LUFS as target loudness (" STR(MIN_TARGET_LOUDNESS) " ≤ n ≤ " STR(MAX_TARGET_LOUDNESS) ")");
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--clip-mode=n", "-c n", "No clipping protection (default)");
     CMD_HELP("--clip-mode=p", "-c p", "Clipping protection enabled for positive gain values only");
@@ -440,7 +440,7 @@ static inline void help_custom() {
     CMD_HELP("--max-peak=n", "-m n", "Use max peak level n dB for clipping protection");
     CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
 
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--lowercase", "-L", "Write lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)");
     CMD_CONT("This is non-standard but sometimes needed");
@@ -448,7 +448,7 @@ static inline void help_custom() {
     CMD_HELP("--id3v2-version=3", "-I 3", "Write ID3v2.3 tags to MP2/MP3/WAV/AIFF");
     CMD_HELP("--id3v2-version=4", "-I 4", "Write ID3v2.4 tags to MP2/MP3/WAV/AIFF");
 
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--opus-mode=d", "-o d", "Write standard ReplayGain tags, clear header output gain (default)");
     CMD_HELP("--opus-mode=r", "-o r", "Write R128_*_GAIN tags, clear header output gain");
@@ -456,7 +456,7 @@ static inline void help_custom() {
     CMD_HELP("--opus-mode=t", "-o t", "Write track gain to header output gain");
     CMD_HELP("--opus-mode=a", "-o a", "Write album gain to header output gain");
 
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to stdout");
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
@@ -465,10 +465,10 @@ static inline void help_custom() {
     CMD_HELP("--preserve-mtimes", "-p", "Preserve file mtimes");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
 
-    print("\n");
+    rsgain::print("\n");
 
-    print("Please report any issues to " PROJECT_URL "/issues\n");
-    print("\n");
+    rsgain::print("Please report any issues to " PROJECT_URL "/issues\n");
+    rsgain::print("\n");
 }
 
 static void version() {
@@ -476,7 +476,7 @@ static void version() {
     int ebur128_v_major = 0;
     int ebur128_v_minor = 0;
     int ebur128_v_patch = 0;
-    print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION
+    rsgain::print(COLOR_GREEN PROJECT_NAME COLOR_OFF " " PROJECT_VERSION
 #if defined COMMITS_SINCE_TAG && defined COMMIT_HASH
                 "-r" COMMITS_SINCE_TAG "-" COMMIT_HASH
 #endif
@@ -485,27 +485,27 @@ static void version() {
 
     // Library versions
     ebur128_get_version(&ebur128_v_major, &ebur128_v_minor, &ebur128_v_patch);
-    PRINT_LIB("libebur128", format("{}.{}.{}", ebur128_v_major, ebur128_v_minor, ebur128_v_patch));
+    PRINT_LIB("libebur128", rsgain::format("{}.{}.{}", ebur128_v_major, ebur128_v_minor, ebur128_v_patch));
     PRINT_LIB_FFMPEG("libavformat", avformat_version);
     PRINT_LIB_FFMPEG("libavcodec", avcodec_version);
     PRINT_LIB_FFMPEG("libavutil", avutil_version);
     PRINT_LIB_FFMPEG("libswresample", swresample_version);
 #if HAS_TAGLIB2
     TagLib::VersionNumber tver = TagLib::runtimeVersion();
-    PRINT_LIB("TagLib", format("{}.{}{}", tver.majorVersion(), tver.minorVersion(), tver.patchVersion() ? format(".{}", tver.patchVersion()) : ""));
+    PRINT_LIB("TagLib", rsgain::format("{}.{}{}", tver.majorVersion(), tver.minorVersion(), tver.patchVersion() ? rsgain::format(".{}", tver.patchVersion()) : ""));
 #else
-    print("\n");
-    print("Built with:\n");
-    PRINT_LIB("TagLib", format("{}.{}{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION ? format(".{}", TAGLIB_PATCH_VERSION) : ""));
+    rsgain::print("\n");
+    rsgain::print("Built with:\n");
+    PRINT_LIB("TagLib", rsgain::format("{}.{}{}", TAGLIB_MAJOR_VERSION, TAGLIB_MINOR_VERSION, TAGLIB_PATCH_VERSION ? rsgain::format(".{}", TAGLIB_PATCH_VERSION) : ""));
 #endif
-    print("\n");
+    rsgain::print("\n");
 
 #if defined(__GNUC__) && !defined(__clang__)
-    print(COLOR_YELLOW "{:<17}" COLOR_OFF " GCC {}.{}\n", "Compiler:", __GNUC__, __GNUC_MINOR__);
+    rsgain::print(COLOR_YELLOW "{:<17}" COLOR_OFF " GCC {}.{}\n", "Compiler:", __GNUC__, __GNUC_MINOR__);
 #endif
 
 #ifdef __clang__
-    print(COLOR_YELLOW "{:<17}" COLOR_OFF " "
+    rsgain::print(COLOR_YELLOW "{:<17}" COLOR_OFF " "
 #ifdef __apple_build_version__
     "Apple "
 #endif
@@ -513,8 +513,8 @@ static void version() {
 #endif
 
 #ifdef _MSC_VER
-    print(COLOR_YELLOW "{:<17}" COLOR_OFF " Microsoft C/C++ {:.2f}\n", "Compiler:", (float) _MSC_VER / 100.0f);
+    rsgain::print(COLOR_YELLOW "{:<17}" COLOR_OFF " Microsoft C/C++ {:.2f}\n", "Compiler:", (float) _MSC_VER / 100.0f);
 #endif
 
-    print(COLOR_YELLOW "{:<17}" COLOR_OFF " " BUILD_DATE "\n", "Build Date:");
+    rsgain::print(COLOR_YELLOW "{:<17}" COLOR_OFF " " BUILD_DATE "\n", "Build Date:");
 }

@@ -20,9 +20,10 @@ The Windows version uses C++23, and the Unix versions use either C++20 or C++23 
 
 ### fmt library
 
-The features that rsgain uses from the fmt library have been integrated into the C++20 and C++23 standards, specifically the `<format>` and `<print>` headers. Currently, neither GCC nor Clang have full support those features, so the fmt libary is required. When they gain support, the fmt dependency will be dropped in favor of the C++ standard library.
-
-The features have been incorporated into Microsoft's C++ standard library implementation, so the fmt library is no longer required for the Windows version.
+The features that rsgain uses from the fmt library have been integrated into the C++20 and C++23 standards, specifically the `<format>` and `<print>` headers. The standard library implementations are planned to completely replace rsgain's fmt dependency in the future. To support the transition, rsgain can use either the fmt library or standard library, depending on platform:
+- MSVC has full support in the standard library since version 19.37. The fmt library has been dropped from the Windows version in favor of the standard library implementation
+- GCC (libstdc++) has full support in the standard library since version 14. Pass `-DUSE_STD_FORMAT=ON` to `cmake` to use the standard library instead of the fmt library
+- Clang (libc++) has full support in the standard library since version 18. Enable it using the configuration switch described above for GCC
 
 ## Unix
 

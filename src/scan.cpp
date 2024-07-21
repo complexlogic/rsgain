@@ -220,7 +220,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     if (lk)
         lk->lock();
-    rc = avformat_open_input(&format_ctx, format("file:{}", path.string()).c_str(), nullptr, nullptr);
+    rc = avformat_open_input(&format_ctx, rsgain::format("file:{}", path.string()).c_str(), nullptr, nullptr);
     if (rc < 0) {
         output_fferror(rc, "Could not open input");
         goto end;
@@ -290,7 +290,7 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         output_ok("Stream #{}: {}, {}{:L} Hz, {} ch",
             stream_id, 
             codec->long_name, 
-            codec_ctx->bits_per_raw_sample > 0 ? format("{} bit, ", codec_ctx->bits_per_raw_sample) : "", 
+            codec_ctx->bits_per_raw_sample > 0 ? rsgain::format("{} bit, ", codec_ctx->bits_per_raw_sample) : "", 
             codec_ctx->sample_rate, 
             nb_channels
         );
@@ -525,52 +525,52 @@ void ScanJob::tag_tracks()
 
         if (tab_output) {
             // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;
-            print(stream, "{}\t", track.path.filename().string());
-            track.result.track_loudness == -HUGE_VAL ? print(stream, "-∞\t") : print(stream, "{:.2f}\t", track.result.track_loudness);
-            print(stream, "{:.2f}\t", track.result.track_gain);
-            print(stream, "{:.6f}\t", track.result.track_peak);
-            track.result.track_peak == 0.0 ? print(stream, "-∞\t") : print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
-            print(stream, "{}\t", config.true_peak ? "True" : "Sample");
-            print(stream, "{}\n", track.tclip ? "Y" : "N");
+            rsgain::print(stream, "{}\t", track.path.filename().string());
+            track.result.track_loudness == -HUGE_VAL ? rsgain::print(stream, "-∞\t") : rsgain::print(stream, "{:.2f}\t", track.result.track_loudness);
+            rsgain::print(stream, "{:.2f}\t", track.result.track_gain);
+            rsgain::print(stream, "{:.6f}\t", track.result.track_peak);
+            track.result.track_peak == 0.0 ? rsgain::print(stream, "-∞\t") : rsgain::print(stream, "{:.2f}\t", 20.0 * log10(track.result.track_peak));
+            rsgain::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
+            rsgain::print(stream, "{}\n", track.tclip ? "Y" : "N");
             if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
-                print(stream, "{}\t", "Album");
-                track.result.album_loudness == -HUGE_VAL ? print(stream, "-∞\t") : print(stream, "{:.2f}\t", track.result.album_loudness);
-                print(stream, "{:.2f}\t", track.result.album_gain);
-                print(stream, "{:.6f}\t", track.result.album_peak);
-                track.result.album_peak == 0.0 ? print(stream, "-∞\t") : print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
-                print(stream, "{}\t", config.true_peak ? "True" : "Sample");
-                print(stream, "{}\n", track.aclip ? "Y" : "N");
+                rsgain::print(stream, "{}\t", "Album");
+                track.result.album_loudness == -HUGE_VAL ? rsgain::print(stream, "-∞\t") : rsgain::print(stream, "{:.2f}\t", track.result.album_loudness);
+                rsgain::print(stream, "{:.2f}\t", track.result.album_gain);
+                rsgain::print(stream, "{:.6f}\t", track.result.album_peak);
+                track.result.album_peak == 0.0 ? rsgain::print(stream, "-∞\t") : rsgain::print(stream, "{:.2f}\t", 20.0 * log10(track.result.album_peak));
+                rsgain::print(stream, "{}\t", config.true_peak ? "True" : "Sample");
+                rsgain::print(stream, "{}\n", track.aclip ? "Y" : "N");
             }
         } 
         
         // Human-readable output
         if (human_output) {
-            print("\nTrack: {}\n", track.path.string());
-            print("  Loudness: {} LUFS\n", track.result.track_loudness == -HUGE_VAL ? "   -∞" : format("{:8.2f}", track.result.track_loudness));
-            print("  Peak:     {:8.6f} ({} dB)\n",
+            rsgain::print("\nTrack: {}\n", track.path.string());
+            rsgain::print("  Loudness: {} LUFS\n", track.result.track_loudness == -HUGE_VAL ? "   -∞" : rsgain::format("{:8.2f}", track.result.track_loudness));
+            rsgain::print("  Peak:     {:8.6f} ({} dB)\n",
                 track.result.track_peak,
-                track.result.track_peak == 0.0 ? "-∞" : format("{:.2f}", 20.0 * log10(track.result.track_peak))
+                track.result.track_peak == 0.0 ? "-∞" : rsgain::format("{:.2f}", 20.0 * log10(track.result.track_peak))
             );
-            print("  Gain:     {:8.2f} dB {}{}\n", 
+            rsgain::print("  Gain:     {:8.2f} dB {}{}\n", 
                 track.result.track_gain,
-                track.type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
+                track.type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? rsgain::format("({})", GAIN_TO_Q78(track.result.track_gain)) : "",
                 track.tclip ? " (adjusted to prevent clipping)" : ""
             );
 
             if (config.do_album && ((size_t) (&track - &tracks[0]) == (nb_files - 1))) {
-                print("\nAlbum:\n");
-                print("  Loudness: {} LUFS\n", track.result.album_loudness == -HUGE_VAL ? "   -∞" : format("{:8.2f}", track.result.album_loudness));
-                print("  Peak:     {:8.6f} ({} dB)\n",
+                rsgain::print("\nAlbum:\n");
+                rsgain::print("  Loudness: {} LUFS\n", track.result.album_loudness == -HUGE_VAL ? "   -∞" : rsgain::format("{:8.2f}", track.result.album_loudness));
+                rsgain::print("  Peak:     {:8.6f} ({} dB)\n",
                     track.result.album_peak,
-                    track.result.album_peak == 0.0 ? "-∞" : format("{:.2f}", 20.0 * log10(track.result.album_peak))
+                    track.result.album_peak == 0.0 ? "-∞" : rsgain::format("{:.2f}", 20.0 * log10(track.result.album_peak))
                 );
-                print("  Gain:     {:8.2f} dB {}{}\n", 
+                rsgain::print("  Gain:     {:8.2f} dB {}{}\n", 
                     track.result.album_gain,
-                    type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
+                    type == FileType::OPUS && (config.opus_mode == 'r' || config.opus_mode == 's') ? rsgain::format("({})", GAIN_TO_Q78(track.result.album_gain)) : "",
                     track.aclip ? " (adjusted to prevent clipping)" : ""
                 );
             }
-            print("\n");
+            rsgain::print("\n");
         }
     }
     if (config.tab_output == OutputType::FILE && stream != nullptr)

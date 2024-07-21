@@ -91,7 +91,7 @@ void ProgressBar::update(int pos)
 
 	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
-		print(" {:3.0f}% [", percent * 100.f);
+		rsgain::print(" {:3.0f}% [", percent * 100.f);
 		memset(buffer, '=', (size_t) c);
 		memset(buffer + c, ' ', (size_t) (w - c));
 		buffer[w] = ']';
@@ -117,7 +117,7 @@ void ProgressBar::complete()
 
 	delete buffer;
 	buffer = nullptr;
-	print("\n");
+	rsgain::print("\n");
 }
 
 inline int ProgressBar::get_console_width()
@@ -144,7 +144,7 @@ void MTProgress::update(const std::string &path)
 	if (w_path + w_message >= w_console)
 		w_path = w_console - w_message;
 
-	print("\33[2K " COLOR_GREEN "{:5.1f}%" COLOR_OFF  MT_MESSAGE "{:.{}}\r", 
+	rsgain::print("\33[2K " COLOR_GREEN "{:5.1f}%" COLOR_OFF  MT_MESSAGE "{:.{}}\r", 
 		100.f * ((float) (cur) / (float) (total)), 
 		path,
 		w_path < 0 ? 0 : w_path

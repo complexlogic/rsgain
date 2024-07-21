@@ -27,7 +27,7 @@
 #include "scan.hpp"
 
 #define MAX_THREAD_SLEEP 30
-#define HELP_STATS(title, format, ...) print(COLOR_YELLOW "{:<18} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
+#define HELP_STATS(title, format, ...) rsgain::print(COLOR_YELLOW "{:<18} " COLOR_OFF format "\n", title ":" __VA_OPT__(,) __VA_ARGS__)
 
 extern "C" {
     int format_handler(void *user, const char *section, const char *name, const char *value);
@@ -776,7 +776,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
                 break;
             cv.wait_for(lock, std::chrono::milliseconds(200));
         }
-        print("\33[2K\n");
+        rsgain::print("\33[2K\n");
     }
 
     // Single threaded scanning
@@ -787,22 +787,22 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
             job->update_data(data);
             jobs.pop();
         }
-        print("\n");
+        rsgain::print("\n");
     }
 
     // Output statistics at the end
     auto duration = std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now() - start_time);
     if (!data.files) {
         if (data.skipped)
-            print("Skipped {:L} file{} with existing ReplayGain information\n",
+            rsgain::print("Skipped {:L} file{} with existing ReplayGain information\n",
                 data.skipped,
                 data.skipped > 1 ? "s" : ""
             );
-        print("No files were scanned\n");
+        rsgain::print("No files were scanned\n");
         return;
     }
     
-    print(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
+    rsgain::print(COLOR_GREEN "Scanning Complete" COLOR_OFF "\n");
     HELP_STATS("Time Elapsed", "{:%H:%M:%S}", duration);
     HELP_STATS("Files Scanned", "{:L}", data.files);
     if (data.skipped)
@@ -810,46 +810,46 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
     HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", data.clipping_adjustments, 100.f * (float) data.clipping_adjustments / (float) data.files);
     HELP_STATS("Average Gain", "{:.2f} dB", data.total_gain / (double) data.files);
     double average_peak = data.total_peak / (double) data.files;
-    HELP_STATS("Average Peak", "{:.6f}{}", average_peak, average_peak != 0.0 ? format(" ({:.2f} dB)", 20.0 * log10(average_peak)) : "");
+    HELP_STATS("Average Peak", "{:.6f}{}", average_peak, average_peak != 0.0 ? rsgain::format(" ({:.2f} dB)", 20.0 * log10(average_peak)) : "");
     HELP_STATS("Negative Gains", "{:L} ({:.1f}% of files)", data.total_negative, 100.f * (float) data.total_negative / (float) data.files);
     HELP_STATS("Positive Gains", "{:L} ({:.1f}% of files)", data.total_positive, 100.f * (float) data.total_positive / (float) data.files);
-    print("\n");
+    rsgain::print("\n");
 
     // Inform user of errors
     if (!data.error_directories.empty()) {
-        print(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
+        rsgain::print(COLOR_RED "There were errors while scanning the following directories:" COLOR_OFF "\n");
         for (const std::string &s : data.error_directories)
-            print("{}\n", s);
-        print("\n");
+            rsgain::print("{}\n", s);
+        rsgain::print("\n");
     }
 }
 
 static inline void help_easy() {
-    print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
+    rsgain::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} easy [OPTIONS] DIRECTORY\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
-    print("  Easy Mode recursively scans a directory using the recommended settings for each\n");
-    print("  file type. Easy Mode assumes that you have your music library organized with each album\n");
-    print("  in its own folder.\n");
+    rsgain::print("  Easy Mode recursively scans a directory using the recommended settings for each\n");
+    rsgain::print("  file type. Easy Mode assumes that you have your music library organized with each album\n");
+    rsgain::print("  in its own folder.\n");
 
-    print("\n");
-    print(COLOR_RED "Options:\n" COLOR_OFF);
+    rsgain::print("\n");
+    rsgain::print(COLOR_RED "Options:\n" COLOR_OFF);
 
     CMD_HELP("--help",     "-h", "Show this help");
     CMD_HELP("--quiet",      "-q",  "Don't print scanning status messages");
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
     CMD_HELP("--multithread=n", "-m n", "Scan files with n parallel threads");
     CMD_HELP("--preset=s", "-p s", "Load scan preset s");
 
-    print("\n");
+    rsgain::print("\n");
 
     CMD_HELP("--output", "-O",  "Output tab-delimited scan data to CSV file per directory");
     CMD_HELP("--output=s", "-O s",  "Output with sep header (needed for Microsoft Excel compatibility)");
     CMD_HELP("--output=a", "-O a",  "Output with files sorted in alphanumeric order");
 
-    print("\n");
+    rsgain::print("\n");
 
-    print("Please report any issues to " PROJECT_URL "/issues\n");
-    print("\n");
+    rsgain::print("Please report any issues to " PROJECT_URL "/issues\n");
+    rsgain::print("\n");
 }

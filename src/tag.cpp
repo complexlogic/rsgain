@@ -65,8 +65,8 @@
 #include "output.hpp"
 
 #define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 + TAGLIB_MINOR_VERSION * 100 + TAGLIB_PATCH_VERSION)
-#define FORMAT_GAIN(gain) format("{:.2f} dB", gain)
-#define FORMAT_PEAK(peak) format("{:.6f}", peak)
+#define FORMAT_GAIN(gain) rsgain::format("{:.2f} dB", gain)
+#define FORMAT_PEAK(peak) rsgain::format("{:.6f}", peak)
 #define OPUS_HEADER_SIZE 47
 #define OGG_ROW_SIZE 4
 #define OPUS_HEAD_OFFSET 7 * OGG_ROW_SIZE
@@ -636,12 +636,12 @@ static void tag_write(TagLib::Ogg::XiphComment *tag, const ScanResult &result, c
     // Opus RFC 7845 tag
     if (std::is_same_v<T, TagLib::Ogg::Opus::File> && (config.opus_mode == 'r' || config.opus_mode == 's')) {
         tag->addField(R128_STRING[static_cast<int>(R128Tag::TRACK_GAIN)], 
-            format("{}", GAIN_TO_Q78(result.track_gain))
+            rsgain::format("{}", GAIN_TO_Q78(result.track_gain))
         );
 
         if (config.do_album) {
             tag->addField(R128_STRING[static_cast<int>(R128Tag::ALBUM_GAIN)], 
-                format("{}", GAIN_TO_Q78(result.album_gain))
+                rsgain::format("{}", GAIN_TO_Q78(result.album_gain))
             );
         }
     }

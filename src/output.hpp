@@ -53,13 +53,25 @@
 #ifdef USE_STD_FORMAT
 #include <format>
 #include <print>
-#define format std::format
-#define print std::print
+namespace rsgain {
+template<class... Args>
+constexpr auto format(std::format_string<Args...> fmt, Args&&... args) { return std::format(fmt, std::forward<Args>(args)...); }
+template<class... Args>
+constexpr auto print(std::format_string<Args...> fmt, Args&&... args) { std::print(fmt, std::forward<Args>(args)...); }
+template<class... Args>
+constexpr auto print(std::FILE* stream, std::format_string<Args...> fmt, Args&&... args) { std::print(stream, fmt, std::forward<Args>(args)...); }
+}
 #else
 #include <fmt/core.h>
 #include <fmt/chrono.h>
-#define format fmt::format
-#define print fmt::print
+namespace rsgain {
+template<class... Args>
+constexpr auto format(fmt::format_string<Args...> fmt, Args&&... args) { return fmt::format(fmt, std::forward<Args>(args)...); }
+template<class... Args>
+constexpr auto print(fmt::format_string<Args...> fmt, Args&&... args) { fmt::print(fmt, std::forward<Args>(args)...); }
+template<class... Args>
+constexpr auto print(std::FILE* stream, fmt::format_string<Args...> fmt, Args&&... args) { fmt::print(stream, fmt, std::forward<Args>(args)...); }
+}
 #endif
 
 #define COLOR_GREEN	"[1;32m"
@@ -87,10 +99,10 @@
 #define FAIL_PREFIX "[" COLOR_RED FAIL_CHAR COLOR_OFF "] "
 
 extern int quiet;
-#define output_ok(format, ...)    if (!quiet) print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_warn(format, ...)  if (!quiet) print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_error(format, ...) print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
-#define output_fail(format, ...)  print(stderr, FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_ok(format, ...)    if (!quiet) rsgain::print(OK_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_warn(format, ...)  if (!quiet) rsgain::print(WARN_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_error(format, ...) rsgain::print(stderr, ERROR_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
+#define output_fail(format, ...)  rsgain::print(stderr, FAIL_PREFIX format "\n" __VA_OPT__(,) __VA_ARGS__)
 
 class ProgressBar {
     private:
