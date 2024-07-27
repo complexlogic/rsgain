@@ -446,24 +446,26 @@ static bool tag_flac(ScanJob::Track &track, const Config &config)
 
 template<typename T>
 static bool tag_ogg(ScanJob::Track &track, const Config &config) {
-    T file(track.path.string().c_str());
-    TagLib::Ogg::XiphComment *tag = nullptr;
-    if constexpr(std::is_same_v<T, TagLib::FileRef>)
-        tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
-    else
-        tag = file.tag();
-    if (!tag)
-        return false;
-    tag_clear<T>(tag);
-    if (config.tag_mode == 'i' && (!std::is_same_v<T, TagLib::Ogg::Opus::File> || 
-    (config.opus_mode != 't' && config.opus_mode != 'a')))
-        tag_write<T>(tag, track.result, config);
+    {
+        T file(track.path.string().c_str());
+        TagLib::Ogg::XiphComment* tag = nullptr;
+        if constexpr (std::is_same_v<T, TagLib::FileRef>)
+            tag = dynamic_cast<TagLib::Ogg::XiphComment*>(file.tag());
+        else
+            tag = file.tag();
+        if (!tag)
+            return false;
+        tag_clear<T>(tag);
+        if (config.tag_mode == 'i' && (!std::is_same_v<T, TagLib::Ogg::Opus::File> ||
+            (config.opus_mode != 't' && config.opus_mode != 'a')))
+            tag_write<T>(tag, track.result, config);
 
-    bool ret = file.save();
-    if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.tag_mode == 's' || 
-    !(config.opus_mode == 't' || config.opus_mode == 'a') || !ret)
-        return ret;
+        bool ret = file.save();
+        if (!std::is_same_v<T, TagLib::Ogg::Opus::File> || config.tag_mode == 's' ||
+            !(config.opus_mode == 't' || config.opus_mode == 'a') || !ret)
+            return ret;
 
+    }
     int16_t gain = config.opus_mode == 'a' && config.do_album ? 
     GAIN_TO_Q78(track.result.album_gain) : GAIN_TO_Q78(track.result.track_gain);
     return set_opus_header_gain(track.path.string().c_str(), gain);
@@ -722,13 +724,16 @@ static void tag_write(TagLib::ASF::Tag *tag, const ScanResult &result, const Con
 }
 
 static_assert(-1 == ~0); // 2's complement for signed integers
-bool set_opus_header_gain(const char *path, int16_t gain)
-{   
+bool set_opus_header_gain(const char* path, int16_t gain)
+{
     uint32_t crc;
-    if constexpr(std::endian::native == std::endian::big)
+    if constexpr (std::endian::native == std::endian::big)
         gain = static_cast<int16_t>((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
-    
+
     std::unique_ptr<std::FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
+    if (!file)
+        return false;
+
     char buffer[8];
     size_t page_size = 0;
     size_t opus_header_size = 0;
