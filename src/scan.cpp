@@ -99,7 +99,8 @@ ScanJob* ScanJob::factory(const std::filesystem::path &path)
     for (const std::filesystem::directory_entry &entry : std::filesystem::directory_iterator(path)) {
         if (entry.is_regular_file() && entry.path().has_extension()
         && ((file_type = determine_filetype(entry.path().extension().string())) != FileType::INVALID)
-        && !(file_type == FileType::M4A && get_config(file_type).skip_mp4 && entry.path().extension().string() == ".mp4")) {
+        && !(file_type == FileType::M4A && get_config(file_type).skip_mp4 && entry.path().extension().string() == ".mp4")
+        && !(entry.path().filename().string().starts_with("._"))) {
             tracks.emplace_back(entry.path(), file_type);
             extensions.insert(file_type);
         }
