@@ -390,7 +390,7 @@ static void help_main() {
 
     rsgain::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
     rsgain::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2),\n");
-    rsgain::print("  MP3 (.mp3), MP4 (.m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
+    rsgain::print("  MP3 (.mp3), MP4 (.mp4, .m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
     rsgain::print("  WAV (.wav), AIFF (.aiff, .aif, .snd), and TAK (.tak).\n");
 
     rsgain::print("\n");
