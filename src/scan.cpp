@@ -55,7 +55,13 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
-#define output_fferror(e, msg) char errbuf[256]; av_strerror(e, errbuf, sizeof(errbuf)); output_error(msg ": {}", errbuf)
+template <typename T>
+constexpr void output_fferror(int error, T&& msg)
+{
+    char errbuf[512];
+    av_strerror(error, errbuf, sizeof(errbuf));
+    output_error("{}: {}", msg, errbuf);
+}
 #define OLD_CHANNEL_LAYOUT LIBAVUTIL_VERSION_MAJOR < 57 || (LIBAVUTIL_VERSION_MAJOR == 57 && LIBAVUTIL_VERSION_MINOR < 18)
 #define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 
@@ -223,7 +229,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         lk->lock();
     rc = avformat_open_input(&format_ctx, rsgain::format("file:{}", path.string()).c_str(), nullptr, nullptr);
     if (rc < 0) {
-        output_fferror(rc, "Could not open input");
+        if (!multithread)
+            output_fferror(rc, "Could not open input");
         goto end;
     }
 
@@ -233,14 +240,16 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
 
     rc = avformat_find_stream_info(format_ctx, nullptr);
     if (rc < 0) {
-        output_fferror(rc, "Could not find stream info");
+        if (!multithread)
+            output_fferror(rc, "Could not find stream info");
         goto end;
     }
 
     // Select the best audio stream
     stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
     if (stream_id < 0) {
-        output_error("Could not find audio stream");
+        if (!multithread)
+            output_error("Could not find audio stream");
         goto end;
     }
     stream = format_ctx->streams[stream_id];
@@ -250,7 +259,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     do {
         codec_ctx = avcodec_alloc_context3(codec);
         if (!codec_ctx) {
-            output_error("Could not allocate audio codec context");
+            if (!multithread)
+                output_error("Could not allocate audio codec context");
             goto end;
         }
         avcodec_parameters_to_context(codec_ctx, stream->codecpar);
@@ -274,7 +284,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                     }
                 }
             }
-            output_fferror(rc, "Could not open codec");
+            if (!multithread)
+                output_fferror(rc, "Could not open codec");
             goto end;
         }
         repeat = false;
@@ -324,13 +335,15 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         );
 #endif
         if (!swr) {
-            output_error("Could not allocate libswresample context");
+            if (!multithread)
+                output_error("Could not allocate libswresample context");
             goto end;
         }
 
         rc = swr_init(swr);
         if (rc < 0) {
-            output_fferror(rc, "Could not open libswresample context");
+            if (!multithread)
+                output_fferror(rc, "Could not open libswresample context");
             goto end;
         }
     }
@@ -345,21 +358,24 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
         EBUR128_MODE_I | peak_mode
     );
     if (!ebur128) {
-        output_error("Could not initialize libebur128 scanner");
+        if (!multithread)
+            output_error("Could not initialize libebur128 scanner");
         goto end;
     }
 
     // Allocate AVPacket structure
     packet = av_packet_alloc();
     if (!packet) {
-        output_error("Could not allocate packet");
+        if (!multithread)
+            output_error("Could not allocate packet");
         goto end;
     }
 
     // Alocate AVFrame structure
     frame = av_frame_alloc();
     if (!frame) {
-        output_error("Could not allocate frame");
+        if (!multithread)
+            output_error("Could not allocate frame");
         goto end;
     }
 
@@ -395,7 +411,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
                             );
                             swr_out_data[0] = (uint8_t*) av_malloc(out_size);
                             if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
-                                output_error("Could not convert audio frame");
+                                if (!multithread)
+                                    output_error("Could not convert audio frame");
                                 av_free(swr_out_data[0]);
                                 goto end;
                             }
