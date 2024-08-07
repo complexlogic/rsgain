@@ -54,7 +54,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // MP2 config
@@ -72,7 +73,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // MP3 config
@@ -90,7 +92,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // FLAC config
@@ -108,7 +111,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // OGG config
@@ -126,7 +130,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // OPUS config
@@ -144,7 +149,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // M4A config
@@ -162,7 +168,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // WMA config
@@ -180,7 +187,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // WAV config
@@ -198,7 +206,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // AIFF config
@@ -216,7 +225,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // Wavpack config
@@ -234,7 +244,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // APE config
@@ -252,7 +263,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
 
     // TAK config
@@ -270,7 +282,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     },
     
     // Musepack config
@@ -288,7 +301,8 @@ static Config configs[] = {
         .lowercase = false,
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
-        .skip_mp4 = false
+        .skip_mp4 = false,
+        .preserve_mtimes = false
     }
 };
 
