@@ -128,9 +128,6 @@ jobs:
           if [[ "${{matrix.config.name}}" == "Debian" ]]; then
             apt update && apt install -y curl zip unzip gzip tar build-essential git cmake pkg-config libavcodec-dev libavformat-dev libavutil-dev libswresample-dev libebur128-dev libinih-dev binutils
           fi
-          if [[ "${{matrix.config.name}}" == "Fedora" ]]; then
-            dnf install -y curl zip unzip gzip tar git make pkg-config gcc-c++ fedora-packager rpmdevtools cmake libavcodec-free-devel libavformat-free-devel libswresample-free-devel libavutil-free-devel libebur128-devel inih-devel
-          fi
           if [[ "${{matrix.config.name}}" == "Static" ]]; then
             apt update && apt install -y curl zip unzip tar build-essential git cmake pkg-config python3 nasm binutils
           fi

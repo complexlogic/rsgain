@@ -1,3 +1,9 @@
+v3.5.2 (2024-08-07)
+- In Easy Mode, ignore macOS AppleDouble files (beginning with ._)
+- Disable error messages while a multithreaded scan is in-progress (errors will be reported at end of scan only)
+- Windows: Fix resource conflict issue when writing to Opus header
+- Unix: Fully support C++23 replacement of fmt dependency
+
 v3.5.1 (2024-06-08)
 - Fix header gain calculation for multichannel Opus files
 - Static builds: Upgrade to FFmpeg 7
