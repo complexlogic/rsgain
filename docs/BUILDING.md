@@ -51,6 +51,12 @@ FFmpeg is in the official repos in Fedora 36 and later only. If you're on an ear
 sudo dnf install libebur128-devel taglib-devel libavformat-free-devel libavcodec-free-devel libswresample-free-devel libavutil-free-devel fmt-devel inih-devel
 ```
 
+### Portage-based Linux (Gentoo, LiGurOS, Xenia)
+
+```bash
+sudo emerge --ask --noreplace --tree media-libs/libebur128 media-libs/taglib media-video/ffmpeg dev-libs/inih dev-libs/libfmt
+```
+
 ### macOS (Homebrew)
 
 ```bash
