@@ -168,10 +168,6 @@ static_assert((size_t) R128Tag::MAX_VAL == R128_STRING.size());
 
 void tag_track(ScanJob::Track &track, const Config &config)
 {
-    std::filesystem::file_time_type mtime;
-    if (config.preserve_mtimes)
-        mtime = std::filesystem::last_write_time(track.path);
-
     switch (track.type) {
         case FileType::MP2:
         case FileType::MP3:
@@ -257,8 +253,8 @@ void tag_track(ScanJob::Track &track, const Config &config)
         default:
             break;
     }
-    if (config.preserve_mtimes)
-        std::filesystem::last_write_time(track.path, mtime);
+    if (track.mtime)
+        std::filesystem::last_write_time(track.path, *(track.mtime));
 }
 
 bool tag_exists(const ScanJob::Track &track)

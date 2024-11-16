@@ -53,6 +53,7 @@ class ScanJob {
 			std::filesystem::path path;
 			FileType type;
 			std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
+			std::unique_ptr<std::filesystem::file_time_type> mtime;
 			std::string container;
 			ScanResult result;
 			int codec_id;

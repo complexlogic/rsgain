@@ -213,6 +213,10 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
     SwrContext *swr = nullptr;
     AVFormatContext *format_ctx = nullptr;
     const AVStream *stream = nullptr;
+    if (config.preserve_mtimes) {
+        mtime = std::make_unique<std::filesystem::file_time_type>();
+        *mtime = std::filesystem::last_write_time(path);
+    }
 
     // For Opus files, FFmpeg always adjusts the decoded audio samples by the header output
     // gain with no way to disable. To get the actual loudness of the audio signal,
