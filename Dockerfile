@@ -1,6 +1,6 @@
 FROM debian:bookworm
 
-ARG VERSION=3.5.2 \
+ARG VERSION=3.5.3 \
     ARCH=amd64
 
 RUN apt-get update && \

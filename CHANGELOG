@@ -1,3 +1,6 @@
+v3.5.3 (2024-11-16)
+- Fix preserve file modification time feature for Opus files
+
 v3.5.2 (2024-08-07)
 - In Easy Mode, ignore macOS AppleDouble files (beginning with ._)
 - Disable error messages while a multithreaded scan is in-progress (errors will be reported at end of scan only)
