@@ -182,7 +182,7 @@ static void custom_mode(int argc, char *argv[])
     unsigned int nb_files   = 0;
     opterr = 0;
 
-    const char *short_opts = "+ac:m:tl:O::qps:LSI:o:h?";
+    const char *short_opts = "+ac:m:tdl:O::qps:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",           no_argument,       nullptr, 'a' },
         { "skip-existing",   no_argument,       nullptr, 'S' },
@@ -190,6 +190,7 @@ static void custom_mode(int argc, char *argv[])
         { "clip-mode",       required_argument, nullptr, 'c' },
         { "max-peak",        required_argument, nullptr, 'm' },
         { "true-peak",       no_argument,       nullptr, 't' },
+        { "dual-mono",       no_argument,       nullptr, 'd' },
 
         { "loudness",        required_argument, nullptr, 'l' },
 
@@ -220,7 +221,8 @@ static void custom_mode(int argc, char *argv[])
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     };
 
     while ((rc = getopt_long(argc, argv, short_opts, long_opts, &i)) != -1) {
@@ -246,6 +248,11 @@ static void custom_mode(int argc, char *argv[])
 
             case 't': {
                 config.true_peak = true;
+                break;
+            }
+
+            case 'd': {
+                config.dual_mono = true;
                 break;
             }
 
@@ -439,6 +446,7 @@ static inline void help_custom() {
     CMD_HELP("--clip-mode=a", "-c a", "Clipping protection always enabled");
     CMD_HELP("--max-peak=n", "-m n", "Use max peak level n dB for clipping protection");
     CMD_HELP("--true-peak",  "-t", "Use true peak for peak calculations");
+    CMD_HELP("--dual-mono",  "-d", "Treat mono files as dual-mono");
 
     rsgain::print("\n");
 

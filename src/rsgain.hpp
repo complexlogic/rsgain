@@ -35,6 +35,7 @@ struct Config {
 	char opus_mode;
 	bool skip_mp4;
 	bool preserve_mtimes;
+	bool dual_mono;
 };
 
 

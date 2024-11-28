@@ -366,6 +366,8 @@ bool ScanJob::Track::scan(const Config &config, std::mutex *m)
             output_error("Could not initialize libebur128 scanner");
         goto end;
     }
+    if (nb_channels == 1 && config.dual_mono)
+        ebur128_set_channel(ebur128, 0, EBUR128_DUAL_MONO);
 
     // Allocate AVPacket structure
     packet = av_packet_alloc();

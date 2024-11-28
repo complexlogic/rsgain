@@ -55,7 +55,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // MP2 config
@@ -74,7 +75,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // MP3 config
@@ -93,7 +95,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // FLAC config
@@ -112,7 +115,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // OGG config
@@ -131,7 +135,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // OPUS config
@@ -150,7 +155,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // M4A config
@@ -169,7 +175,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // WMA config
@@ -188,7 +195,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // WAV config
@@ -207,7 +215,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // AIFF config
@@ -226,7 +235,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // Wavpack config
@@ -245,7 +255,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // APE config
@@ -264,7 +275,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
 
     // TAK config
@@ -283,7 +295,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     },
     
     // Musepack config
@@ -302,7 +315,8 @@ static Config configs[] = {
         .id3v2version = ID3V2_KEEP,
         .opus_mode = 'd',
         .skip_mp4 = false,
-        .preserve_mtimes = false
+        .preserve_mtimes = false,
+        .dual_mono = false
     }
 };
 
@@ -535,6 +549,15 @@ int global_handler([[maybe_unused]] void *user, const char *section, const char 
         else
             quit(EXIT_FAILURE);
     }
+    else if (MATCH(name, "DualMono")) {
+        bool dual_mono;
+        if (convert_bool(value, dual_mono)) {
+            for (Config &config : configs)
+                config.dual_mono = dual_mono;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
     return 0;
 }
 
@@ -567,6 +590,8 @@ int format_handler([[maybe_unused]] void *user, const char *section, const char 
         convert_bool(value, configs[static_cast<int>(file_type)].skip_mp4);
     else if (MATCH(name, "PreserveMtimes"))
         convert_bool(value, configs[static_cast<int>(file_type)].preserve_mtimes);
+    else if (MATCH(name, "DualMono"))
+        convert_bool(value, configs[static_cast<int>(file_type)].dual_mono);
     return 0;
 }
 
