@@ -33,8 +33,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <math.h>
 #include <getopt.h>
+#include <cmath>
 #include <string>
 #include <locale>
 
@@ -150,7 +150,7 @@ bool parse_max_peak_level(const char *value, double &peak)
 {
     char *rest = nullptr;
     double max_peak = strtod(value, &rest);
-    if (rest == value || !isfinite(max_peak)) {
+    if (rest == value || !std::isfinite(max_peak)) {
         output_error("Invalid max peak level '{}'", value);
         return false;
     }
