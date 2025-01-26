@@ -847,6 +847,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
     if (data.skipped)
         HELP_STATS("Files Skipped", "{:L}", data.skipped);
     HELP_STATS("Clip Adjustments", "{:L} ({:.1f}% of files)", data.clipping_adjustments, 100.f * (float) data.clipping_adjustments / (float) data.files);
+    HELP_STATS("Average Loudness", "{:.2f} LUFS", data.total_loudness / (double) data.files);
     HELP_STATS("Average Gain", "{:.2f} dB", data.total_gain / (double) data.files);
     double average_peak = data.total_peak / (double) data.files;
     HELP_STATS("Average Peak", "{:.6f}{}", average_peak, average_peak != 0.0 ? rsgain::format(" ({:.2f} dB)", 20.0 * log10(average_peak)) : "");

@@ -41,6 +41,7 @@ struct ScanData {
     size_t clipping_adjustments = 0;
     double total_gain = 0.0;
     double total_peak = 0.0;
+    double total_loudness = 0.0;
     size_t total_negative = 0;
     size_t total_positive = 0;
     std::vector<std::string> error_directories;
