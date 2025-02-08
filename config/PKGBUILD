@@ -1,5 +1,5 @@
 pkgname=rsgain
-pkgver=3.5.3
+pkgver=3.6
 pkgrel=1
 epoch=
 pkgdesc="ReplayGain 2.0 loudness normalizer"

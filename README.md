@@ -33,7 +33,7 @@ Binary packages are available on the [Release Page](https://github.com/complexlo
 ### Windows
 
 Download the ZIP file from the link below and extract its contents to a folder of your choice:
-- [rsgain v3.5.3 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.5.3/rsgain-3.5.3-win64.zip)
+- [rsgain v3.6 portable ZIP (x64)](https://github.com/complexlogic/rsgain/releases/download/v3.6/rsgain-3.6-win64.zip)
 
 rsgain should be run on Windows 10 or later for full compatibility, but it can run on Windows versions as early as Vista with some caveats. See [Windows Notes](#windows-notes) for more information.
 
@@ -56,8 +56,8 @@ scoop install extras/rsgain
 ### macOS
 
 Separate builds are available for Apple Silicon and Intel based Macs. Both require macOS 12 (Monterey) or later. Download and extract the correct version according to your hardware:
-- [rsgain v3.5.3 portable ZIP (Apple Silicon)](https://github.com/complexlogic/rsgain/releases/download/v3.5.3/rsgain-3.5.3-macOS-arm64.zip)
-- [rsgain v3.5.3 portable ZIP (Intel)](https://github.com/complexlogic/rsgain/releases/download/v3.5.3/rsgain-3.5.3-macOS-x86_64.zip)
+- [rsgain v3.6 portable ZIP (Apple Silicon)](https://github.com/complexlogic/rsgain/releases/download/v3.6/rsgain-3.6-macOS-arm64.zip)
+- [rsgain v3.6 portable ZIP (Intel)](https://github.com/complexlogic/rsgain/releases/download/v3.6/rsgain-3.6-macOS-x86_64.zip)
 
 These builds are not codesigned, and the macOS Gatekeeper will most likely block execution. To work around this, you can remove the quarantine bit using the command below:
 
@@ -84,8 +84,8 @@ sudo apt install rsgain
 There is also a .deb package for Debian Bookworm available on the [release page](https://github.com/complexlogic/rsgain/releases/latest). Use the following commands to install:
 
 ```bash
-wget https://github.com/complexlogic/rsgain/releases/download/v3.5.3/rsgain_3.5.3-1_amd64.deb
-sudo apt install ./rsgain_3.5.3-1_amd64.deb
+wget https://github.com/complexlogic/rsgain/releases/download/v3.6/rsgain_3.6-1_amd64.deb
+sudo apt install ./rsgain_3.6-1_amd64.deb
 ```
 The above package won't work on recent Ubuntu releases due to an FFmpeg ABI break.
 
@@ -125,7 +125,7 @@ sudo dnf install rsgain
 #### Static Build
 
 An x86_64 static build is available that should run on recent releases of most GNU-based Linux distros (any distro shipping GCC 10 or later). Download the archive below and extract it to a directory of your choice:
-- [rsgain v3.5.3 portable TAR (x86_64)](https://github.com/complexlogic/rsgain/releases/download/v3.5.3/rsgain-3.5.3-Linux.tar.xz)
+- [rsgain v3.6 portable TAR (x86_64)](https://github.com/complexlogic/rsgain/releases/download/v3.6/rsgain-3.6-Linux.tar.xz)
 
 ### FreeBSD
 

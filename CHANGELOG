@@ -1,3 +1,9 @@
+v3.6 (2025-02-08)
+- Add "dual mono" -d option to treat mono files as stereo
+- Add "Average Loudness" statistic to Easy Mode end-of-scan statistic report
+- Report warning instead of error if a file does not have an audio stream
+- Fix error reporting for tag writing errors. Previously, when an error occured while writing tags to a file, the program would fail to set a non-zero exit code in Custom Mode, or include it in the end-of-scan error report in Easy Mode
+
 v3.5.3 (2024-11-16)
 - Fix preserve file modification time feature for Opus files
 
