@@ -181,7 +181,7 @@ bool ScanJob::scan(std::mutex *ffmpeg_mutex)
         std::vector<size_t> remove;
         for (Track &track : tracks) {
             ret = track.scan(config, ffmpeg_mutex);
-            if (ret == ScanReturn::ERROR) {
+            if (ret == ScanReturn::ERR) {
                 error = true;
                 return false;
             }
@@ -204,7 +204,7 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     ProgressBar progress_bar;
     int rc, stream_id = -1;
     uint8_t *swr_out_data[1];
-    ScanReturn ret = ScanReturn::ERROR;
+    ScanReturn ret = ScanReturn::ERR;
     bool repeat = false;
     int peak_mode;
     double time_base;

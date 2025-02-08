@@ -28,7 +28,7 @@ defaults:
   run:
     shell: bash
 env:
-  VCPKG_COMMITTISH: 10b7a178346f3f0abef60cecd5130e295afd8da4
+  VCPKG_COMMITTISH: 6f29f12e82a8293156836ad81cc9bf5af41fe836
 
 jobs:
   build_windows:
@@ -78,7 +78,7 @@ jobs:
           build/${{env.CMAKE_BUILD_TYPE}}/rsgain.exe -v
 
       - name: Upload Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: Windows build
           path: build/*.zip
@@ -166,7 +166,7 @@ jobs:
           build/rsgain -v
 
       - name: Upload Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: ${{matrix.config.name}} build
           path: build/*${{matrix.config.package_ext}}
@@ -244,7 +244,7 @@ jobs:
         run: build/rsgain -v
 
       - name: Upload Package
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: macOS ${{matrix.config.name}} build
           path: build/*.zip

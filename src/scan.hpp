@@ -36,7 +36,7 @@ struct ScanResult {
 };
 
 enum class ScanReturn {
-	ERROR,
+	ERR,
 	NO_STREAM,
 	SUCCESS
 };
