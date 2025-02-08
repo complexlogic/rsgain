@@ -34,7 +34,7 @@
 
 #define GAIN_TO_Q78(gain) static_cast<int16_t>(std::round(gain * 256.0))
 
-void tag_track(ScanJob::Track &track, const Config &config);
+bool tag_track(ScanJob::Track &track, const Config &config);
 bool tag_exists(const ScanJob::Track &track);
 bool set_opus_header_gain(const char *path, int16_t gain);
 

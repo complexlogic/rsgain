@@ -178,7 +178,7 @@ bool ScanJob::scan(std::mutex *ffmpeg_mutex)
             }
         }
         ScanReturn ret;
-        std::vector<int> remove;
+        std::vector<size_t> remove;
         for (Track &track : tracks) {
             ret = track.scan(config, ffmpeg_mutex);
             if (ret == ScanReturn::ERROR) {
@@ -556,7 +556,7 @@ void ScanJob::tag_tracks()
         std::sort(tracks.begin(), tracks.end(), [](const auto &a, const auto &b){ return a.path.string() < b.path.string(); });
     for (Track &track : tracks) {
         if (config.tag_mode != 's')
-            tag_track(track, config);
+            error |= !tag_track(track, config);
 
         if (tab_output) {
             // Filename;Loudness;Gain (dB);Peak;Peak (dB);Peak Type;Clipping Adjustment;

@@ -79,7 +79,6 @@
 
 #define MP4_ATOM_STRING "----:com.apple.iTunes:"
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
-#define tag_error(t) output_error("Couldn't write to: {}", t.path.string())
 
 using RGTagsArray = std::array<TagLib::String, 7>;
 
@@ -166,88 +165,74 @@ static const std::array<TagLib::String, 2> R128_STRING = {{
 }};
 static_assert((size_t) R128Tag::MAX_VAL == R128_STRING.size());
 
-void tag_track(ScanJob::Track &track, const Config &config)
+bool tag_track(ScanJob::Track &track, const Config &config)
 {
+    bool ret = false;
     switch (track.type) {
         case FileType::MP2:
         case FileType::MP3:
-            if (!tag_mp3(track, config))
-                tag_error(track);
+            ret = tag_mp3(track, config);
             break;
 
         case FileType::FLAC:
-            if (!tag_flac(track, config))
-                tag_error(track);
+            ret = tag_flac(track, config);
             break;
 
         case FileType::OGG:
             switch (track.codec_id) {
                 case AV_CODEC_ID_OPUS:
-                    if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
-                        tag_error(track);
+                    ret = tag_ogg<TagLib::Ogg::Opus::File>(track, config);
                     break;
 
                 case AV_CODEC_ID_VORBIS:
-                    if (!tag_ogg<TagLib::Ogg::Vorbis::File>(track, config))
-                        tag_error(track);
+                    ret = tag_ogg<TagLib::Ogg::Vorbis::File>(track, config);
                     break;
 
                 case AV_CODEC_ID_FLAC:
-                    if (!tag_ogg<TagLib::Ogg::FLAC::File>(track, config))
-                        tag_error(track);
+                    ret = tag_ogg<TagLib::Ogg::FLAC::File>(track, config);
                     break;
 
                 case AV_CODEC_ID_SPEEX:
-                    if (!tag_ogg<TagLib::Ogg::Speex::File>(track, config))
-                        tag_error(track);
+                    ret = tag_ogg<TagLib::Ogg::Speex::File>(track, config);
                     break;
 
                 default:
-                    if (!tag_ogg<TagLib::FileRef>(track, config))
-                        tag_error(track);
+                    ret = tag_ogg<TagLib::FileRef>(track, config);
                     break;
             }
             break;
                 
         case FileType::OPUS:
-            if (!tag_ogg<TagLib::Ogg::Opus::File>(track, config))
-                tag_error(track);
+            ret = tag_ogg<TagLib::Ogg::Opus::File>(track, config);
             break;
 
         case FileType::M4A:
-            if (!tag_mp4(track, config))
-                tag_error(track);
+            ret = tag_mp4(track, config);
             break;
 
         case FileType::WMA:
-            if (!tag_wma(track, config))
-                tag_error(track);
+            ret = tag_wma(track, config);
             break;
 
         case FileType::WAV:
-            if (!tag_riff<TagLib::RIFF::WAV::File>(track, config))
-                tag_error(track);
+            ret = tag_riff<TagLib::RIFF::WAV::File>(track, config);
             break;
 
         case FileType::AIFF:
-            if (!tag_riff<TagLib::RIFF::AIFF::File>(track, config))
-                tag_error(track);
+            ret = tag_riff<TagLib::RIFF::AIFF::File>(track, config);
             break;
 
         case FileType::WAVPACK:
-            if (!tag_apev2<TagLib::WavPack::File>(track, config))
-                tag_error(track);
+            ret = tag_apev2<TagLib::WavPack::File>(track, config);
             break;
             
         case FileType::APE:
         case FileType::TAK:
-            if (!tag_apev2<TagLib::APE::File>(track, config))
-                tag_error(track);
+            ret = tag_apev2<TagLib::APE::File>(track, config);
             break;
 
         case FileType::MPC:
-            if (!tag_apev2<TagLib::MPC::File>(track, config))
-                tag_error(track);
+            ret = tag_apev2<TagLib::MPC::File>(track, config);
             break;
 
         default:
@@ -255,6 +240,9 @@ void tag_track(ScanJob::Track &track, const Config &config)
     }
     if (track.mtime)
         std::filesystem::last_write_time(track.path, *(track.mtime));
+    if (!ret)
+        output_error("Couldn't write tags to: {}", track.path.string());
+    return ret;
 }
 
 bool tag_exists(const ScanJob::Track &track)
