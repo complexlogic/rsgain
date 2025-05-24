@@ -342,7 +342,7 @@ int main(int argc, char *argv[]) {
         { "version", no_argument, nullptr, 'v' },
         { 0, 0, 0, 0 }
     };
-    std::locale::global(std::locale(""));
+    try { std::locale::global(std::locale("")); } catch(...) {}
     av_log_set_callback(nullptr);
 
 #ifdef _WIN32
