@@ -118,6 +118,7 @@ static bool tag_exists_mp4(const ScanJob::Track &track);
 template<typename T>
 static bool tag_exists_ape(const ScanJob::Track &track);
 static bool tag_exists_asf(const ScanJob::Track &track);
+static int16_t get_opus_header_gain(const char* path);
 
 enum class RGTag {
     TRACK_GAIN,
@@ -259,7 +260,8 @@ bool tag_exists(const ScanJob::Track &track)
             return tag_exists_xiph<TagLib::FileRef>(track);
 
         case FileType::OPUS:
-            return tag_exists_xiph<TagLib::Ogg::Opus::File>(track);
+            return tag_exists_xiph<TagLib::Ogg::Opus::File>(track)
+                   || (get_opus_header_gain(track.path.c_str()) != 0);
 
         case FileType::M4A:
             return tag_exists_mp4(track);
@@ -766,6 +768,38 @@ bool set_opus_header_gain(const char* path, int16_t gain)
     fseek(file.get(), OPUS_GAIN_OFFSET, SEEK_SET);
     fwrite(&gain, sizeof(gain), 1, file.get());
     return true;
+}
+
+static int16_t get_opus_header_gain(const char* path)
+{
+    int16_t gain = 0;
+    std::unique_ptr<std::FILE, int (*)(FILE*)> file(fopen(path, "rb+"), fclose);
+    if (!file)
+        return 0;
+
+    char buffer[8];
+
+    // Check for OggS header
+    if (fseek(file.get(), 0, SEEK_SET)
+        || fread(buffer, 1, 4, file.get()) != 4
+        || strncmp(buffer, "OggS", 4))
+        return 0;
+
+    // Check for OpusHead header
+    if (fseek(file.get(), OPUS_HEAD_OFFSET, SEEK_SET)
+        || fread(buffer, 1, 8, file.get()) != 8
+        || strncmp(buffer, "OpusHead", 8))
+        return 0;
+
+    // Read Gain
+    if (fseek(file.get(), OPUS_GAIN_OFFSET, SEEK_SET)
+        || fread(&gain, sizeof(gain), 1, file.get()) != 1)
+        return 0;
+
+    if constexpr (std::endian::native == std::endian::big)
+        gain = static_cast<int16_t>((gain << 8) & 0xff00) | ((gain >> 8) & 0x00ff);
+
+    return gain;
 }
 
 static bool set_mpc_packet_rg(const char *path)
