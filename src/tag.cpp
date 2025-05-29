@@ -261,7 +261,7 @@ bool tag_exists(const ScanJob::Track &track)
 
         case FileType::OPUS:
             return tag_exists_xiph<TagLib::Ogg::Opus::File>(track)
-                   || (get_opus_header_gain(track.path.c_str()) != 0);
+                   || (get_opus_header_gain(track.path.string().c_str()) != 0);
 
         case FileType::M4A:
             return tag_exists_mp4(track);
