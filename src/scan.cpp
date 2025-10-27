@@ -671,26 +671,46 @@ void ScanJob::Track::calculate_loudness(const Config &config)
 
 void ScanJob::calculate_album_loudness() 
 {
-    double album_loudness, album_peak;
-    size_t nb_states = tracks.size();
-    std::vector<ebur128_state*> states(nb_states);
-    for (const Track &track : tracks)
-        if (track.result.track_loudness != -HUGE_VAL)
-            states.emplace_back(track.ebur128.get());
+    if (config.album_as_aes77) {
+        double album_loudness = -HUGE_VAL, album_peak = 0.0, album_gain;
+        for (const Track &track : tracks) {
+            if (album_loudness < track.result.track_loudness) {
+                album_loudness = track.result.track_loudness;
+                album_gain = track.result.track_gain;
+            }
+            if (album_peak < track.result.track_peak) {
+                album_peak = track.result.track_peak;
+            }
+        }
+        for (Track &track : tracks) {
+            track.result.album_gain = album_gain;
+            track.result.album_peak = album_peak;
+            track.result.album_loudness = album_loudness;
+        }
+    }
 
-    if (ebur128_loudness_global_multiple(states.data(), states.size(), &album_loudness) != EBUR128_SUCCESS)
-        album_loudness = config.target_loudness;
+    else {
+        double album_loudness, album_peak;
+        size_t nb_states = tracks.size();
+        std::vector<ebur128_state*> states(nb_states);
+        for (const Track &track : tracks)
+            if (track.result.track_loudness != -HUGE_VAL)
+                states.emplace_back(track.ebur128.get());
 
-    album_peak = std::max_element(tracks.begin(),
-                     tracks.end(),
-                     [](const auto &a, const auto &b) { return a.result.track_peak < b.result.track_peak; }
-                 )->result.track_peak;
-    
-    double album_gain = (type == FileType::OPUS && config.opus_mode == 's' ? -23.0 : config.target_loudness)
-                         - album_loudness;
-    for (Track &track : tracks) {
-        track.result.album_gain = album_gain;
-        track.result.album_peak = album_peak;
-        track.result.album_loudness = album_loudness;
+        if (ebur128_loudness_global_multiple(states.data(), states.size(), &album_loudness) != EBUR128_SUCCESS)
+            album_loudness = config.target_loudness;
+
+        album_peak = std::max_element(tracks.begin(),
+                         tracks.end(),
+                         [](const auto &a, const auto &b) { return a.result.track_peak < b.result.track_peak; }
+                     )->result.track_peak;
+
+        double album_gain = (type == FileType::OPUS && config.opus_mode == 's' ? -23.0 : config.target_loudness)
+                             - album_loudness;
+        for (Track &track : tracks) {
+            track.result.album_gain = album_gain;
+            track.result.album_peak = album_peak;
+            track.result.album_loudness = album_loudness;
+        }
     }
 }

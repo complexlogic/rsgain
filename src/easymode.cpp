@@ -48,6 +48,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -68,6 +69,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -88,6 +90,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -108,6 +111,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -128,6 +132,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -148,6 +153,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -168,6 +174,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -188,6 +195,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -208,6 +216,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -228,6 +237,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -248,6 +258,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -268,6 +279,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -288,6 +300,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -308,6 +321,7 @@ static Config configs[] = {
         .true_peak = false,
         .clip_mode = 'p',
         .do_album = true,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -468,6 +482,15 @@ int global_handler([[maybe_unused]] void *user, const char *section, const char 
         else
             quit(EXIT_FAILURE);
     }
+    else if (MATCH(name, "AlbumAsAES77")) {
+        bool as_aes77;
+        if (convert_bool(value, as_aes77)) {
+            for (Config &config : configs)
+                config.album_as_aes77 = as_aes77;
+        }
+        else
+            quit(EXIT_FAILURE);
+    }
     else if (MATCH(name, "TagMode")) {
         char tag_mode;
         if (parse_tag_mode_easy(value, tag_mode)) {
@@ -570,6 +593,8 @@ int format_handler([[maybe_unused]] void *user, const char *section, const char 
     // Parse setting keys
     if (MATCH(name, "Album"))
         convert_bool(value, configs[static_cast<int>(file_type)].do_album);
+    else if (MATCH(name, "AlbumAsAES77"))
+        convert_bool(value, configs[static_cast<int>(file_type)].album_as_aes77);
     else if (MATCH(name, "TagMode"))
         parse_tag_mode_easy(value, configs[static_cast<int>(file_type)].tag_mode);
     else if (MATCH(name, "ClipMode"))

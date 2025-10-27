@@ -27,6 +27,7 @@ struct Config {
 	bool true_peak;
 	char clip_mode;
 	bool do_album;
+	bool album_as_aes77;
 	OutputType tab_output;
 	bool sep_header;
 	bool sort_alphanum;
