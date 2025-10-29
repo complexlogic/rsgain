@@ -182,9 +182,10 @@ static void custom_mode(int argc, char *argv[])
     unsigned int nb_files   = 0;
     opterr = 0;
 
-    const char *short_opts = "+ac:m:tdl:O::qps:LSI:o:h?";
+    const char *short_opts = "+aec:m:tdl:O::qps:LSI:o:h?";
     static struct option long_opts[] = {
         { "album",           no_argument,       nullptr, 'a' },
+        { "album-aes77",     no_argument,       nullptr, 'e' },
         { "skip-existing",   no_argument,       nullptr, 'S' },
 
         { "clip-mode",       required_argument, nullptr, 'c' },
@@ -214,6 +215,7 @@ static void custom_mode(int argc, char *argv[])
         .true_peak = false,
         .clip_mode = 'n',
         .do_album = false,
+        .album_as_aes77 = false,
         .tab_output = OutputType::NONE,
         .sep_header = false,
         .sort_alphanum = false,
@@ -229,6 +231,11 @@ static void custom_mode(int argc, char *argv[])
         switch (rc) {
             case 'a':
                 config.do_album = true;
+                break;
+
+            case 'e':
+                config.do_album = true;
+                config.album_as_aes77 = true;
                 break;
 
             case 'S':
@@ -430,6 +437,7 @@ static inline void help_custom() {
     rsgain::print("\n");
 
     CMD_HELP("--album",  "-a", "Calculate album gain and peak");
+    CMD_HELP("--album-aes77", "-e", "Use the loudest track as the album loudness as recommended in AES77");
     CMD_HELP("--skip-existing", "-S", "Don't scan files with existing ReplayGain information");
     rsgain::print("\n");
 
