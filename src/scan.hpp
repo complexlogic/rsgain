@@ -22,7 +22,8 @@ enum class FileType {
     WAVPACK,
     APE,
 	TAK,
-	MPC
+	MPC,
+	DSF
 };
 
 struct ScanResult {

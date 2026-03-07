@@ -79,7 +79,7 @@ static FileType determine_filetype(const std::string &extension)
         {".spx",  FileType::OGG},
         {".opus", FileType::OPUS},
         {".m4a",  FileType::M4A},
-	    {".mp4",  FileType::M4A},
+        {".mp4",  FileType::M4A},
         {".wma",  FileType::WMA},
         {".wav",  FileType::WAV},
         {".aiff", FileType::AIFF},
@@ -88,7 +88,8 @@ static FileType determine_filetype(const std::string &extension)
         {".wv",   FileType::WAVPACK},
         {".ape",  FileType::APE},
         {".tak",  FileType::TAK},
-        {".mpc",  FileType::MPC}
+        {".mpc",  FileType::MPC},
+        {".dsf",  FileType::DSF}
     };
 	std::string extensionlower = extension;
 	std::transform(extensionlower.begin(), extensionlower.end(), extensionlower.begin(), ::tolower);
