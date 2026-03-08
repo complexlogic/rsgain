@@ -686,8 +686,8 @@ void ScanJob::calculate_album_loudness()
     }
 
     else {
-        size_t nb_states = tracks.size();
-        std::vector<ebur128_state*> states(nb_states);
+        std::vector<ebur128_state*> states;
+        states.reserve(tracks.size());
         for (const Track &track : tracks)
             if (track.result.track_loudness != -HUGE_VAL)
                 states.emplace_back(track.ebur128.get());
