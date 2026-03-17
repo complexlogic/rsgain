@@ -1,3 +1,10 @@
+v3.7 (2026-03-17)
+- Add -e option to add album gain normalization method per AES77 (using loudest track's gain)
+- When skipping files with existing gain information (-S mode), also consider Opus header gain information
+- Fix memory-related bug
+- Handle exception when setting locale
+- Static builds: Upgrade to FFmpeg 8
+
 v3.6 (2025-02-08)
 - Add "dual mono" -d option to treat mono files as stereo
 - Add "Average Loudness" statistic to Easy Mode end-of-scan statistic report

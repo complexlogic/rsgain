@@ -11,7 +11,7 @@ if (VCPKG)
 endif ()
 
 project(rsgain
-  VERSION 3.6
+  VERSION 3.7
   DESCRIPTION "ReplayGain 2.0 loudness normalizer"
   HOMEPAGE_URL "https://github.com/complexlogic/rsgain"
   LANGUAGES CXX
