@@ -100,7 +100,7 @@ if (WIN32)
   find_package(fdk-aac CONFIG REQUIRED)
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
     find_library(ZLIB zlib REQUIRED)
-	set(STATIC_LIBS ${ZLIB} ws2_32.lib secur32.lib mfplat.lib mfuuid.lib strmiids.lib bcrypt.lib)
+	set(STATIC_LIBS ${ZLIB} ws2_32.lib secur32.lib mfplat.lib mfuuid.lib strmiids.lib bcrypt.lib ncrypt.lib crypt32.lib)
   endif ()
 
 # Find dependencies - Linux/Mac

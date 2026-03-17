@@ -28,12 +28,12 @@ defaults:
   run:
     shell: bash
 env:
-  VCPKG_COMMITTISH: 6f29f12e82a8293156836ad81cc9bf5af41fe836
+  VCPKG_COMMITTISH: 62159a45e18f3a9ac0548628dcaf74fcb60c6ff9
 
 jobs:
   build_windows:
     name: Windows
-    runs-on: windows-2022
+    runs-on: windows-2025
     strategy:
       fail-fast: false
     env:
@@ -180,9 +180,9 @@ jobs:
 
   build_macos:
     name: macOS
-    runs-on: macos-13
     permissions:
       packages: write
+    runs-on: macos-15-intel
     strategy:
       fail-fast: false
       matrix:
@@ -190,11 +190,9 @@ jobs:
           - name: Intel
             OSX_ARCH: x86_64
             VCPKG_TRIPLET: x64-osx
-
           - name: Apple Silicon
             OSX_ARCH: arm64
             VCPKG_TRIPLET: arm64-osx
-
     env:
       CMAKE_BUILD_TYPE: Release
 
