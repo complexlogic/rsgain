@@ -331,6 +331,27 @@ static Config configs[] = {
         .skip_mp4 = false,
         .preserve_mtimes = false,
         .dual_mono = false
+    },
+
+    // DSF config
+    {
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.0,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .album_as_aes77 = false,
+        .tab_output = OutputType::NONE,
+        .sep_header = false,
+        .sort_alphanum = false,
+        .lowercase = false,
+        .id3v2version = ID3V2_KEEP,
+        .opus_mode = 'd',
+        .skip_mp4 = false,
+        .preserve_mtimes = false,
+        .dual_mono = false
     }
 };
 
@@ -460,7 +481,8 @@ static FileType determine_section_type(const std::string &section)
         {"Wavpack",  FileType::WAVPACK},
         {"APE",      FileType::APE},
         {"TAK",      FileType::TAK},
-        {"Musepack", FileType::MPC}
+        {"Musepack", FileType::MPC},
+        {"DSF",      FileType::DSF}
     };
     auto it = map.find(section);
     return it == map.end() ? FileType::INVALID : it->second;
