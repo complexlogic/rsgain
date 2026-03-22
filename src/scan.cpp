@@ -89,7 +89,12 @@ static FileType determine_filetype(const std::string &extension)
         {".ape",  FileType::APE},
         {".tak",  FileType::TAK},
         {".mpc",  FileType::MPC},
-        {".dsf",  FileType::DSF}
+        {".dsf",  FileType::DSF},
+#if HAS_MATROSKA
+        {".mka",  FileType::MATROSKA},
+        {".mkv",  FileType::MATROSKA},
+        {".webm", FileType::WEBM}
+#endif
     };
 	std::string extensionlower = extension;
 	std::transform(extensionlower.begin(), extensionlower.end(), extensionlower.begin(), ::tolower);
@@ -270,7 +275,7 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     }
     stream = format_ctx->streams[stream_id];
     time_base = av_q2d(stream->time_base);
-        
+
     // Initialize the decoder
     do {
         codec_ctx = avcodec_alloc_context3(codec);
@@ -398,13 +403,18 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     }
 
     if (output_progress) { 
-        if (stream->duration == AV_NOPTS_VALUE)
+        double duration;
+        if (stream->duration != AV_NOPTS_VALUE)
+            duration = stream->duration * time_base;
+        else if (format_ctx->duration != AV_NOPTS_VALUE)
+            duration = static_cast<double>(format_ctx->duration) * (1.0 / static_cast<double>(AV_TIME_BASE));
+        else
             output_progress = false;
-        else {
+        if (output_progress) {
             int start = 0;
             if (stream->start_time != AV_NOPTS_VALUE)
                 start = (int) std::round((double) stream->start_time * time_base);
-            progress_bar.begin(start, (int) std::round((double) stream->duration * time_base));
+            progress_bar.begin(start, (int) std::round(duration));
         }
     }
     

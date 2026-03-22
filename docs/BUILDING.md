@@ -25,6 +25,9 @@ The features that rsgain uses from the fmt library have been integrated into the
 - GCC (libstdc++) has full support in the standard library since version 14. Pass `-DUSE_STD_FORMAT=ON` to `cmake` to use the standard library instead of the fmt library
 - Clang (libc++) has full support in the standard library since version 18. Enable it using the configuration switch described above for GCC
 
+### Matroska/WebM Support
+Matroska/WebM support requires TagLib ≥2.2.
+
 ## Unix
 
 Before starting, make sure you have the development tools Git, CMake and pkg-config installed.

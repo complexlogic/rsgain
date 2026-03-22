@@ -353,6 +353,50 @@ static Config configs[] = {
         .preserve_mtimes = false,
         .dual_mono = false
     }
+
+    // Matroska config
+#if HAS_MATROSKA
+    ,{
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.0,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .album_as_aes77 = false,
+        .tab_output = OutputType::NONE,
+        .sep_header = false,
+        .sort_alphanum = false,
+        .lowercase = false,
+        .id3v2version = ID3V2_KEEP,
+        .opus_mode = 'd',
+        .skip_mp4 = false,
+        .preserve_mtimes = false,
+        .dual_mono = false
+    },
+
+    // WebM config
+    {
+        .tag_mode = 'i',
+        .skip_existing = false,
+        .target_loudness = RG_TARGET_LOUDNESS,
+        .max_peak_level = 0.0,
+        .true_peak = false,
+        .clip_mode = 'p',
+        .do_album = true,
+        .album_as_aes77 = false,
+        .tab_output = OutputType::NONE,
+        .sep_header = false,
+        .sort_alphanum = false,
+        .lowercase = false,
+        .id3v2version = ID3V2_KEEP,
+        .opus_mode = 'd',
+        .skip_mp4 = false,
+        .preserve_mtimes = false,
+        .dual_mono = false
+    }
+#endif
 };
 
 const Config& get_config(FileType type)
@@ -482,7 +526,11 @@ static FileType determine_section_type(const std::string &section)
         {"APE",      FileType::APE},
         {"TAK",      FileType::TAK},
         {"Musepack", FileType::MPC},
-        {"DSF",      FileType::DSF}
+        {"DSF",      FileType::DSF},
+#if HAS_MATROSKA
+        {"Matroska", FileType::MATROSKA},
+        {"WebM",     FileType::WEBM}
+#endif
     };
     auto it = map.find(section);
     return it == map.end() ? FileType::INVALID : it->second;

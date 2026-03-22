@@ -403,9 +403,15 @@ static void help_main() {
     rsgain::print(COLOR_RED "Usage: " COLOR_OFF "{}{}{} [OPTIONS] <command> ...\n", COLOR_GREEN, EXECUTABLE_TITLE, COLOR_OFF);
 
     rsgain::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
-    rsgain::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2),\n");
-    rsgain::print("  MP3 (.mp3), MP4 (.mp4, .m4a), WMA (.wma), WavPack (.wv), APE (.ape),\n");
-    rsgain::print("  WAV (.wav), AIFF (.aiff, .aif, .snd), TAK (.tak), and DSF (.dsf).\n");
+    rsgain::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2), MP3 (.mp3),\n");
+    rsgain::print("  MP4 (.mp4, .m4a), WMA (.wma), WavPack (.wv), APE (.ape), WAV (.wav),\n");
+    rsgain::print("  WAV (.wav), DSF (.dsf), TAK (.tak), ");
+
+    rsgain::print(
+#if HAS_MATROSKA
+                    "Matroska (.mka, .mkv), WebM (.webm),\n  "
+#endif
+     "and AIFF (.aiff, .aif, .snd).\n");
 
     rsgain::print("\n");
     rsgain::print(COLOR_RED "Options:\n" COLOR_OFF);

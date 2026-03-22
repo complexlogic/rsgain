@@ -21,9 +21,13 @@ enum class FileType {
     AIFF,
     WAVPACK,
     APE,
-	TAK,
-	MPC,
-	DSF
+    TAK,
+    MPC,
+    DSF,
+#if HAS_MATROSKA
+    MATROSKA,
+    WEBM
+#endif
 };
 
 struct ScanResult {

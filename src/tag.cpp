@@ -65,6 +65,12 @@
 #include "tag.hpp"
 #include "output.hpp"
 
+#if HAS_MATROSKA
+#include <taglib/matroskafile.h>
+#include <taglib/matroskatag.h>
+#include <taglib/matroskasimpletag.h>
+#endif
+
 #define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 + TAGLIB_MINOR_VERSION * 100 + TAGLIB_PATCH_VERSION)
 #define FORMAT_GAIN(gain) rsgain::format("{:.2f} dB", gain)
 #define FORMAT_PEAK(peak) rsgain::format("{:.6f}", peak)
@@ -77,6 +83,9 @@
 #define RG_TAGS_UPPERCASE 1
 #define RG_TAGS_LOWERCASE 2
 #define R128_TAGS         4
+#if HAS_MATROSKA
+#define RG_TAGS_MK        8
+#endif
 
 #define MP4_ATOM_STRING "----:com.apple.iTunes:"
 #define FORMAT_MP4_TAG(s, tag) s.append(MP4_ATOM_STRING).append(tag)
@@ -92,6 +101,11 @@ static bool tag_mp4(ScanJob::Track &track, const Config &config);
 template <typename T>
 static bool tag_apev2(ScanJob::Track &track, const Config &config);
 static bool tag_wma(ScanJob::Track &track, const Config &config);
+#if HAS_MATROSKA
+static bool tag_matroska(ScanJob::Track &track, const Config &config);
+static void tag_write(TagLib::Matroska::Tag *tag, const ScanResult &result, const Config &config);
+static void tag_clear(TagLib::Matroska::Tag *tag);
+#endif
 template<typename T>
 static bool tag_riff(ScanJob::Track &track, const Config &config);
 template<typename T>
@@ -119,6 +133,9 @@ static bool tag_exists_mp4(const ScanJob::Track &track);
 template<typename T>
 static bool tag_exists_ape(const ScanJob::Track &track);
 static bool tag_exists_asf(const ScanJob::Track &track);
+#if HAS_MATROSKA
+static bool tag_exists_matroska(const ScanJob::Track &track);
+#endif
 static int16_t get_opus_header_gain(const char* path);
 
 enum class RGTag {
@@ -166,6 +183,20 @@ static const std::array<TagLib::String, 2> R128_STRING = {{
     "R128_ALBUM_GAIN"
 }};
 static_assert((size_t) R128Tag::MAX_VAL == R128_STRING.size());
+
+#if HAS_MATROSKA
+enum class RGTagMk {
+    GAIN,
+    PEAK,
+    MAX_VAL
+};
+
+static const std::array<TagLib::String, 2> RG_STRING_MK = {{
+    "REPLAYGAIN_GAIN",
+    "REPLAYGAIN_PEAK"
+}};
+static_assert((size_t) RGTagMk::MAX_VAL == RG_STRING_MK.size());
+#endif
 
 bool tag_track(ScanJob::Track &track, const Config &config)
 {
@@ -241,6 +272,13 @@ bool tag_track(ScanJob::Track &track, const Config &config)
             ret = tag_riff<TagLib::DSF::File>(track, config);
             break;
 
+#if HAS_MATROSKA
+        case FileType::MATROSKA:
+        case FileType::WEBM:
+            ret = tag_matroska(track, config);
+            break;
+#endif
+
         default:
             break;
     }
@@ -292,6 +330,12 @@ bool tag_exists(const ScanJob::Track &track)
 
         case FileType::DSF:
             return tag_exists_id3<TagLib::DSF::File>(track);
+
+#if HAS_MATROSKA
+        case FileType::MATROSKA:
+        case FileType::WEBM:
+            return tag_exists_matroska(track);
+#endif
 
         default:
             return false;
@@ -391,6 +435,21 @@ static bool tag_exists_asf(const ScanJob::Track &track)
     return tag->contains(RG_STRING_UPPER[static_cast<int>(RGTag::TRACK_GAIN)]) ||
     tag->contains(RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]);
 }
+
+#if HAS_MATROSKA
+static bool tag_exists_matroska(const ScanJob::Track &track)
+{
+    TagLib::Matroska::File file(track.path.string().c_str(), false);
+    const TagLib::Matroska::Tag *tag = file.tag(false);
+    if (!tag)
+        return false;
+    TagLib::Matroska::SimpleTagsList list = tag->simpleTagsList();
+    for (const auto &st : list)
+        if (st.name() == RG_STRING_MK[static_cast<size_t>(RGTagMk::GAIN)] && st.targetTypeValue() == TagLib::Matroska::SimpleTag::TargetTypeValue::Track)
+            return true;
+    return false;
+}
+#endif
 
 template<typename T>
 static void write_rg_tags(const ScanResult &result, const Config &config, T&& write_tag)
@@ -511,6 +570,19 @@ static bool tag_wma(ScanJob::Track &track, const Config &config)
     return file.save();
 }
 
+#if HAS_MATROSKA
+static bool tag_matroska(ScanJob::Track &track, const Config &config)
+{
+    TagLib::Matroska::File file(track.path.string().c_str());
+    TagLib::Matroska::Tag *tag = file.tag(true);
+    tag_clear(tag);
+    if (config.tag_mode == 'i')
+        tag_write(tag, track.result, config);
+
+    return file.save();
+}
+#endif
+
 template<typename T>
 static bool tag_riff(ScanJob::Track &track, const Config &config)
 {
@@ -557,6 +629,12 @@ static void tag_clear_map(T&& clear)
         for (const auto &tag : R128_STRING)
             clear(tag);
     }
+#if HAS_MATROSKA
+    if constexpr((flags) & RG_TAGS_MK) {
+        for (const auto &tag : RG_STRING_MK)
+            clear(tag);
+    }
+#endif
 }
 
 static void tag_clear(TagLib::ID3v2::Tag *tag)
@@ -716,6 +794,36 @@ static void tag_write(TagLib::ASF::Tag *tag, const ScanResult &result, const Con
         }
     );
 }
+
+#if HAS_MATROSKA
+static void tag_clear(TagLib::Matroska::Tag *tag)
+{
+    TagLib::Matroska::SimpleTagsList list = tag->simpleTagsList();
+    tag_clear_map<RG_TAGS_UPPERCASE | RG_TAGS_MK>(
+        [&](const TagLib::String &t) {
+            for (const TagLib::Matroska::SimpleTag &st : list) {
+                if (st.name() == t)
+                    tag->removeSimpleTag(st.name(), st.targetTypeValue(), st.trackUid());
+            }
+        }
+    );
+}
+
+static void tag_write(TagLib::Matroska::Tag *tag, const ScanResult &result, const Config &config)
+{
+    write_rg_tags(result,
+        config,
+        [&](RGTag rg_tag, const TagLib::String &value) {
+            TagLib::Matroska::SimpleTag st(
+                rg_tag == RGTag::TRACK_PEAK || rg_tag == RGTag::ALBUM_PEAK ? RG_STRING_MK[static_cast<size_t>(RGTagMk::PEAK)] : RG_STRING_MK[static_cast<size_t>(RGTagMk::GAIN)],
+                value,
+                rg_tag == RGTag::ALBUM_GAIN || rg_tag == RGTag::ALBUM_PEAK ? TagLib::Matroska::SimpleTag::TargetTypeValue::Album : TagLib::Matroska::SimpleTag::TargetTypeValue::Track
+            );
+            tag->addSimpleTag(st);
+        }
+    );
+}
+#endif
 
 static_assert(-1 == ~0); // 2's complement for signed integers
 bool set_opus_header_gain(const char* path, int16_t gain)

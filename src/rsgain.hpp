@@ -1,5 +1,8 @@
 #pragma once
 
+#include <taglib/taglib_config.h>
+#define HAS_MATROSKA defined(TAGLIB_WITH_MATROSKA) && TAGLIB_WITH_MATROSKA == 1
+
 #define CMD_HELP(CMDL, CMDS, MSG) rsgain::print("  {}{:<8} {:<20}{}  {}.\n", COLOR_YELLOW, CMDS ",", CMDL, COLOR_OFF, MSG);
 #define CMD_CMD(CMD, MSG) rsgain::print("  {}{:<22}{}  {}.\n", COLOR_YELLOW, CMD, COLOR_OFF, MSG);
 #define CMD_CONT(MSG) rsgain::print("  {}{:<8} {:<20}{}  {}.\n", COLOR_YELLOW, "", "", COLOR_OFF, MSG);
