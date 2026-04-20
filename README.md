@@ -209,7 +209,7 @@ rsgain easy /path/to/music/library
 rsgain easy "C:\path\to\music library"
 ```
 
-Easy Mode assumes that you have you have your music library organized by album, so that each album is contained in its own folder. The album gain calculations rely on this assumption. If you do *not* have your music library organized by album, you should disable the album tags because the calculated values will not be valid. rsgain ships with a scan preset which can disable the album tags for you; invoke it with `-p no_album`. See the [Scan Presets](#scan-presets) section for more information about how the scan preset feature works.
+Easy Mode assumes that you have your music library organized by album, so that each album is contained in its own folder. The album gain calculations rely on this assumption. If you do *not* have your music library organized by album, you should disable the album tags because the calculated values will not be valid. rsgain ships with a scan preset which can disable the album tags for you; invoke it with `-p no_album`. See the [Scan Presets](#scan-presets) section for more information about how the scan preset feature works.
 
 #### Multithreaded Scanning
 
@@ -289,7 +289,7 @@ Each setting key in a presets file corresponds to a command line option in Custo
 | ID3v2Version   | Integer    | -I                 |
 | MaxPeakLevel   | Decimal    | -m                 |
 | OpusMode       | Character  | -o                 |
-| PreserveMtimes | Booelan    | -p                 |
+| PreserveMtimes | Boolean    | -p                 |
 
 See [Custom Mode](#custom-mode) for more information.
 
