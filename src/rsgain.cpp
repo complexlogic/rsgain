@@ -349,7 +349,12 @@ int main(int argc, char *argv[]) {
         { "version", no_argument, nullptr, 'v' },
         { 0, 0, 0, 0 }
     };
+#ifndef _WIN32
+    // On Windows, the CRT's numpunct facet crashes when accessed for locales that use
+    // non-ASCII thousands separators (e.g. French NARROW NO-BREAK SPACE U+202F), which
+    // is triggered by the {:L} format specifiers used for locale-aware number output.
     try { std::locale::global(std::locale("")); } catch(...) {}
+#endif
     av_log_set_callback(nullptr);
 
 #ifdef _WIN32
