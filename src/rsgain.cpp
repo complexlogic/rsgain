@@ -353,6 +353,7 @@ int main(int argc, char *argv[]) {
     // On Windows, the CRT's numpunct facet crashes when accessed for locales that use
     // non-ASCII thousands separators (e.g. French NARROW NO-BREAK SPACE U+202F), which
     // is triggered by the {:L} format specifiers used for locale-aware number output.
+    // See https://github.com/microsoft/STL/issues/6206
     try { std::locale::global(std::locale("")); } catch(...) {}
 #endif
     av_log_set_callback(nullptr);
