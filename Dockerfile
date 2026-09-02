@@ -1,6 +1,6 @@
 FROM debian:trixie
 
-ARG VERSION=3.7 \
+ARG VERSION=3.8 \
     ARCH=amd64
 
 RUN apt-get update && \

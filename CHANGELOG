@@ -1,3 +1,9 @@
+v3.8 (2026-09-02)
+- Add support for Matroska and WebM formats
+- Add support for DSD format
+- Windows: work around Microsoft STL bug that can cause program to crash when run in some locales
+- Static build: Upgrade to FFmpeg 9
+
 v3.7 (2026-03-17)
 - Add -e option to add album gain normalization method per AES77 (using loudest track's gain)
 - When skipping files with existing gain information (-S mode), also consider Opus header gain information
