@@ -408,7 +408,7 @@ static void help_main() {
     rsgain::print("  WAV (.wav), DSF (.dsf), TAK (.tak), ");
 
     rsgain::print(
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
                     "Matroska (.mka, .mkv), WebM (.webm),\n  "
 #endif
      "and AIFF (.aiff, .aif, .snd).\n");

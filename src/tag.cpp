@@ -65,7 +65,7 @@
 #include "tag.hpp"
 #include "output.hpp"
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 #include <taglib/matroskafile.h>
 #include <taglib/matroskatag.h>
 #include <taglib/matroskasimpletag.h>
@@ -83,7 +83,7 @@
 #define RG_TAGS_UPPERCASE 1
 #define RG_TAGS_LOWERCASE 2
 #define R128_TAGS         4
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 #define RG_TAGS_MK        8
 #endif
 
@@ -101,7 +101,7 @@ static bool tag_mp4(ScanJob::Track &track, const Config &config);
 template <typename T>
 static bool tag_apev2(ScanJob::Track &track, const Config &config);
 static bool tag_wma(ScanJob::Track &track, const Config &config);
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 static bool tag_matroska(ScanJob::Track &track, const Config &config);
 static void tag_write(TagLib::Matroska::Tag *tag, const ScanResult &result, const Config &config);
 static void tag_clear(TagLib::Matroska::Tag *tag);
@@ -133,7 +133,7 @@ static bool tag_exists_mp4(const ScanJob::Track &track);
 template<typename T>
 static bool tag_exists_ape(const ScanJob::Track &track);
 static bool tag_exists_asf(const ScanJob::Track &track);
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 static bool tag_exists_matroska(const ScanJob::Track &track);
 #endif
 static int16_t get_opus_header_gain(const char* path);
@@ -184,7 +184,7 @@ static const std::array<TagLib::String, 2> R128_STRING = {{
 }};
 static_assert((size_t) R128Tag::MAX_VAL == R128_STRING.size());
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 enum class RGTagMk {
     GAIN,
     PEAK,
@@ -272,7 +272,7 @@ bool tag_track(ScanJob::Track &track, const Config &config)
             ret = tag_riff<TagLib::DSF::File>(track, config);
             break;
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
         case FileType::MATROSKA:
         case FileType::WEBM:
             ret = tag_matroska(track, config);
@@ -331,7 +331,7 @@ bool tag_exists(const ScanJob::Track &track)
         case FileType::DSF:
             return tag_exists_id3<TagLib::DSF::File>(track);
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
         case FileType::MATROSKA:
         case FileType::WEBM:
             return tag_exists_matroska(track);
@@ -436,7 +436,7 @@ static bool tag_exists_asf(const ScanJob::Track &track)
     tag->contains(RG_STRING_LOWER[static_cast<int>(RGTag::TRACK_GAIN)]);
 }
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 static bool tag_exists_matroska(const ScanJob::Track &track)
 {
     TagLib::Matroska::File file(track.path.string().c_str(), false);
@@ -570,7 +570,7 @@ static bool tag_wma(ScanJob::Track &track, const Config &config)
     return file.save();
 }
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 static bool tag_matroska(ScanJob::Track &track, const Config &config)
 {
     TagLib::Matroska::File file(track.path.string().c_str());
@@ -629,7 +629,7 @@ static void tag_clear_map(T&& clear)
         for (const auto &tag : R128_STRING)
             clear(tag);
     }
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
     if constexpr((flags) & RG_TAGS_MK) {
         for (const auto &tag : RG_STRING_MK)
             clear(tag);
@@ -795,7 +795,7 @@ static void tag_write(TagLib::ASF::Tag *tag, const ScanResult &result, const Con
     );
 }
 
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
 static void tag_clear(TagLib::Matroska::Tag *tag)
 {
     TagLib::Matroska::SimpleTagsList list = tag->simpleTagsList();

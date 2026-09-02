@@ -90,7 +90,7 @@ static FileType determine_filetype(const std::string &extension)
         {".tak",  FileType::TAK},
         {".mpc",  FileType::MPC},
         {".dsf",  FileType::DSF},
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
         {".mka",  FileType::MATROSKA},
         {".mkv",  FileType::MATROSKA},
         {".webm", FileType::WEBM}

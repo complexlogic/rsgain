@@ -355,7 +355,7 @@ static Config configs[] = {
     }
 
     // Matroska config
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
     ,{
         .tag_mode = 'i',
         .skip_existing = false,
@@ -527,7 +527,7 @@ static FileType determine_section_type(const std::string &section)
         {"TAK",      FileType::TAK},
         {"Musepack", FileType::MPC},
         {"DSF",      FileType::DSF},
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
         {"Matroska", FileType::MATROSKA},
         {"WebM",     FileType::WEBM}
 #endif

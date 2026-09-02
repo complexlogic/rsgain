@@ -24,7 +24,7 @@ enum class FileType {
     TAK,
     MPC,
     DSF,
-#if HAS_MATROSKA
+#ifdef HAS_MATROSKA
     MATROSKA,
     WEBM
 #endif
