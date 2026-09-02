@@ -28,7 +28,7 @@ defaults:
   run:
     shell: bash
 env:
-  VCPKG_COMMITTISH: 62159a45e18f3a9ac0548628dcaf74fcb60c6ff9
+  VCPKG_COMMITTISH: 9e593bb18ea69cc5095e012465dcd675a822ed0d
 
 jobs:
   build_windows:
@@ -38,7 +38,7 @@ jobs:
       fail-fast: false
     env:
       CMAKE_BUILD_TYPE: Release
-      CMAKE_GENERATOR: Visual Studio 17 2022
+      CMAKE_GENERATOR: Visual Studio 18 2026
       VCPKG_TRIPLET: custom-triplet
 
     steps:
@@ -99,7 +99,7 @@ jobs:
       matrix:
         config:
           - name: Debian
-            docker_image: debian:bookworm
+            docker_image: debian:trixie
             package_type: DEB
             package_ext: .deb
             vcpkg_features: fmt;

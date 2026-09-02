@@ -33,7 +33,7 @@ if (WIN32)
     FDK-AAC::fdk-aac
   )
   if (VCPKG_TARGET_TRIPLET STREQUAL "custom-triplet")
-    target_link_libraries(${EXECUTABLE_TITLE} ${STATIC_LIBS})
+    target_link_libraries(${EXECUTABLE_TITLE} ${STATIC_LIBS} ZLIB::ZLIB)
   endif ()
   add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
 

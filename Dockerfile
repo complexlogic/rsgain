@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:trixie
 
 ARG VERSION=3.7 \
     ARCH=amd64
