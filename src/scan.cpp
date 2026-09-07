@@ -133,7 +133,17 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     std::vector<Track> tracks;
     std::unordered_set<FileType> types;
     for (size_t i = 0; i < nb_files; i++) {
+#ifdef _WIN32
+        // Windows CommandLineToArgvW treats \" as a literal " rather than closing
+        // the argument, so a path typed as "C:\foo\bar\" arrives with a trailing "
+        // instead of \. Strip it so filesystem operations work correctly.
+        std::string file_str = files[i];
+        if (!file_str.empty() && file_str.back() == '"')
+            file_str.pop_back();
+        path = file_str;
+#else
         path = files[i];
+#endif
         if (!std::filesystem::exists(path)) {
             output_error("File '{}' does not exist", path.string());
             return nullptr;
