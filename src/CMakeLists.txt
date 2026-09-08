@@ -51,6 +51,7 @@ elseif (UNIX)
     PkgConfig::LIBEBUR128
     PkgConfig::INIH
     Threads::Threads
+    ZLIB::ZLIB
   )
   if (NOT USE_STD_FORMAT)
     target_link_libraries(${EXECUTABLE_TITLE} PkgConfig::FMT)
