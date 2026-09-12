@@ -106,9 +106,9 @@ extern int quiet;
 
 class ProgressBar {
     private:
-        int c_prev = -1;
-        int w_prev = -1;
-        int pos_prev = -1;
+        int c_prev{-1};
+        int w_prev{-1};
+        int pos_prev{-1};
         int start;
         int len = 0;
         char *buffer = nullptr;
@@ -121,8 +121,8 @@ class ProgressBar {
 #endif
 
     public:
+        ProgressBar(int start, int len) : start(start), len(len) {}
         static int get_console_width();
-        void begin(int start, int len);
         void update(int pos);
         void complete();
 #ifdef _WIN32

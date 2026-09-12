@@ -55,6 +55,43 @@ extern "C" {
 #include "output.hpp"
 #include "tag.hpp"
 
+struct AVPacketDeleter {
+    void operator()(AVPacket *packet) const noexcept {
+        if (packet)
+			av_packet_free(&packet);
+    }
+};
+struct AVFrameDeleter {
+    void operator()(AVFrame *frame) const noexcept {
+        if (frame)
+			av_frame_free(&frame);
+    }
+};
+
+struct DecoderParams {
+#if LIBAVCODEC_VERSION_MAJOR >= 59
+    const
+#endif
+    AVCodec *codec{nullptr};
+    AVCodecContext *codec_ctx{nullptr};
+    AVFormatContext *format_ctx{nullptr};
+    SwrContext *swr{nullptr};
+    AVStream *stream{nullptr};
+    AVSampleFormat output_format;
+    int stream_id{-1};
+    int nb_channels{0};
+    double time_base{0.0};
+    ~DecoderParams()
+    {
+        if (codec_ctx)
+            avcodec_free_context(&codec_ctx);
+        if (format_ctx)
+            avformat_close_input(&format_ctx);
+        if (swr)
+            swr_free(&swr);
+    }
+};
+
 template <typename T>
 constexpr void output_fferror(int error, T&& msg)
 {
@@ -63,9 +100,24 @@ constexpr void output_fferror(int error, T&& msg)
     output_error("{}: {}", msg, errbuf);
 }
 #define OLD_CHANNEL_LAYOUT LIBAVUTIL_VERSION_MAJOR < 57 || (LIBAVUTIL_VERSION_MAJOR == 57 && LIBAVUTIL_VERSION_MINOR < 18)
-#define OUTPUT_FORMAT AV_SAMPLE_FMT_S16
 
 extern bool multithread;
+
+static AVSampleFormat determine_output_format(AVSampleFormat input)
+{
+    static const std::unordered_map<AVSampleFormat, AVSampleFormat> map {
+        {AV_SAMPLE_FMT_S16, AV_SAMPLE_FMT_S16},
+        {AV_SAMPLE_FMT_S16P, AV_SAMPLE_FMT_S16},
+        {AV_SAMPLE_FMT_S32, AV_SAMPLE_FMT_S32},
+        {AV_SAMPLE_FMT_S32P, AV_SAMPLE_FMT_S32},
+        {AV_SAMPLE_FMT_FLT, AV_SAMPLE_FMT_FLT},
+        {AV_SAMPLE_FMT_FLTP, AV_SAMPLE_FMT_FLT},
+        {AV_SAMPLE_FMT_DBL, AV_SAMPLE_FMT_DBL},
+        {AV_SAMPLE_FMT_DBLP, AV_SAMPLE_FMT_DBL}
+    };
+    auto it = map.find(input);
+    return it == map.end() ? AV_SAMPLE_FMT_FLT : it->second;
+}
 
 // A function to determine a file type
 static FileType determine_filetype(const std::string &extension)
@@ -152,12 +204,6 @@ ScanJob* ScanJob::factory(char **files, size_t nb_files, const Config &config)
     return new ScanJob(tracks, config, types.size() > 1 ? FileType::DEFAULT : *types.begin());
 }
 
-void free_ebur128(ebur128_state *ebur128_state)
-{
-    if (ebur128_state)
-        ebur128_destroy(&ebur128_state);
-}
-
 bool ScanJob::scan(std::mutex *ffmpeg_mutex)
 {
     if (config.tag_mode != 'd') {
@@ -205,30 +251,99 @@ bool ScanJob::scan(std::mutex *ffmpeg_mutex)
     return true;
 }
 
+template <typename T, int (*ebur128_add_frames)(ebur128_state* st, const T* src, size_t frames)>
+ScanReturn ScanJob::Track::scan_loop(DecoderParams &dp,  ProgressBar *progress_bar)
+{
+    int rc;
+    uint8_t *swr_out_data[1];
+    std::unique_ptr<uint8_t[]> buffer;
+    size_t buffer_size{};
+
+    // Allocate AVPacket structure
+    std::unique_ptr<AVPacket, AVPacketDeleter> packet(av_packet_alloc());
+    if (!packet) {
+        if (!multithread)
+            output_error("Could not allocate packet");
+        return ScanReturn::ERR;
+    }
+
+    // Alocate AVFrame structure
+    std::unique_ptr<AVFrame, AVFrameDeleter> frame(av_frame_alloc());
+    if (!frame) {
+        if (!multithread)
+            output_error("Could not allocate frame");
+        return ScanReturn::ERR;
+    }
+
+    while (av_read_frame(dp.format_ctx, packet.get()) == 0) {
+        if (packet->stream_index == dp.stream_id) {
+            if ((rc = avcodec_send_packet(dp.codec_ctx, packet.get())) == 0) {
+                while ((rc = avcodec_receive_frame(dp.codec_ctx, frame.get())) >= 0) {
+#if OLD_CHANNEL_LAYOUT
+                    if (frame->channels == dp.nb_channels) {
+#else
+                    if (frame->ch_layout.nb_channels == dp.nb_channels) {
+#endif
+                        // Convert audio format with libswresample if necessary
+                        if (dp.swr) {
+                            size_t out_size = static_cast<size_t>(
+                                av_samples_get_buffer_size(nullptr,
+                                    dp.nb_channels,
+                                    frame->nb_samples,
+                                    dp.output_format,
+                                    0
+                                )
+                            );
+                            if (out_size < 0) {
+                                output_error("Could not calculate output buffer size");
+                                return ScanReturn::ERR;
+                            }
+                            if (out_size > buffer_size) {
+                                buffer = std::make_unique_for_overwrite<uint8_t[]>(out_size);
+                                buffer_size = out_size;
+                                swr_out_data[0] = buffer.get();
+                            }
+                            if (swr_convert(dp.swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
+                                if (!multithread)
+                                    output_error("Could not convert audio frame");
+                                return ScanReturn::ERR;
+                            }
+                            ebur128_add_frames(ebur128.get(), reinterpret_cast<T*>(swr_out_data[0]), static_cast<size_t>(frame->nb_samples));
+                        }
+
+                        // Audio is already in correct format
+                        else
+                            ebur128_add_frames(ebur128.get(), reinterpret_cast<T*>(frame->data[0]), static_cast<size_t>(frame->nb_samples));
+
+                        if (progress_bar) {
+                            int pos = (int) std::round((double) frame->pts * dp.time_base);
+                            if (pos >= 0)
+                                progress_bar->update(pos);
+                        }
+                    }
+                    av_frame_unref(frame.get());
+                }
+            }
+        }
+        av_packet_unref(packet.get());
+    }
+
+    // Make sure the progress bar finishes at 100%
+    if (progress_bar)
+        progress_bar->complete();
+
+    return ScanReturn::SUCCESS;
+}
+
 ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
 {
-    ProgressBar progress_bar;
-    int rc, stream_id = -1;
-    uint8_t *swr_out_data[1];
-    ScanReturn ret = ScanReturn::ERR;
+    std::unique_ptr<ProgressBar> progress_bar;
+    int rc;
     bool repeat = false;
     int peak_mode;
-    double time_base;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
-    std::unique_lock<std::mutex> *lk = nullptr;
-    ebur128_state *ebur128 = nullptr;
-    int nb_channels;
+    DecoderParams dp;
 
-#if LIBAVCODEC_VERSION_MAJOR >= 59 
-    const 
-#endif
-    AVCodec *codec = nullptr;
-    AVPacket *packet = nullptr;
-    AVCodecContext *codec_ctx = nullptr;
-    AVFrame *frame = nullptr;
-    SwrContext *swr = nullptr;
-    AVFormatContext *format_ctx = nullptr;
-    const AVStream *stream = nullptr;
     if (config.preserve_mtimes) {
         mtime = std::make_unique<std::filesystem::file_time_type>();
         *mtime = std::filesystem::last_write_time(path);
@@ -239,254 +354,176 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     // we need to set the header output gain to 0 dB before decoding
     if (type == FileType::OPUS && config.tag_mode != 's')
         set_opus_header_gain(path.string().c_str(), 0);
-    
-    if (m)
-        lk = new std::unique_lock<std::mutex>(*m, std::defer_lock);
+
     if (output_progress)
         output_ok("Scanning '{}'", path.string());
-
-    if (lk)
-        lk->lock();
-    rc = avformat_open_input(&format_ctx, rsgain::format("file:{}", path.string()).c_str(), nullptr, nullptr);
-    if (rc < 0) {
-        if (!multithread)
-            output_fferror(rc, "Could not open input");
-        goto end;
-    }
-
-    container = format_ctx->iformat->name;
-    if (output_progress)
-        output_ok("Container: {} [{}]", format_ctx->iformat->long_name, format_ctx->iformat->name);
-
-    rc = avformat_find_stream_info(format_ctx, nullptr);
-    if (rc < 0) {
-        if (!multithread)
-            output_fferror(rc, "Could not find stream info");
-        goto end;
-    }
-
-    // Select the best audio stream
-    stream_id = av_find_best_stream(format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &codec, 0);
-    if (stream_id < 0) {
-        if (!multithread)
-            output_warn("Could not find audio stream\n");
-        ret = ScanReturn::NO_STREAM;
-        goto end;
-    }
-    stream = format_ctx->streams[stream_id];
-    time_base = av_q2d(stream->time_base);
-
-    // Initialize the decoder
-    do {
-        codec_ctx = avcodec_alloc_context3(codec);
-        if (!codec_ctx) {
-            if (!multithread)
-                output_error("Could not allocate audio codec context");
-            goto end;
-        }
-        avcodec_parameters_to_context(codec_ctx, stream->codecpar);
-        rc = avcodec_open2(codec_ctx, codec, nullptr);
+    {
+        std::unique_ptr<std::scoped_lock<std::mutex>> lk;
+        if (m)
+            lk = std::make_unique<std::scoped_lock<std::mutex>>(*m);
+        rc = avformat_open_input(&dp.format_ctx, rsgain::format("file:{}", path.string()).c_str(), nullptr, nullptr);
         if (rc < 0) {
-            if (!repeat) {
-#if LIBAVCODEC_VERSION_MAJOR >= 59 
-                const
-#endif
-                AVCodec *try_codec;
-                avcodec_free_context(&codec_ctx);
-                codec_ctx = nullptr;
+            if (!multithread)
+                output_fferror(rc, "Could not open input");
+            return ScanReturn::ERR;
+        }
 
-                // For AAC files, try the Fraunhofer decoder if the native FFmpeg decoder failed
-                if (codec->id == AV_CODEC_ID_AAC) {
-                    try_codec = avcodec_find_decoder_by_name("libfdk_aac");
-                    if (try_codec) {
-                        codec = try_codec;
-                        repeat = true;
-                        continue;
+        container = dp.format_ctx->iformat->name;
+        if (output_progress)
+            output_ok("Container: {} [{}]", dp.format_ctx->iformat->long_name, dp.format_ctx->iformat->name);
+
+        rc = avformat_find_stream_info(dp.format_ctx, nullptr);
+        if (rc < 0) {
+            if (!multithread)
+                output_fferror(rc, "Could not find stream info");
+            return ScanReturn::ERR;
+        }
+
+        // Select the best audio stream
+        dp.stream_id = av_find_best_stream(dp.format_ctx, AVMEDIA_TYPE_AUDIO, -1, -1, &dp.codec, 0);
+        if (dp.stream_id < 0) {
+            if (!multithread)
+                output_warn("Could not find audio stream\n");
+            return ScanReturn::NO_STREAM;
+        }
+        dp.stream = dp.format_ctx->streams[dp.stream_id];
+        dp.time_base = av_q2d(dp.stream->time_base);
+
+        // Initialize the decoder
+        do {
+            dp.codec_ctx = avcodec_alloc_context3(dp.codec);
+            if (!dp.codec_ctx) {
+                if (!multithread)
+                    output_error("Could not allocate audio codec context");
+                return ScanReturn::ERR;
+            }
+            avcodec_parameters_to_context(dp.codec_ctx, dp.stream->codecpar);
+            rc = avcodec_open2(dp.codec_ctx, dp.codec, nullptr);
+            if (rc < 0) {
+                if (!repeat) {
+#if LIBAVCODEC_VERSION_MAJOR >= 59 
+                    const
+#endif
+                    AVCodec *try_codec;
+                    avcodec_free_context(&dp.codec_ctx);
+                    dp.codec_ctx = nullptr;
+
+                    // For AAC files, try the Fraunhofer decoder if the native FFmpeg decoder failed
+                    if (dp.codec->id == AV_CODEC_ID_AAC) {
+                        try_codec = avcodec_find_decoder_by_name("libfdk_aac");
+                        if (try_codec) {
+                            dp.codec = try_codec;
+                            repeat = true;
+                            continue;
+                        }
                     }
                 }
+                if (!multithread)
+                    output_fferror(rc, "Could not open codec");
+                return ScanReturn::ERR;
             }
-            if (!multithread)
-                output_fferror(rc, "Could not open codec");
-            goto end;
-        }
-        repeat = false;
-    } while (repeat);
-    codec_id = codec->id;
+            repeat = false;
+        } while (repeat);
+        codec_id = dp.codec->id;
 #if OLD_CHANNEL_LAYOUT
-    nb_channels = codec_ctx->channels;
+        dp.nb_channels = dp.codec_ctx->channels;
 #else
-    nb_channels = codec_ctx->ch_layout.nb_channels;
+        dp.nb_channels = dp.codec_ctx->ch_layout.nb_channels;
 #endif
 
-    // Display some information about the file
-    if (output_progress)
-        output_ok("Stream #{}: {}, {}{:L} Hz, {} ch",
-            stream_id, 
-            codec->long_name, 
-            codec_ctx->bits_per_raw_sample > 0 ? rsgain::format("{} bit, ", codec_ctx->bits_per_raw_sample) : "", 
-            codec_ctx->sample_rate, 
-            nb_channels
-        );
+        // Display some information about the file
+        if (output_progress)
+            output_ok("Stream #{}: {}, {}{:L} Hz, {} ch",
+                dp.stream_id,
+                dp.codec->long_name,
+                dp.codec_ctx->bits_per_raw_sample > 0 ? rsgain::format("{} bit, ", dp.codec_ctx->bits_per_raw_sample) : "",
+                dp.codec_ctx->sample_rate,
+                dp.nb_channels
+            );
 
-    // Only initialize swresample if we need to convert the format
-    if (codec_ctx->sample_fmt != OUTPUT_FORMAT) {
+        // Only initialize swresample if we need to convert the format
+        dp.output_format = determine_output_format(dp.codec_ctx->sample_fmt);
+        if (dp.codec_ctx->sample_fmt != dp.output_format) {
 #if OLD_CHANNEL_LAYOUT
-        if (!codec_ctx->channel_layout)
-            codec_ctx->channel_layout = av_get_default_channel_layout(codec_ctx->channels);
-        swr = swr_alloc_set_opts(nullptr,
-                 codec_ctx->channel_layout,
-                 OUTPUT_FORMAT,
-                 codec_ctx->sample_rate,
-                 codec_ctx->channel_layout,
-                 codec_ctx->sample_fmt,
-                 codec_ctx->sample_rate,
-                 0,
-                 nullptr
-             );
+            if (!dp.codec_ctx->channel_layout)
+                dp.codec_ctx->channel_layout = av_get_default_channel_layout(dp.codec_ctx->channels);
+            dp.swr = swr_alloc_set_opts(nullptr,
+                    dp.codec_ctx->channel_layout,
+                    dp.output_format,
+                    dp.codec_ctx->sample_rate,
+                    dp.codec_ctx->channel_layout,
+                    dp.codec_ctx->sample_fmt,
+                    dp.codec_ctx->sample_rate,
+                    0,
+                    nullptr
+                );
 #else
-        swr_alloc_set_opts2(&swr,
-            &codec_ctx->ch_layout,
-            OUTPUT_FORMAT,
-            codec_ctx->sample_rate,
-            &codec_ctx->ch_layout,
-            codec_ctx->sample_fmt,
-            codec_ctx->sample_rate,
-            0,
-            nullptr
-        );
+            swr_alloc_set_opts2(&dp.swr,
+                &dp.codec_ctx->ch_layout,
+                dp.output_format,
+                dp.codec_ctx->sample_rate,
+                &dp.codec_ctx->ch_layout,
+                dp.codec_ctx->sample_fmt,
+                dp.codec_ctx->sample_rate,
+                0,
+                nullptr
+            );
 #endif
-        if (!swr) {
-            if (!multithread)
-                output_error("Could not allocate libswresample context");
-            goto end;
-        }
+            if (!dp.swr) {
+                if (!multithread)
+                    output_error("Could not allocate libswresample context");
+                return ScanReturn::ERR;
+            }
 
-        rc = swr_init(swr);
-        if (rc < 0) {
-            if (!multithread)
-                output_fferror(rc, "Could not open libswresample context");
-            goto end;
+            rc = swr_init(dp.swr);
+            if (rc < 0) {
+                if (!multithread)
+                    output_fferror(rc, "Could not open libswresample context");
+                return ScanReturn::ERR;
+            }
         }
     }
-
-    if (lk)
-        lk->unlock();
 
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
-    ebur128 = ebur128_init((unsigned int) nb_channels,
-        (size_t) codec_ctx->sample_rate,
+    ebur128 = std::unique_ptr<ebur128_state, Ebur128Deleter>(ebur128_init((unsigned int) dp.nb_channels,
+        static_cast<size_t>(dp.codec_ctx->sample_rate),
         EBUR128_MODE_I | peak_mode
-    );
+    ));
     if (!ebur128) {
         if (!multithread)
             output_error("Could not initialize libebur128 scanner");
-        goto end;
+        return ScanReturn::ERR;
     }
-    if (nb_channels == 1 && config.dual_mono)
-        ebur128_set_channel(ebur128, 0, EBUR128_DUAL_MONO);
-
-    // Allocate AVPacket structure
-    packet = av_packet_alloc();
-    if (!packet) {
-        if (!multithread)
-            output_error("Could not allocate packet");
-        goto end;
-    }
-
-    // Alocate AVFrame structure
-    frame = av_frame_alloc();
-    if (!frame) {
-        if (!multithread)
-            output_error("Could not allocate frame");
-        goto end;
-    }
+    if (dp.nb_channels == 1 && config.dual_mono)
+        ebur128_set_channel(ebur128.get(), 0, EBUR128_DUAL_MONO);
 
     if (output_progress) { 
         double duration;
-        if (stream->duration != AV_NOPTS_VALUE)
-            duration = stream->duration * time_base;
-        else if (format_ctx->duration != AV_NOPTS_VALUE)
-            duration = static_cast<double>(format_ctx->duration) * (1.0 / static_cast<double>(AV_TIME_BASE));
+        if (dp.stream->duration != AV_NOPTS_VALUE)
+            duration = dp.stream->duration * dp.time_base;
+        else if (dp.format_ctx->duration != AV_NOPTS_VALUE)
+            duration = static_cast<double>(dp.format_ctx->duration) * (1.0 / static_cast<double>(AV_TIME_BASE));
         else
             output_progress = false;
         if (output_progress) {
             int start = 0;
-            if (stream->start_time != AV_NOPTS_VALUE)
-                start = (int) std::round((double) stream->start_time * time_base);
-            progress_bar.begin(start, (int) std::round(duration));
+            if (dp.stream->start_time != AV_NOPTS_VALUE)
+                start = (int) std::round((double) dp.stream->start_time * dp.time_base);
+            progress_bar = std::make_unique<ProgressBar>(start, (int) std::round(duration));
         }
     }
-    
-    while (av_read_frame(format_ctx, packet) == 0) {
-        if (packet->stream_index == stream_id) {
-            if ((rc = avcodec_send_packet(codec_ctx, packet)) == 0) {
-                while ((rc = avcodec_receive_frame(codec_ctx, frame)) >= 0) {
-#if OLD_CHANNEL_LAYOUT
-                    if (frame->channels == nb_channels) {
-#else
-                    if (frame->ch_layout.nb_channels == nb_channels) {
-#endif
-                        // Convert audio format with libswresample if necessary
-                        if (swr) {
-                            size_t out_size = static_cast<size_t>(
-                                av_samples_get_buffer_size(nullptr,
-                                    nb_channels,
-                                    frame->nb_samples,
-                                    OUTPUT_FORMAT,
-                                    0
-                                )
-                            );
-                            swr_out_data[0] = (uint8_t*) av_malloc(out_size);
-                            if (swr_convert(swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
-                                if (!multithread)
-                                    output_error("Could not convert audio frame");
-                                av_free(swr_out_data[0]);
-                                goto end;
-                            }
 
-                            ebur128_add_frames_short(ebur128, (short*) swr_out_data[0], static_cast<size_t>(frame->nb_samples));
-                            av_free(swr_out_data[0]);
-                        }
-
-                        // Audio is already in correct format
-                        else
-                            ebur128_add_frames_short(ebur128, (short*) frame->data[0], static_cast<size_t>(frame->nb_samples));
-
-                        if (output_progress) {
-                            int pos = (int) std::round((double) frame->pts * time_base);
-                            if (pos >= 0)
-                                progress_bar.update(pos);
-                        }
-                    }
-                    av_frame_unref(frame);
-                }
-            }
-        }
-        av_packet_unref(packet);
-    }
-
-    // Make sure the progress bar finishes at 100%
-    if (output_progress)
-        progress_bar.complete();
-
-    ret = ScanReturn::SUCCESS;
-end:
-    av_packet_free(&packet);
-    av_frame_free(&frame);
-    if (codec_ctx)
-        avcodec_free_context(&codec_ctx);
-    if (format_ctx)
-        avformat_close_input(&format_ctx);
-    if (swr)
-        swr_free(&swr);
-
-    // Use a smart pointer to manage the remaining lifetime of the ebur128 state
-    if (ebur128) 
-        this->ebur128 = std::unique_ptr<ebur128_state, decltype(&free_ebur128)>(ebur128, free_ebur128);
-    
-    delete lk;
-    return ret;
+    if (dp.output_format == AV_SAMPLE_FMT_S16)
+        return scan_loop<short, ebur128_add_frames_short>(dp, progress_bar.get());
+    else if (dp.output_format == AV_SAMPLE_FMT_FLT)
+        return scan_loop<float, ebur128_add_frames_float>(dp, progress_bar.get());
+    else if (dp.output_format == AV_SAMPLE_FMT_S32)
+        return scan_loop<int, ebur128_add_frames_int>(dp, progress_bar.get());
+    else if (dp.output_format == AV_SAMPLE_FMT_DBL)
+        return scan_loop<double, ebur128_add_frames_double>(dp, progress_bar.get());
+    else
+        return ScanReturn::ERR;
 }
 
 void ScanJob::calculate_loudness()

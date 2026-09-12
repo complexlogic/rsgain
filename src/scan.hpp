@@ -5,7 +5,13 @@
 #include <filesystem>
 #include <ebur128.h>
 
-void free_ebur128(ebur128_state *ebur128);
+
+struct Ebur128Deleter {
+    void operator()(ebur128_state *state) const noexcept {
+        if (state)
+			ebur128_destroy(&state);
+    }
+};
 
 enum class FileType {
     INVALID = -1,
@@ -58,13 +64,14 @@ struct ScanData {
     std::vector<std::string> error_directories;
 };
 
-
+struct DecoderParams;
+class ProgressBar;
 class ScanJob {
 	public:
 		struct Track {
 			std::filesystem::path path;
 			FileType type;
-			std::unique_ptr<ebur128_state, decltype(&free_ebur128)> ebur128;
+			std::unique_ptr<ebur128_state, Ebur128Deleter> ebur128;
 			std::unique_ptr<std::filesystem::file_time_type> mtime;
 			std::string container;
 			ScanResult result;
@@ -72,9 +79,11 @@ class ScanJob {
 			bool tclip = false;
 			bool aclip = false;
 
-			Track(const std::filesystem::path &path, FileType type) : path(path), type(type), ebur128(nullptr, free_ebur128) {};
+			Track(const std::filesystem::path &path, FileType type) : path(path), type(type) {};
 			ScanReturn scan(const Config &config, std::mutex *ffmpeg_mutex);
 			void calculate_loudness(const Config &config);
+			template <typename T, int (*ebur128_add_frames)(ebur128_state* st, const T* src, size_t frames)>
+			ScanReturn scan_loop(DecoderParams &dp, ProgressBar *progress_bar);
 		};
 
 		std::filesystem::path path;
