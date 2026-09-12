@@ -493,7 +493,17 @@ void easy_mode(int argc, char *argv[])
         quit(EXIT_FAILURE);
     }
 
+#ifdef _WIN32
+    // Windows CommandLineToArgvW treats \" as a literal " rather than closing
+    // the argument, so a path typed as "C:\foo\bar\" arrives with a trailing "
+    // instead of \. Strip it so filesystem operations work correctly.
+    std::string path_arg = argv[optind];
+    if (!path_arg.empty() && path_arg.back() == '"')
+        path_arg.pop_back();
+    scan_easy(path_arg, preset ? preset : std::filesystem::path(), threads);
+#else
     scan_easy(argv[optind], preset ? preset : std::filesystem::path(), threads);
+#endif
 }
 
 static bool convert_bool(const char *value, bool &setting)
