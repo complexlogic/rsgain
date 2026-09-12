@@ -174,8 +174,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 | Monkey's Audio                       | .ape                        |
 | MPEG-1 Audio Layer II (MP2)          | .mp2                        |
 | MPEG-1 Audio Layer III (MP3)         | .mp3                        |
-| MPEG-4 Audio (AAC, ALAC)¹            | .m4a                        |
-| Musepack (MPC)²                      | .mpc                        |
+| MPEG-4 Audio (AAC, ALAC)             | .m4a                        |
 | Ogg (Vorbis, Speex, FLAC)            | .ogg, .oga, .spx            |
 | Opus                                 | .opus                       |
 | Tom's lossless Audio Kompressor      | .tak                        |
@@ -186,8 +185,7 @@ rsgain supports all popular file formats. See the below table for compatibility.
 | WebM                                 | .webm                       |
 | Direct Stream Digital (DSD)          | .dsf                        |
 
-1. *Support for HE-AAC and xHE-AAC are available via the Fraunhofer FDK AAC library. For the static builds, the included FFmpeg was compiled with support, so no further action is required. For the dynamic builds, you will need to check if your build of FFmpeg was compiled with the '--enable-libfdk-aac' option, and compile it yourself if necessary*
-2. *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
+1. *Stream Version 8 (SV8) supported only. If you have files in the older SV7 format, you can convert them losslessly to SV8*
 
 ## Usage
 
