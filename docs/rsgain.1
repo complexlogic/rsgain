@@ -1,4 +1,4 @@
-.TH "rsgain" "1" "October 2023" "" ""
+.TH "RSGAIN" "1" "2026-09-16" "" ""
 .
 .SH "NAME"
 \fBrsgain\fR \- ReplayGain 2\.0 loudness normalizer
@@ -15,19 +15,22 @@ A ReplayGain-compatible player will dynamically adjust the volume of your tagged
 .P
 \fBrsgain\fR supports writing tags to the following file types:
 .br
-  \- AIFF (\.aiff, \.aif, \.snd)
-  \- APE (\.ape)
-  \- FLAC (\.flac)
-  \- MP2 (\.mp2)
-  \- MP3 (\.mp3)
-  \- MP4 (\.m4a)
-  \- Musepack (\.mpc)
-  \- Ogg (\.ogg, \.oga, \.spx)
+  \- Audio Interchange File Fomat (AIFF) (\.aiff)
+  \- Free Lossless Audio Codec (FLAC) (\.flac)
+  \- Monkey's Audio (\.ape)
+  \- MPEG-1 Audio Layer II (MP2) (\.mp2)
+  \- MPEG-1 Audio Layer III (MP3) (\.mp3)
+  \- MPEG-4 Audio (AAC, ALAC) (\.m4a)
+  \- Musepack (MPC) (\.mpc)
+  \- Ogg (Vorbis, Speex, FLAC) (\.ogg, \.oga, \.spx)
   \- Opus (\.opus)
-  \- TAK (\.tak)
-  \- WAV (\.wav)
+  \- Tom's lossless Audio Kompressor (TAK) (\.tak)
+  \- Waveform Audio File Format (WAV) (\.wav)
   \- WavPack (\.wv)
-  \- WMA (\.wma)\.
+  \- Windows Media Audio (WMA) (\.wma)\.
+  \- Matroska (\.mka, \.mkv)
+  \- WebM (\.webm)
+  \- Direct Stream Digital (DSD) Stream File (\.dsf)
 .
 .SS "OPTIONS AND COMMANDS"
 .TP
@@ -54,7 +57,9 @@ Usage: rsgain easy [OPTIONS] DIRECTORY
 .P
 Easy Mode recursively scans a directory using the recommended settings for each file type\.
 .P
-Easy Mode assumes that you have your music library organized with each album in its own folder\.
+Easy Mode assumes that your music library is organized with each album in its own folder\.
+.P
+If you do not have your music library organized by album, pass \fB\-p no_album\fR to disable album tags\.
 .
 .SS "OPTIONS"
 .TP
@@ -74,7 +79,7 @@ Scan files with \fBn\fR parallel threads\.
 Load scan preset \fBs\fR\.
 .TP
 \fB\-O\fR, \fB\-\-output\fR
-Output tab\-delimited scan data to CSV file per directory\.
+Output tab\-delimited scan data to one CSV file per directory\.
 .TP
 \fB\-O s\fR, \fB\-\-output=s\fR
 Output with sep header (needed for Microsoft Excel compatibility)\.
@@ -96,6 +101,9 @@ Show help\.
 .TP
 \fB\-a\fR, \fB\-\-album\fR
 Calculate album gain and peak\.
+.TP
+\fB\-e\fR, \fB\-\-\album\-aes77\fR
+Use the loudest track as the album loudness as recommended in AES77\.
 .TP
 \fB\-S\fR, \fB\-\-skip\-existing\fR
 Don't scan files with existing ReplayGain information\.
@@ -133,7 +141,7 @@ Write lowercase tags (MP2/MP3/MP4/WMA/WAV/AIFF)\.
 This is non\-standard but sometimes needed\.
 .TP
 \fB\-I keep\fR, \fB\-\-id3v2\-version=keep\fR
-Keep file's existing ID3v2 version, 3 if none exists (default)\.
+Keep a file's existing ID3v2 version or use 3 if none exists (default)\.
 .TP
 \fB\-I 3\fR, \fB\-\-id3v2\-version=3\fR
 Write ID3v2\.3 tags to MP2/MP3/WAV/AIFF\.
@@ -142,10 +150,10 @@ Write ID3v2\.3 tags to MP2/MP3/WAV/AIFF\.
 Write ID3v2\.4 tags to MP2/MP3/WAV/AIFF\.
 .TP
 \fB\-o d\fR, \fB\-\-opus\-mode=d\fR
-Write standard ReplayGain tags, clear header output gain (default)\.
+Write standard ReplayGain tags and clear header output gain (default)\.
 .TP
 \fB\-o r\fR, \fB\-\-opus\-mode=r\fR
-Write R128_*_GAIN tags, clear header output gain\.
+Write R128_*_GAIN tags and clear header output gain\.
 .TP
 \fB\-o s\fR, \fB\-\-opus\-mode=s\fR
 Same as 'r', plus override target loudness to \-23 LUFS\.
@@ -172,10 +180,10 @@ Preserve file mtimes\.
 Don't print scanning status messages\.
 .
 .SH "BUGS"
-\fBrsgain\fR is maintained on GitHub. Please report all bugs to the issue tracker at https://github\.com/complexlogic/rsgain/issues\.
+\fBrsgain\fR is maintained on GitHub. Please report any issues at https://github\.com/complexlogic/rsgain/issues\.
 .
 .SH "COPYRIGHT"
-Copyright (C) 2023 Hugh McMaster
+Copyright (C) 2023\-2026 Hugh McMaster
 .
 .P
 \fBrsgain\fR is released under the BSD\-2\-Clause licence\.
