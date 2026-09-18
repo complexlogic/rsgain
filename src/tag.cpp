@@ -74,6 +74,7 @@
 #define TAGLIB_VERSION (TAGLIB_MAJOR_VERSION * 10000 + TAGLIB_MINOR_VERSION * 100 + TAGLIB_PATCH_VERSION)
 #define FORMAT_GAIN(gain) rsgain::format("{:.2f} dB", gain)
 #define FORMAT_PEAK(peak) rsgain::format("{:.6f}", peak)
+#define FORMAT_LOUDNESS(loudness) rsgain::format("{:.2f} LUFS", loudness)
 #define OPUS_HEADER_SIZE 47
 #define OGG_ROW_SIZE 4
 #define OPUS_HEAD_OFFSET 7 * OGG_ROW_SIZE
@@ -460,6 +461,7 @@ static void write_rg_tags(const ScanResult &result, const Config &config, T&& wr
         write_tag(RGTag::ALBUM_GAIN, FORMAT_GAIN(result.album_gain));
         write_tag(RGTag::ALBUM_PEAK, FORMAT_PEAK(result.album_peak));
     }
+    write_tag(RGTag::REFERENCE_LOUDNESS, FORMAT_LOUDNESS(config.target_loudness));
 }
 
 static bool tag_mp3(ScanJob::Track &track, const Config &config)
