@@ -411,13 +411,17 @@ static void help_main() {
     rsgain::print("{} {} supports writing tags to the following file types:\n", PROJECT_NAME, PROJECT_VERSION);
     rsgain::print("  FLAC (.flac), Ogg (.ogg, .oga, .spx), Opus (.opus), MP2 (.mp2), MP3 (.mp3),\n");
     rsgain::print("  MP4 (.mp4, .m4a), WMA (.wma), WavPack (.wv), APE (.ape), WAV (.wav),\n");
-    rsgain::print("  WAV (.wav), DSF (.dsf), TAK (.tak), ");
+    rsgain::print("  WAV (.wav), TAK (.tak), ");
 
     rsgain::print(
+#ifdef HAS_DSF
+                    "DSF (.dsf), "
+#endif
 #ifdef HAS_MATROSKA
                     "Matroska (.mka, .mkv), WebM (.webm),\n  "
 #endif
-     "and AIFF (.aiff, .aif, .snd).\n");
+                    "and AIFF (.aiff, .aif, .snd).\n"
+    );
 
     rsgain::print("\n");
     rsgain::print(COLOR_RED "Options:\n" COLOR_OFF);
