@@ -54,7 +54,6 @@
 #include <taglib/wavpackfile.h>
 #include <taglib/apefile.h>
 #include <taglib/mpcfile.h>
-#include <taglib/dsffile.h>
 #include <libavcodec/avcodec.h>
 
 #define CRCPP_USE_CPP11
@@ -64,6 +63,10 @@
 #include "scan.hpp"
 #include "tag.hpp"
 #include "output.hpp"
+
+#ifdef HAS_DSF
+#include <taglib/dsffile.h>
+#endif
 
 #ifdef HAS_MATROSKA
 #include <taglib/matroskafile.h>
@@ -268,9 +271,11 @@ bool tag_track(ScanJob::Track &track, const Config &config)
             ret = tag_apev2<TagLib::MPC::File>(track, config);
             break;
 
+#ifdef HAS_DSF
         case FileType::DSF:
             ret = tag_riff<TagLib::DSF::File>(track, config);
             break;
+#endif
 
 #ifdef HAS_MATROSKA
         case FileType::MATROSKA:
@@ -328,8 +333,10 @@ bool tag_exists(const ScanJob::Track &track)
         case FileType::MPC:
             return tag_exists_ape<TagLib::MPC::File>(track);
 
+#ifdef HAS_DSF
         case FileType::DSF:
             return tag_exists_id3<TagLib::DSF::File>(track);
+#endif
 
 #ifdef HAS_MATROSKA
         case FileType::MATROSKA:
@@ -348,7 +355,11 @@ static bool tag_exists_id3(const ScanJob::Track &track)
 {
     const TagLib::ID3v2::Tag *tag = nullptr;
     T file(track.path.string().c_str(), false);
-    if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File> || std::is_same_v<T, TagLib::DSF::File>)
+    if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>
+#ifdef HAS_DSF
+                  || std::is_same_v<T, TagLib::DSF::File>
+#endif
+    )
         tag = file.tag();
     else
         tag = file.ID3v2Tag();
@@ -590,7 +601,11 @@ static bool tag_riff(ScanJob::Track &track, const Config &config)
     TagLib::ID3v2::Tag *tag = nullptr;
     if constexpr (std::is_same_v<T, TagLib::RIFF::WAV::File>)
         tag = file.ID3v2Tag();
-    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File> || std::is_same_v<T, TagLib::DSF::File>)
+    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>
+#ifdef HAS_DSF
+                       || std::is_same_v<T, TagLib::DSF::File>
+#endif
+    )
         tag = file.tag();
     if (!tag)
         return false;
@@ -610,7 +625,11 @@ static bool tag_riff(ScanJob::Track &track, const Config &config)
             id3v2version == 3 ? TagLib::ID3v2::Version::v3 : TagLib::ID3v2::Version::v4
         );
 #endif
-    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File> || std::is_same_v<T, TagLib::DSF::File>)
+    else if constexpr (std::is_same_v<T, TagLib::RIFF::AIFF::File>
+#ifdef HAS_DSF
+                       || std::is_same_v<T, TagLib::DSF::File>
+#endif
+    )
         return file.save();
 }
 

@@ -331,10 +331,11 @@ static Config configs[] = {
         .skip_mp4 = false,
         .preserve_mtimes = false,
         .dual_mono = false
-    },
+    }
 
     // DSF config
-    {
+#ifdef HAS_DSF
+    ,{
         .tag_mode = 'i',
         .skip_existing = false,
         .target_loudness = RG_TARGET_LOUDNESS,
@@ -353,6 +354,7 @@ static Config configs[] = {
         .preserve_mtimes = false,
         .dual_mono = false
     }
+#endif
 
     // Matroska config
 #ifdef HAS_MATROSKA
@@ -526,7 +528,9 @@ static FileType determine_section_type(const std::string &section)
         {"APE",      FileType::APE},
         {"TAK",      FileType::TAK},
         {"Musepack", FileType::MPC},
+#ifdef HAS_DSF
         {"DSF",      FileType::DSF},
+#endif
 #ifdef HAS_MATROSKA
         {"Matroska", FileType::MATROSKA},
         {"WebM",     FileType::WEBM}

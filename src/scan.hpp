@@ -29,7 +29,9 @@ enum class FileType {
     APE,
     TAK,
     MPC,
+#ifdef HAS_DSF
     DSF,
+#endif
 #ifdef HAS_MATROSKA
     MATROSKA,
     WEBM
