@@ -1,6 +1,12 @@
 #pragma once
 
 #include <taglib/taglib_config.h>
+// Taglib added DSF support in 2.0, but the TAGLIB_WITH_DSF define was not
+// added untile 2.1.  Check both ways.  TAGLIB_MAJOR_VERSION can be dropped
+// when taglib >= 2.1 is required.
+#if (defined(TAGLIB_WITH_DSF) && TAGLIB_WITH_DSF == 1) || TAGLIB_MAJOR_VERSION > 1
+#define HAS_DSF
+#endif
 #if defined(TAGLIB_WITH_MATROSKA) && TAGLIB_WITH_MATROSKA == 1
 #define HAS_MATROSKA
 #endif

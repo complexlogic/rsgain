@@ -141,7 +141,9 @@ static FileType determine_filetype(const std::string &extension)
         {".ape",  FileType::APE},
         {".tak",  FileType::TAK},
         {".mpc",  FileType::MPC},
+#ifdef HAS_DSF
         {".dsf",  FileType::DSF},
+#endif
 #ifdef HAS_MATROSKA
         {".mka",  FileType::MATROSKA},
         {".mkv",  FileType::MATROSKA},
