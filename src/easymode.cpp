@@ -865,7 +865,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
         nb_threads = nb_jobs;
 
     // Mulithreaded scanning
-    if (nb_threads > 1) {
+    if (multithread && (nb_jobs > 0)) {
         MTProgress progress(nb_jobs);
         std::vector<std::unique_ptr<WorkerThread>> threads;
         std::mutex ffmpeg_mutex;
@@ -874,7 +874,7 @@ void scan_easy(const std::filesystem::path &path, const std::filesystem::path &p
         std::unique_lock lock(mutex);
 
         // Spawn worker threads
-        output_ok("Scanning with {} threads...", nb_threads);
+        output_ok("Scanning with {} thread{}...", nb_threads, (nb_threads > 1) ? "s" : "");
         for (size_t i = 0; i < nb_threads; i++) {
             progress.update(jobs.front()->path.string());
             threads.emplace_back(std::make_unique<WorkerThread>(
