@@ -74,8 +74,7 @@ void ProgressBar::update(int pos)
 		return;
 
 	if (w != w_prev) {
-		delete buffer;
-		buffer = new char[(size_t) (w + 3)];
+		buffer = std::make_unique<char[]>((size_t) (w + 3));
 	}
 
 	float percent = (float) pos / (float) len;
@@ -86,15 +85,15 @@ void ProgressBar::update(int pos)
 	// Only output if we've actually made progress since last the call, or the console width changed
 	if (c != c_prev || w != w_prev) {
 		rsgain::print(" {:3.0f}% [", percent * 100.f);
-		memset(buffer, '=', (size_t) c);
-		memset(buffer + c, ' ', (size_t) (w - c));
+		memset(buffer.get(), '=', (size_t) c);
+		memset(buffer.get() + c, ' ', (size_t) (w - c));
 		buffer[w] = ']';
 		buffer[w + 1] = '\r';
 		buffer[w + 2] = '\0';
 #ifdef _WIN32
-		WriteConsoleA(console, buffer, w + 2, nullptr, nullptr);
+		WriteConsoleA(console, buffer.get(), w + 2, nullptr, nullptr);
 #else
-		fputs(buffer, stdout);
+		fputs(buffer.get(), stdout);
 		fflush(stdout);
 #endif
 	}
@@ -109,8 +108,7 @@ void ProgressBar::complete()
 	if (c_prev != w_prev)
 		update(len);
 
-	delete buffer;
-	buffer = nullptr;
+	buffer.reset();
 	rsgain::print("\n");
 }
 

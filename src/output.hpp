@@ -47,6 +47,7 @@
 #include <windows.h>
 #endif
 
+#include <memory>
 #include <string>
 #include <string_view>
 
@@ -111,7 +112,7 @@ class ProgressBar {
         int pos_prev{-1};
         int start;
         int len = 0;
-        char *buffer = nullptr;
+        std::unique_ptr<char[]> buffer;
 
 #ifdef _WIN32
         inline static CONSOLE_SCREEN_BUFFER_INFO info;
