@@ -305,12 +305,13 @@ ScanReturn ScanJob::Track::scan_loop(DecoderParams &dp,  ProgressBar *progress_b
                                 buffer_size = out_size;
                                 swr_out_data[0] = buffer.get();
                             }
-                            if (swr_convert(dp.swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples) < 0) {
+                            int nb_samples = swr_convert(dp.swr, swr_out_data, frame->nb_samples, (const uint8_t**) frame->data, frame->nb_samples);
+                            if (nb_samples < 0) {
                                 if (!multithread)
                                     output_error("Could not convert audio frame");
                                 return ScanReturn::ERR;
                             }
-                            ebur128_add_frames(ebur128.get(), reinterpret_cast<T*>(swr_out_data[0]), static_cast<size_t>(frame->nb_samples));
+                            ebur128_add_frames(ebur128.get(), reinterpret_cast<T*>(swr_out_data[0]), static_cast<size_t>(nb_samples));
                         }
 
                         // Audio is already in correct format
@@ -330,6 +331,14 @@ ScanReturn ScanJob::Track::scan_loop(DecoderParams &dp,  ProgressBar *progress_b
         av_packet_unref(packet.get());
     }
 
+    // Drain the samples still buffered in the resampler when changing sample rate
+    if (dp.swr && buffer) {
+        int capacity = static_cast<int>(buffer_size / (dp.nb_channels * av_get_bytes_per_sample(dp.output_format)));
+        int nb_samples = swr_convert(dp.swr, swr_out_data, capacity, nullptr, 0);
+        if (nb_samples > 0)
+            ebur128_add_frames(ebur128.get(), reinterpret_cast<T*>(swr_out_data[0]), static_cast<size_t>(nb_samples));
+    }
+
     // Make sure the progress bar finishes at 100%
     if (progress_bar)
         progress_bar->complete();
@@ -343,6 +352,7 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     int rc;
     bool repeat = false;
     int peak_mode;
+    int output_rate;
     bool output_progress = !quiet && !multithread && config.tag_mode != 'd';
     DecoderParams dp;
 
@@ -443,16 +453,26 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
                 dp.nb_channels
             );
 
-        // Only initialize swresample if we need to convert the format
+        // DSD decodes at DSD rate / 8 with strong noise-shaped ultrasonic noise,
+        // which would otherwise be measured as loudness and peak. Halving the rate
+        // to 96 kHz or below (88.2 kHz for the 44.1 kHz family) filters it out
+        output_rate = dp.codec_ctx->sample_rate;
+        if (dp.codec->id == AV_CODEC_ID_DSD_LSBF || dp.codec->id == AV_CODEC_ID_DSD_MSBF
+            || dp.codec->id == AV_CODEC_ID_DSD_LSBF_PLANAR || dp.codec->id == AV_CODEC_ID_DSD_MSBF_PLANAR) {
+            while (output_rate > 96000)
+                output_rate /= 2;
+        }
+
+        // Only initialize swresample if we need to convert the format or sample rate
         dp.output_format = determine_output_format(dp.codec_ctx->sample_fmt);
-        if (dp.codec_ctx->sample_fmt != dp.output_format) {
+        if (dp.codec_ctx->sample_fmt != dp.output_format || dp.codec_ctx->sample_rate != output_rate) {
 #if OLD_CHANNEL_LAYOUT
             if (!dp.codec_ctx->channel_layout)
                 dp.codec_ctx->channel_layout = av_get_default_channel_layout(dp.codec_ctx->channels);
             dp.swr = swr_alloc_set_opts(nullptr,
                     dp.codec_ctx->channel_layout,
                     dp.output_format,
-                    dp.codec_ctx->sample_rate,
+                    output_rate,
                     dp.codec_ctx->channel_layout,
                     dp.codec_ctx->sample_fmt,
                     dp.codec_ctx->sample_rate,
@@ -463,7 +483,7 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
             swr_alloc_set_opts2(&dp.swr,
                 &dp.codec_ctx->ch_layout,
                 dp.output_format,
-                dp.codec_ctx->sample_rate,
+                output_rate,
                 &dp.codec_ctx->ch_layout,
                 dp.codec_ctx->sample_fmt,
                 dp.codec_ctx->sample_rate,
@@ -489,7 +509,7 @@ ScanReturn ScanJob::Track::scan(const Config &config, std::mutex *m)
     // Initialize libebur128
     peak_mode = config.true_peak ? EBUR128_MODE_TRUE_PEAK : EBUR128_MODE_SAMPLE_PEAK;
     ebur128 = std::unique_ptr<ebur128_state, Ebur128Deleter>(ebur128_init((unsigned int) dp.nb_channels,
-        static_cast<size_t>(dp.codec_ctx->sample_rate),
+        static_cast<size_t>(output_rate),
         EBUR128_MODE_I | peak_mode
     ));
     if (!ebur128) {
